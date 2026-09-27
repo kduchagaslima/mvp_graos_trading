@@ -37,6 +37,7 @@ services:
       - STREAMLIT_SERVER_HEADLESS=true
       - STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
       - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
     depends_on:
       db:
         condition: service_healthy
@@ -63,6 +64,7 @@ services:
     environment:
       - DATABASE_URL=postgresql://postgres:postgrespassword@db:5432/agri_trading
       - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
     depends_on:
       db:
         condition: service_healthy
