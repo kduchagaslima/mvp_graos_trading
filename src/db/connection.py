@@ -1,15 +1,20 @@
 """
 Configuração da conexão com o Banco de Dados e Gerenciamento de Sessões SQLAlchemy.
-Suporta SQLite otimizado com Write-Ahead Logging (WAL) e PostgreSQL via DATABASE_URL.
+Suporta PostgreSQL (com psycopg ou psycopg2 e pooling) e SQLite (com WAL mode).
+Possui fallback resiliente e tentativas de reconexão automática no boot.
 """
 
 import os
+import time
+import logging
 from pathlib import Path
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from typing import Generator
 
-# Diretório padrão para dados persistentes
+logger = logging.getLogger(__name__)
+
+# Diretório padrão para dados persistentes locais
 DEFAULT_DATA_DIR = Path("/app/data") if Path("/app").exists() else Path("./data")
 DEFAULT_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -17,6 +22,40 @@ DEFAULT_DB_FILE = DEFAULT_DATA_DIR / "market_data.db"
 DEFAULT_DB_URL = f"sqlite:///{DEFAULT_DB_FILE}"
 
 DATABASE_URL = os.getenv("DATABASE_URL", DEFAULT_DB_URL)
+
+# Normalização e detecção inteligente de driver para PostgreSQL
+if DATABASE_URL.startswith("postgres://") or (
+    DATABASE_URL.startswith("postgresql://") and not DATABASE_URL.startswith("postgresql+")
+):
+    prefix = "postgres://" if DATABASE_URL.startswith("postgres://") else "postgresql://"
+    # 1. Verificar se psycopg (psycopg 3) está instalado
+    has_psycopg3 = False
+    try:
+        import psycopg  # noqa: F401
+        has_psycopg3 = True
+    except ImportError:
+        pass
+
+    # 2. Verificar se psycopg2 está instalado
+    has_psycopg2 = False
+    try:
+        import psycopg2  # noqa: F401
+        has_psycopg2 = True
+    except ImportError:
+        pass
+
+    if has_psycopg3:
+        # Mantém postgresql:// ou usa postgresql+psycopg://
+        DATABASE_URL = DATABASE_URL.replace(prefix, "postgresql+psycopg://", 1)
+    elif has_psycopg2:
+        # Usa psycopg2
+        DATABASE_URL = DATABASE_URL.replace(prefix, "postgresql+psycopg2://", 1)
+    else:
+        logger.warning(
+            "Drivers PostgreSQL (psycopg/psycopg2) não encontrados no ambiente. "
+            "Recorrendo temporariamente a SQLite local."
+        )
+        DATABASE_URL = DEFAULT_DB_URL
 
 # Configuração do Engine
 connect_args = {}
@@ -38,7 +77,7 @@ engine = create_engine(
     **engine_kwargs,
 )
 
-# Otimização específica para SQLite: Habilitar modo WAL (Write-Ahead Logging) e foreign keys
+# Otimização específica para SQLite
 if DATABASE_URL.startswith("sqlite"):
     @event.listens_for(engine, "connect")
     def set_sqlite_pragma(dbapi_connection, connection_record):
@@ -62,7 +101,24 @@ def get_db() -> Generator[Session, None, None]:
         db.close()
 
 
-def init_db() -> None:
-    """Cria todas as tabelas no banco de dados se não existirem."""
-    from src.db import models  # noqa
-    Base.metadata.create_all(bind=engine)
+def init_db(max_retries: int = 5, retry_delay: float = 2.0) -> None:
+    """
+    Cria as tabelas no banco de dados se não existirem, com tentativas
+    de espera para o caso do container do banco estar terminando de subir.
+    """
+    from src.db import models  # noqa: F401
+    
+    for attempt in range(1, max_retries + 1):
+        try:
+            Base.metadata.create_all(bind=engine)
+            logger.info("Tabelas do banco de dados inicializadas com sucesso.")
+            return
+        except Exception as exc:
+            if attempt == max_retries:
+                logger.error(f"Falha definitiva ao inicializar banco após {max_retries} tentativas: {exc}")
+                raise exc
+            logger.warning(
+                f"Banco de dados ainda indisponível (tentativa {attempt}/{max_retries}). "
+                f"Aguardando {retry_delay}s... Erro: {exc}"
+            )
+            time.sleep(retry_delay)
