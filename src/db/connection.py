@@ -20,14 +20,22 @@ DATABASE_URL = os.getenv("DATABASE_URL", DEFAULT_DB_URL)
 
 # Configuração do Engine
 connect_args = {}
+engine_kwargs = {"pool_pre_ping": True, "echo": False}
+
 if DATABASE_URL.startswith("sqlite"):
     connect_args = {"check_same_thread": False}
+else:
+    # Pool otimizado para PostgreSQL
+    engine_kwargs.update({
+        "pool_size": 10,
+        "max_overflow": 20,
+        "pool_recycle": 1800,
+    })
 
 engine = create_engine(
     DATABASE_URL,
     connect_args=connect_args,
-    pool_pre_ping=True,
-    echo=False,
+    **engine_kwargs,
 )
 
 # Otimização específica para SQLite: Habilitar modo WAL (Write-Ahead Logging) e foreign keys

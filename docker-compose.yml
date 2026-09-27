@@ -1,5 +1,27 @@
 services:
-  # Dashboard Interativo do Trader (Streamlit)
+  # 1. Banco de Dados Relacional (PostgreSQL 16)
+  db:
+    image: postgres:16-alpine
+    container_name: agri_trading_db
+    environment:
+      POSTGRES_DB: agri_trading
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d agri_trading"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - trading_net
+
+  # 2. Dashboard Interativo do Trader (Streamlit)
   dashboard:
     build:
       context: .
@@ -11,9 +33,13 @@ services:
     volumes:
       - .:/app
     environment:
+      - DATABASE_URL=postgresql://postgres:postgrespassword@db:5432/agri_trading
       - STREAMLIT_SERVER_HEADLESS=true
       - STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
       - PYTHONUNBUFFERED=1
+    depends_on:
+      db:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
       interval: 15s
@@ -23,7 +49,7 @@ services:
     networks:
       - trading_net
 
-  # API Backend REST & Cálculo (FastAPI)
+  # 3. API Backend REST & Cálculo (FastAPI)
   api:
     build:
       context: .
@@ -35,7 +61,11 @@ services:
     volumes:
       - .:/app
     environment:
+      - DATABASE_URL=postgresql://postgres:postgrespassword@db:5432/agri_trading
       - PYTHONUNBUFFERED=1
+    depends_on:
+      db:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 15s
@@ -44,6 +74,10 @@ services:
     restart: unless-stopped
     networks:
       - trading_net
+
+volumes:
+  postgres_data:
+    driver: local
 
 networks:
   trading_net:

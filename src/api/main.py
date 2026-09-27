@@ -1,12 +1,18 @@
 """
 FastAPI Backend para o MVP de Market Data e Trading de Grãos.
-Expõe endpoints REST para cálculo de paridade, custo de carrego, simulação de estresse e cotações.
+Expõe endpoints REST para cálculo de paridade, custo de carrego, simulação de estresse,
+extração e persistência de dados de mercado no banco relacional.
 """
 
-from fastapi import FastAPI, HTTPException
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Dict, Any, Optional
+from sqlalchemy.orm import Session
 
+from src.db.connection import init_db, get_db
+from src.db.repository import MarketDataRepository
+from src.db.models import ExtractionLog
 from src.domain.commodities import CommodityType, COMMODITY_SPECS
 from src.domain.locations import ORIGINATION_HUBS, PORTS
 from src.domain.models import (
@@ -21,11 +27,21 @@ from src.engines.export_parity import ExportParityEngine
 from src.engines.carry_cost import CarryCostEngine
 from src.engines.stress_tester import StressTesterEngine
 from src.services.market_data import market_service
+from src.services.extractor import extract_and_persist_market_data
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Inicializa tabelas do banco de dados na inicialização
+    init_db()
+    yield
+
 
 app = FastAPI(
     title="Grain Trading Market Data & Projection API",
-    description="Motor de formação de preço de grãos, paridade de exportação FAS/FOB, carrego e simulação de risco.",
+    description="Motor de formação de preço de grãos, paridade de exportação FAS/FOB, carrego e persistência de mercado.",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 # CORS Middleware
@@ -65,9 +81,47 @@ def get_locations():
     }
 
 
+# ==============================================================================
+# ENDPOINTS DE MARKET DATA E BANCO DE DADOS
+# ==============================================================================
+
 @app.get("/api/market-data/snapshot")
 def get_market_snapshot():
     return market_service.get_snapshot()
+
+
+@app.post("/api/market-data/extract")
+def trigger_market_data_extraction(db: Session = Depends(get_db)):
+    """
+    Executa a extração completa de Market Data (PTAX, CBOT, Prêmios, Físico e Frete)
+    e persiste os dados de forma transacional e idempotente no banco de dados.
+    """
+    try:
+        summary = extract_and_persist_market_data(db=db)
+        return summary
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/market-data/quotes")
+def get_latest_quotes_from_db(db: Session = Depends(get_db)):
+    """Retorna todas as cotações ativas mais recentes persistidas no banco."""
+    quotes = MarketDataRepository.get_all_latest_quotes(db)
+    return [q.to_dict() for q in quotes]
+
+
+@app.get("/api/market-data/history/{symbol}")
+def get_quote_history(symbol: str, limit: int = 50, db: Session = Depends(get_db)):
+    """Retorna o histórico temporal de cotações para um símbolo específico."""
+    history = MarketDataRepository.get_quotes_history(db=db, symbol=symbol, limit=limit)
+    return [q.to_dict() for q in history]
+
+
+@app.get("/api/market-data/logs")
+def get_extraction_logs(limit: int = 10, db: Session = Depends(get_db)):
+    """Retorna os logs recentes de auditoria de extração de dados."""
+    logs = db.query(ExtractionLog).order_by(ExtractionLog.id.desc()).limit(limit).all()
+    return [l.to_dict() for l in logs]
 
 
 @app.post("/api/market-data/fx/refresh")
@@ -75,6 +129,10 @@ def refresh_live_fx():
     rate = market_service.fetch_live_usd_brl()
     return {"status": "success", "usd_brl_fx": rate}
 
+
+# ==============================================================================
+# ENDPOINTS DE CÁLCULO E MOTORES DE PROJEÇÃO
+# ==============================================================================
 
 @app.post("/api/parity/calculate", response_model=ParityCalculationResult)
 def calculate_export_parity(payload: ParityCalculationInput):
@@ -135,3 +193,4 @@ def simulate_stress_scenario(payload: ScenarioSimulationInput):
         return result
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+

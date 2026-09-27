@@ -8,6 +8,7 @@ help:
 	@echo "  make restart    - Reinicia os containers"
 	@echo "  make logs       - Visualiza os logs dos containers"
 	@echo "  make test       - Executa a suite de testes no container"
+	@echo "  make extract    - Executa o pipeline de extração e persistência (ETL)"
 	@echo "  make clean      - Limpa volumes e containers não utilizados"
 
 build:
@@ -29,6 +30,9 @@ logs:
 
 test:
 	docker compose run --rm api pytest -v
+
+extract:
+	docker compose run --rm api python -m src.scripts.run_extraction
 
 clean:
 	docker compose down -v --remove-orphans

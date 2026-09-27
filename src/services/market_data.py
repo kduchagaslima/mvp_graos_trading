@@ -178,3 +178,4 @@ def deepcopy_seeds() -> Dict[str, Any]:
 
 # Instância singleton para uso na aplicação
 market_service = MarketDataService()
+

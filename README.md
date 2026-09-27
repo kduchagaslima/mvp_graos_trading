@@ -144,3 +144,4 @@ mvp_graos_trading/
 ## 📐 Fórmulas e Modelagem
 
 Para detalhes aprofundados sobre a matemática da formação de preço, fatores de bushel de soja (60 lbs) vs milho (56 lbs), deduções fiscais e o diagrama ER do banco de dados, consulte o documento [ARCHITECTURE.md](ARCHITECTURE.md).
+
