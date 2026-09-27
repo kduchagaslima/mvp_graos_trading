@@ -140,3 +140,65 @@ graph LR
 | **Cascavel** | PR | Paranaguá | R$ 145 - 220 | Isento |
 | **Passo Fundo** | RS | Rio Grande | R$ 130 - 190 | Isento |
 | **Luís Eduardo Magalhães** | BA | Itaqui / Santos | R$ 290 - 340 | PRODEAGRO (R$ 0,60) |
+
+---
+
+## 6. Modelagem de Dados Otimizada para Consumo Analítico
+
+A base de dados foi modelada com foco em consultas temporais de baixíssima latência (sub-milissegundo), idempotência estrita e integridade transacional.
+
+```mermaid
+erDiagram
+    MARKET_QUOTES {
+        int id PK
+        date quote_date
+        datetime timestamp
+        string category "FX, FUTURES, PORT_PREMIUM, PHYSICAL_CASH, FREIGHT"
+        string commodity "SOJA, MILHO"
+        string symbol "USD_BRL_PTAX, ZS=F, etc."
+        string contract_code "SPOT, MAR25, JUL25"
+        string location_id "sorriso_mt, STS, etc."
+        float price
+        string unit "BRL, cents/bu, R$/saca, R$/ton"
+        string source "BCB_PTAX, CME, CEPEA"
+        string metadata_json
+    }
+
+    PARITY_SNAPSHOTS {
+        int id PK
+        date calculation_date
+        datetime timestamp
+        string commodity
+        string hub_id
+        string port_id
+        float cbot_cents
+        float premium_cents
+        float fx_rate
+        float net_parity_brl_bag
+        float cash_price_brl_bag
+        float originator_spread_brl_bag
+    }
+
+    EXTRACTION_LOGS {
+        int id PK
+        datetime started_at
+        datetime finished_at
+        string status "SUCCESS, FAILED, RUNNING"
+        int records_extracted
+        int records_upserted
+        string sources_contacted
+        string error_message
+    }
+```
+
+### Otimizações Implementadas para Consumo Rápido:
+1. **Chave Natural & Idempotência (`UniqueConstraint`)**:
+   `UNIQUE(quote_date, category, symbol, contract_code, location_id)`
+   Garante que reprocessamentos no mesmo dia realizam `UPSERT` sem duplicar linhas.
+2. **Índices Compostos de Alta Performance**:
+   - `idx_quotes_latest`: `(category, symbol, quote_date DESC)` para recuperar a última cotação de qualquer ativo em \(O(1)\).
+   - `idx_quotes_commodity_date`: `(commodity, category, quote_date)` para filtros instantâneos por cultura agrícola.
+   - `idx_quotes_lookup`: `(symbol, contract_code, quote_date)` para carregar curvas a termo e séries históricas sem varredura de tabela (*full table scan*).
+3. **Engine com WAL (Write-Ahead Logging)**:
+   Modo `PRAGMA journal_mode=WAL` no SQLite, permitindo leituras concorrentes ultrarrápidas sem travar operações de escrita do extrator.
+

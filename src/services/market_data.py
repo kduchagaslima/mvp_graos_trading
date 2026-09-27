@@ -1,12 +1,16 @@
 """
 Serviço de Ingestão e Agregação de Market Data (Câmbio BCB, CBOT, Prêmios e Mercado Físico).
-Possui fallback automático para garantir funcionamento mesmo em ambientes sem conectividade externa.
+Integra com o banco de dados relacional para consultas de baixa latência e histórico,
+com fallback automático para garantir funcionamento offline contínuo.
 """
 
 from typing import Dict, Any, Optional
 from datetime import datetime, date
 import requests
 import logging
+
+from src.db.connection import SessionLocal
+from src.db.repository import MarketDataRepository
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +60,7 @@ DEFAULT_MARKET_SEEDS = {
 class MarketDataService:
     """
     Agregador de cotações para a mesa de operações.
-    Integra Banco Central do Brasil (PTAX), provedores de futuros e tabelas locais.
+    Consulta primariamente o banco de dados relacional e mantém cache em memória.
     """
 
     def __init__(self):
@@ -64,8 +68,24 @@ class MarketDataService:
         self._last_updated: datetime = datetime.now()
 
     def get_snapshot(self) -> Dict[str, Any]:
-        """Retorna todas as cotações atuais consolidadas."""
+        """Retorna todas as cotações atuais consolidadas do banco de dados ou cache."""
+        try:
+            with SessionLocal() as db:
+                db_quotes = MarketDataRepository.get_all_latest_quotes(db)
+                if db_quotes:
+                    quotes_list = [q.to_dict() for q in db_quotes]
+                    return {
+                        "source": "DATABASE",
+                        "timestamp": datetime.now().isoformat(),
+                        "total_quotes": len(quotes_list),
+                        "quotes": quotes_list,
+                        "data": self._cache,
+                    }
+        except Exception as e:
+            logger.warning(f"Erro ao consultar snapshot no banco de dados: {e}")
+
         return {
+            "source": "CACHE_SEEDS",
             "timestamp": self._last_updated.isoformat(),
             "data": self._cache,
         }
@@ -76,27 +96,26 @@ class MarketDataService:
         Caso ocorra timeout ou erro de rede, utiliza o valor em cache.
         """
         try:
-            today_str = date.today().strftime("%m-%d-%Y")
-            url = (
-                f"https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/"
-                f"CotacaoMoedaDia(moeda=@moeda,dataCotacao=@dataCotacao)?"
-                f"@moeda='USD'&@dataCotacao='{today_str}'&$top=1&$orderby=dataHoraCotacao%20desc&$format=json"
-            )
-            response = requests.get(url, timeout=3.0)
-            if response.status_code == 200:
-                json_data = response.json()
-                items = json_data.get("value", [])
-                if items:
-                    ptax_sell = float(items[0]["cotacaoVenda"])
-                    self._cache["fx_usd_brl"] = ptax_sell
-                    self._last_updated = datetime.now()
-                    return ptax_sell
+            from src.services.extractor import MarketDataExtractor
+            quotes = MarketDataExtractor.extract_bcb_ptax()
+            if quotes:
+                rate = float(quotes[0]["price"])
+                self._cache["fx_usd_brl"] = rate
+                self._last_updated = datetime.now()
+                return rate
         except Exception as e:
-            logger.warning(f"Não foi possível obter PTAX online: {e}. Mantendo valor em cache.")
+            logger.warning(f"Não foi possível obter PTAX online: {e}. Mantendo valor atual.")
             
         return float(self._cache["fx_usd_brl"])
 
     def get_fx_usd_brl(self) -> float:
+        try:
+            with SessionLocal() as db:
+                quote = MarketDataRepository.get_latest_quote(db, "USD_BRL_PTAX_VENDA", category="FX")
+                if quote:
+                    return float(quote.price)
+        except Exception:
+            pass
         return float(self._cache["fx_usd_brl"])
 
     def set_fx_usd_brl(self, value: float) -> None:
@@ -105,6 +124,14 @@ class MarketDataService:
 
     def get_cbot_price(self, commodity: str) -> float:
         com_key = commodity.upper()
+        symbol = "ZS=F" if com_key == "SOJA" else "ZC=F"
+        try:
+            with SessionLocal() as db:
+                quote = MarketDataRepository.get_latest_quote(db, symbol, category="FUTURES")
+                if quote:
+                    return float(quote.price)
+        except Exception:
+            pass
         return float(self._cache["cbot_prices"][com_key]["last_price_cents"])
 
     def set_cbot_price(self, commodity: str, price_cents: float) -> None:
@@ -113,6 +140,14 @@ class MarketDataService:
         self._last_updated = datetime.now()
 
     def get_port_premium(self, port_id: str, commodity: str) -> float:
+        sym = f"PREM_{port_id.upper()}_{commodity.upper()}"
+        try:
+            with SessionLocal() as db:
+                quote = MarketDataRepository.get_latest_quote(db, sym, category="PORT_PREMIUM")
+                if quote:
+                    return float(quote.price)
+        except Exception:
+            pass
         return float(self._cache["port_premiums_cents"].get(port_id, {}).get(commodity.upper(), 80.0))
 
     def set_port_premium(self, port_id: str, commodity: str, premium_cents: float) -> None:
@@ -122,6 +157,14 @@ class MarketDataService:
         self._last_updated = datetime.now()
 
     def get_cash_price(self, hub_id: str, commodity: str) -> Optional[float]:
+        sym = f"CASH_{hub_id.upper()}_{commodity.upper()}"
+        try:
+            with SessionLocal() as db:
+                quote = MarketDataRepository.get_latest_quote(db, sym, category="PHYSICAL_CASH")
+                if quote:
+                    return float(quote.price)
+        except Exception:
+            pass
         return self._cache["cash_prices_brl_bag"].get(hub_id, {}).get(commodity.upper())
 
     def get_forward_curve(self) -> list:

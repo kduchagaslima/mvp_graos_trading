@@ -142,6 +142,19 @@ cash_price = st.sidebar.number_input(
     help="Preço à vista ofertado/praticado no mercado físico da região",
 )
 
+# Ingestão e Persistência no Banco de Dados
+st.sidebar.markdown("---")
+st.sidebar.subheader("🗄️ Banco de Dados & ETL")
+if st.sidebar.button("⚡ Extrair & Persistir Market Data", use_container_width=True, help="Coleta cotações do BCB PTAX, CBOT, Prêmios e Físico e grava no banco"):
+    with st.spinner("Extraindo e gravando no banco de dados..."):
+        try:
+            from src.services.extractor import extract_and_persist_market_data
+            summary = extract_and_persist_market_data()
+            st.sidebar.success(f"✅ {summary['total_persisted']} cotações gravadas!")
+            st.rerun()
+        except Exception as e:
+            st.sidebar.error(f"Erro na extração: {e}")
+
 # Cabeçalho Principal
 st.title("🌾 AgriTrading - Sistema de Market Data & Projeções")
 st.caption(f"Monitoramento e formação de preço de commodities agrícolas | Última atualização: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
@@ -180,11 +193,12 @@ with kpi_col4:
 st.markdown("---")
 
 # Abas Principais do Sistema
-tab_paridade, tab_forward, tab_stress, tab_tabelas = st.tabs([
+tab_paridade, tab_forward, tab_stress, tab_tabelas, tab_database = st.tabs([
     "📊 Calculadora de Paridade de Exportação",
     "📈 Curva Forward & Custo de Carrego",
     "⚡ Simulador de Cenários e Estresse",
     "📋 Custos Logísticos e Fiscais",
+    "🗄️ Banco de Dados & Histórico",
 ])
 
 # ==============================================================================
@@ -638,3 +652,112 @@ with tab_tabelas:
             {"Estado": "Bahia (BA)", "Tributo": "PRODEAGRO", "Soja (R$/sc)": 0.60, "Milho (R$/sc)": 0.35, "Observação": "Fundo de desenvolvimento agropecuário"},
         ]
         st.dataframe(pd.DataFrame(tax_data), hide_index=True, use_container_width=True)
+
+
+# ==============================================================================
+# TAB 5: BANCO DE DADOS & HISTÓRICO
+# ==============================================================================
+with tab_database:
+    st.subheader("🗄️ Repositório Relacional de Market Data & Governança")
+    st.markdown("Consulte as cotações persistidas na base de dados, visualize séries temporais e monitore os logs de extração.")
+
+    from src.db.connection import SessionLocal
+    from src.db.repository import MarketDataRepository
+    from src.db.models import ExtractionLog, MarketQuote
+
+    try:
+        with SessionLocal() as db:
+            all_quotes = MarketDataRepository.get_all_latest_quotes(db)
+            recent_logs = db.query(ExtractionLog).order_by(ExtractionLog.id.desc()).limit(5).all()
+            
+            # KPIs do Banco de Dados
+            db_col1, db_col2, db_col3 = st.columns(3)
+            with db_col1:
+                st.metric("Total de Cotações no Snapshot", len(all_quotes))
+            with db_col2:
+                last_log_status = recent_logs[0].status if recent_logs else "Nenhum"
+                st.metric("Status do Último Pipeline ETL", last_log_status)
+            with db_col3:
+                last_exec = recent_logs[0].started_at.strftime("%d/%m/%Y %H:%M:%S") if recent_logs else "-"
+                st.metric("Última Execução ETL", last_exec)
+
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # Tabela de Cotações Persistidas com Filtro
+            st.write("##### 📋 Cotações Ativas na Base de Dados")
+            categories = ["TODAS"] + sorted(list({q.category for q in all_quotes})) if all_quotes else ["TODAS"]
+            selected_cat = st.selectbox("Filtrar por Categoria", categories, index=0)
+
+            filtered_quotes = all_quotes
+            if selected_cat != "TODAS":
+                filtered_quotes = [q for q in all_quotes if q.category == selected_cat]
+
+            if filtered_quotes:
+                quotes_df = pd.DataFrame([
+                    {
+                        "Data": q.quote_date.strftime("%d/%m/%Y") if q.quote_date else "-",
+                        "Categoria": q.category,
+                        "Símbolo": q.symbol,
+                        "Commodity": q.commodity or "-",
+                        "Praça / Local": q.location_id or "-",
+                        "Preço": q.price,
+                        "Unidade": q.unit,
+                        "Fonte": q.source,
+                        "Última Atualização": q.timestamp.strftime("%H:%M:%S") if q.timestamp else "-",
+                    }
+                    for q in filtered_quotes
+                ])
+                st.dataframe(quotes_df, hide_index=True, use_container_width=True)
+            else:
+                st.info("Nenhuma cotação persistida encontrada. Clique em '⚡ Extrair & Persistir Market Data' na barra lateral para popular a base!")
+
+            # Histórico e Gráficos
+            if all_quotes:
+                st.markdown("<br>", unsafe_allow_html=True)
+                st.write("##### 📈 Consulta de Série Histórica por Ticker")
+                symbols_available = sorted(list({q.symbol for q in all_quotes}))
+                chosen_symbol = st.selectbox("Selecione o Ativo para Análise Temporal", symbols_available)
+                
+                history_quotes = MarketDataRepository.get_quotes_history(db, chosen_symbol, limit=30)
+                if history_quotes:
+                    hist_df = pd.DataFrame([
+                        {
+                            "Data": h.quote_date,
+                            "Preço": h.price,
+                            "Fonte": h.source,
+                        }
+                        for h in reversed(history_quotes)
+                    ])
+                    fig_hist = px.line(
+                        hist_df,
+                        x="Data",
+                        y="Preço",
+                        markers=True,
+                        title=f"Evolução Temporal: {chosen_symbol}",
+                    )
+                    fig_hist.update_layout(height=350, margin=dict(l=20, r=20, t=35, b=20))
+                    st.plotly_chart(fig_hist, use_container_width=True)
+
+            # Logs de Auditoria
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.write("##### 🛡️ Auditoria de Extrações (Extraction Logs)")
+            if recent_logs:
+                logs_df = pd.DataFrame([
+                    {
+                        "ID": l.id,
+                        "Início": l.started_at.strftime("%d/%m/%Y %H:%M:%S") if l.started_at else "-",
+                        "Fim": l.finished_at.strftime("%d/%m/%Y %H:%M:%S") if l.finished_at else "-",
+                        "Status": l.status,
+                        "Extraídos": l.records_extracted,
+                        "Persistidos (Upsert)": l.records_upserted,
+                        "Fontes": l.sources_contacted,
+                    }
+                    for l in recent_logs
+                ])
+                st.dataframe(logs_df, hide_index=True, use_container_width=True)
+            else:
+                st.write("Nenhum log registrado ainda.")
+
+    except Exception as e:
+        st.error(f"Erro ao conectar com a base de dados: {e}")
+
