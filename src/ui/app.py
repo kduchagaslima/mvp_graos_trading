@@ -1,13 +1,13 @@
 """
 Dashboard Interativo do MVP de Market Data e Trading de Grãos.
-Interface profissional para traders agrícolas calcularem paridade de exportação,
-custo de carrego de curva forward e simulações de estresse de mercado.
+Interface profissional com alto contraste, tipografia nítida e visualização clara
+para mesas de trading, paridade de exportação, custo de carrego e análise de risco.
 """
 
 import sys
 from pathlib import Path
 
-# Garante que a raiz da aplicação (/app ou repo root) esteja no sys.path do Streamlit
+# Garante que a raiz da aplicação (/app ou repo root) esteja no sys.path
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
@@ -29,6 +29,9 @@ from src.engines.export_parity import ExportParityEngine
 from src.engines.carry_cost import CarryCostEngine
 from src.engines.stress_tester import StressTesterEngine
 from src.services.market_data import market_service
+from src.db.connection import SessionLocal
+from src.db.repository import MarketDataRepository
+from src.db.models import ExtractionLog
 
 # Configuração da Página
 st.set_page_config(
@@ -38,42 +41,84 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Estilização CSS customizada
+# Estilização CSS de Alto Contraste e Legibilidade
 st.markdown(
     """
     <style>
-    .metric-card {
-        background-color: #f8f9fa;
+    /* Estilos globais para alto contraste e legibilidade */
+    .stApp {
+        background-color: #f8fafc;
+        color: #0f172a;
+    }
+    
+    /* Cards de Métricas com borda nítida e texto escuro */
+    [data-testid="stMetric"] {
+        background-color: #ffffff !important;
+        padding: 16px 20px !important;
+        border-radius: 10px !important;
+        border: 1px solid #cbd5e1 !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06) !important;
+    }
+    [data-testid="stMetricLabel"] {
+        color: #475569 !important;
+        font-size: 0.88rem !important;
+        font-weight: 600 !important;
+        letter-spacing: 0.02em !important;
+    }
+    [data-testid="stMetricValue"] {
+        color: #0f172a !important;
+        font-size: 1.65rem !important;
+        font-weight: 700 !important;
+    }
+    [data-testid="stMetricDelta"] {
+        font-weight: 600 !important;
+        font-size: 0.85rem !important;
+    }
+    
+    /* Abas com destaque visual claro */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+        background-color: #f1f5f9;
+        padding: 6px;
         border-radius: 8px;
-        padding: 14px;
-        border-left: 5px solid #2e7d32;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        border: 1px solid #e2e8f0;
     }
-    .stMetric {
-        background-color: #ffffff;
-        padding: 10px 14px;
+    .stTabs [data-baseweb="tab"] {
         border-radius: 6px;
-        border: 1px solid #e0e0e0;
+        color: #475569;
+        font-weight: 600;
+        padding: 8px 16px;
+        background-color: transparent;
     }
-    .header-style {
-        color: #1b5e20;
-        font-weight: 700;
+    .stTabs [aria-selected="true"] {
+        background-color: #ffffff !important;
+        color: #16a34a !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+    }
+
+    /* Container de cartões personalizados */
+    .highlight-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 12px;
     }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
-# Sidebar - Variáveis Globais de Mercado
-st.sidebar.image("https://images.unsplash.com/photo-1574943320219-553eb213f72d?w=400&q=80", use_container_width=True)
-st.sidebar.title("🌾 Market Data Desk")
+# Sidebar - Painel de Cotações e Parâmetros
+st.sidebar.title("🌾 Mesa de Market Data")
+st.sidebar.caption("Parâmetros Globais de Negociação")
 
 # Seleção da Commodity
 selected_commodity_str = st.sidebar.selectbox(
     "Commodity em Negociação",
     options=["SOJA", "MILHO"],
     index=0,
-    help="Selecione o grão para carregar os fatores de conversão física (bushel/ton) e cotações.",
+    help="Define fatores de conversão (bushel/ton/saca) e cotações de bolsa.",
 )
 selected_commodity = CommodityType(selected_commodity_str)
 specs = get_commodity_specs(selected_commodity)
@@ -81,7 +126,7 @@ specs = get_commodity_specs(selected_commodity)
 # Cotação CBOT
 default_cbot = market_service.get_cbot_price(selected_commodity.value)
 cbot_price = st.sidebar.number_input(
-    f"CBOT {specs.name} (cents/bu)",
+    f"Chicago CBOT {specs.name} (cents/bu)",
     min_value=200.0,
     max_value=3000.0,
     value=default_cbot,
@@ -94,7 +139,7 @@ current_fx = market_service.get_fx_usd_brl()
 col_fx1, col_fx2 = st.sidebar.columns([3, 1])
 with col_fx1:
     usd_brl = st.number_input(
-        "Câmbio USD/BRL (PTAX)",
+        "Dólar PTAX (USD/BRL)",
         min_value=3.0,
         max_value=10.0,
         value=current_fx,
@@ -103,12 +148,12 @@ with col_fx1:
     )
 with col_fx2:
     st.write("")
-    if st.button("🔄 BCB", help="Buscar taxa oficial PTAX online do Banco Central"):
+    if st.button("🔄 BCB", help="Consultar taxa oficial PTAX online do Banco Central"):
         live_fx = market_service.fetch_live_usd_brl()
         st.sidebar.success(f"BCB: {live_fx:.4f}")
         usd_brl = live_fx
 
-# Porto de Escoamento
+# Porto de Embarque
 port_keys = list(PORTS.keys())
 selected_port_id = st.sidebar.selectbox(
     "Porto de Embarque",
@@ -152,9 +197,9 @@ cash_price = st.sidebar.number_input(
 
 # Ingestão e Persistência no Banco de Dados
 st.sidebar.markdown("---")
-st.sidebar.subheader("🗄️ Banco de Dados & ETL")
+st.sidebar.subheader("🗄️ Base de Dados & ETL")
 if st.sidebar.button("⚡ Extrair & Persistir Market Data", use_container_width=True, help="Coleta cotações do BCB PTAX, CBOT, Prêmios e Físico e grava no PostgreSQL"):
-    with st.spinner("Extraindo e gravando no banco de dados..."):
+    with st.spinner("Extraindo e persistindo dados no banco..."):
         try:
             from src.services.extractor import extract_and_persist_market_data
             summary = extract_and_persist_market_data()
@@ -163,11 +208,16 @@ if st.sidebar.button("⚡ Extrair & Persistir Market Data", use_container_width=
         except Exception as e:
             st.sidebar.error(f"Erro na extração: {e}")
 
-# Cabeçalho Principal
-st.title("🌾 AgriTrading - Sistema de Market Data & Projeções")
-st.caption(f"Monitoramento e formação de preço de commodities agrícolas | Última atualização: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+# Cabeçalho Principal com Tipografia Nítida
+st.title("🌾 AgriTrading - Market Data & Motor de Projeções")
+st.markdown(
+    f"<p style='color: #475569; font-size: 1.05rem; margin-top: -10px; margin-bottom: 20px;'>"
+    f"Formação de preço de exportação (FOB/FAS), custo de carrego e análise de risco para grãos "
+    f"| <b>{datetime.now().strftime('%d/%m/%Y %H:%M')}</b></p>",
+    unsafe_allow_html=True,
+)
 
-# Top Bar com KPIs Globais
+# Top Bar com KPIs Globais Claros
 kpi_col1, kpi_col2, kpi_col3, kpi_col4 = st.columns(4)
 fob_cents_total = cbot_price + port_premium
 fob_usd_ton_calc = fob_cents_total * specs.cents_per_bu_to_usd_per_ton
@@ -181,24 +231,24 @@ with kpi_col1:
     )
 with kpi_col2:
     st.metric(
-        label="Dólar PTAX",
+        label="Dólar PTAX (Spot)",
         value=f"R$ {usd_brl:.4f}",
-        delta="Mercado Spot",
+        delta="Banco Central",
     )
 with kpi_col3:
     st.metric(
         label=f"FOB {selected_port_id} (USD/ton)",
         value=f"$ {fob_usd_ton_calc:.2f}",
-        delta=f"{fob_cents_total:.2f} ¢/bu",
+        delta=f"{fob_cents_total:.2f} ¢/bu total",
     )
 with kpi_col4:
     st.metric(
-        label=f"FOB Equivalente (R$/saca)",
+        label="FOB Equivalente (R$/saca)",
         value=f"R$ {fob_brl_bag_calc:.2f}",
-        delta="Bruto no Porto",
+        delta="Bruto no Navio",
     )
 
-st.markdown("---")
+st.markdown("<br>", unsafe_allow_html=True)
 
 # Abas Principais do Sistema
 tab_paridade, tab_forward, tab_stress, tab_tabelas, tab_database = st.tabs([
@@ -214,9 +264,14 @@ tab_paridade, tab_forward, tab_stress, tab_tabelas, tab_database = st.tabs([
 # ==============================================================================
 with tab_paridade:
     st.subheader(f"Formação do Preço de Paridade de Exportação: {hub_info.name} ➔ {port_info.name}")
+    st.markdown(
+        f"<p style='color: #475569;'>Cálculo automatizado partindo da cotação internacional no porto "
+        f"até o armazém no interior, deduzindo logística, impostos e margem comercial.</p>",
+        unsafe_allow_html=True,
+    )
     
     # Parâmetros Ajustáveis na Linha
-    with st.expander("⚙️ Ajustar Custos Logísticos e Margens Específicas", expanded=False):
+    with st.expander("⚙️ Ajustar Custos Logísticos, Impostos e Margem Comercial", expanded=False):
         exp_col1, exp_col2, exp_col3, exp_col4 = st.columns(4)
         
         default_freight = hub_info.freight_to_port_brl_ton.get(selected_port_id, 350.0)
@@ -260,23 +315,25 @@ with tab_paridade:
     result = ExportParityEngine.calculate(parity_input)
     bk = result.cost_breakdown
 
-    # Exibição dos Resultados Chave
+    # Exibição dos Resultados Chave com Métricas de Alto Contraste
     res_col1, res_col2, res_col3, res_col4 = st.columns(4)
     with res_col1:
         st.metric(
             label="Preço FOB Porto (Bruto)",
             value=f"R$ {result.fob_brl_bag:.2f} / sc",
-            help="Preço colocado no navio antes de frete e custos internos.",
+            delta=f"${result.fob_usd_ton:.2f} / ton",
+            help="Preço colocado no navio antes de fretes internos e custos de originação.",
         )
     with res_col2:
         st.metric(
             label="Preço FAS Porto (Líquido)",
             value=f"R$ {bk.fas_brl_bag:.2f} / sc",
-            help="Preço entregue no porto após despesas portuárias e elevação.",
+            delta="Livre ao lado do navio",
+            help="Preço entregue no porto após deduzir custos de elevação portuária e despacho.",
         )
     with res_col3:
         st.metric(
-            label="Preço Paridade Balcão",
+            label="Preço Paridade Balcão (Líquido)",
             value=f"R$ {result.net_parity_price_brl_bag:.2f} / sc",
             delta=f"R$ {result.net_parity_price_brl_ton:.2f} / ton",
             help="Preço justo de compra no armazém/fazenda no interior.",
@@ -285,20 +342,20 @@ with tab_paridade:
         if result.originator_spread_brl_bag is not None:
             spread_color = "normal" if result.originator_spread_brl_bag >= 0 else "inverse"
             st.metric(
-                label="Margem de Originação (Spread)",
+                label="Spread de Originação (Basis)",
                 value=f"R$ {result.originator_spread_brl_bag:+.2f} / sc",
                 delta=f"{result.originator_margin_pct:+.2f}% vs Balcão Físico",
                 delta_color=spread_color,
-                help="Paridade Teórica menos o Preço Praticado na Praça. Positivo = Margem favorável à compra.",
+                help="Paridade Teórica menos o Balcão Físico Praticado. Positivo = Margem favorável à compra pela trading.",
             )
 
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # Gráficos e Decomposição
+    # Gráficos e Decomposição Waterfall com Alto Contraste
     g_col1, g_col2 = st.columns([3, 2])
     
     with g_col1:
-        st.write("##### 📉 Decomposição de Custos (Waterfall FOB ➔ Balcão Interior)")
+        st.write("##### 📉 Decomposição de Custos (Waterfall: FOB Porto ➔ Balcão Interior)")
         waterfall_fig = go.Figure(go.Waterfall(
             name="Formação de Preço",
             orientation="v",
@@ -306,7 +363,7 @@ with tab_paridade:
             x=[
                 "FOB Porto",
                 "Elevação Port.",
-                "Outras Desp. Port.",
+                "Taxas Port.",
                 "Frete Rodoviário",
                 "Fundo Estadual",
                 "Quebra Técnica",
@@ -314,7 +371,7 @@ with tab_paridade:
                 "Margem Trading",
                 "Paridade Balcão",
             ],
-            textposition="outside",
+            textposition="auto",
             text=[
                 f"R${bk.fob_gross_brl_bag:.2f}",
                 f"-R${bk.elevation_brl_bag:.2f}",
@@ -337,20 +394,25 @@ with tab_paridade:
                 -bk.trading_margin_brl_bag,
                 0,
             ],
-            connector={"line": {"color": "rgb(63, 63, 63)"}},
-            decreasing={"marker": {"color": "#e53935"}},
-            increasing={"marker": {"color": "#43a047"}},
-            totals={"marker": {"color": "#1e88e5"}},
+            connector={"line": {"color": "#64748b", "width": 1.5}},
+            decreasing={"marker": {"color": "#dc2626"}},
+            increasing={"marker": {"color": "#16a34a"}},
+            totals={"marker": {"color": "#2563eb"}},
         ))
         waterfall_fig.update_layout(
-            margin=dict(l=20, r=20, t=30, b=20),
-            height=380,
-            yaxis_title="R$ por saca de 60kg",
+            template="plotly_white",
+            font=dict(color="#0f172a", size=11),
+            paper_bgcolor="#ffffff",
+            plot_bgcolor="#ffffff",
+            margin=dict(l=20, r=20, t=30, b=40),
+            height=390,
+            yaxis=dict(title="R$ por saca de 60kg", gridcolor="#f1f5f9"),
+            xaxis=dict(tickangle=-25),
         )
         st.plotly_chart(waterfall_fig, use_container_width=True)
 
     with g_col2:
-        st.write("##### 📋 Tabela Resumo de Deduções")
+        st.write("##### 📋 Tabela Discriminada de Deduções")
         summary_df = pd.DataFrame({
             "Componente": [
                 "1. Preço FOB Porto",
@@ -365,33 +427,34 @@ with tab_paridade:
                 "➔ PREÇO PARIDADE BALCÃO LÍQUIDO",
             ],
             "R$/saca": [
-                bk.fob_gross_brl_bag,
-                -bk.elevation_brl_bag,
-                -bk.other_port_costs_brl_bag,
-                bk.fas_brl_bag,
-                -bk.freight_brl_bag,
-                -bk.state_fund_brl_bag,
-                -bk.shrinkage_brl_bag,
-                -bk.funrural_brl_bag,
-                -bk.trading_margin_brl_bag,
-                bk.net_parity_brl_bag,
+                f"R$ {bk.fob_gross_brl_bag:.2f}",
+                f"-R$ {bk.elevation_brl_bag:.2f}",
+                f"-R$ {bk.other_port_costs_brl_bag:.2f}",
+                f"R$ {bk.fas_brl_bag:.2f}",
+                f"-R$ {bk.freight_brl_bag:.2f}",
+                f"-R$ {bk.state_fund_brl_bag:.2f}",
+                f"-R$ {bk.shrinkage_brl_bag:.2f}",
+                f"-R$ {bk.funrural_brl_bag:.2f}",
+                f"-R$ {bk.trading_margin_brl_bag:.2f}",
+                f"R$ {bk.net_parity_brl_bag:.2f}",
             ],
             "R$/tonelada": [
-                round(bk.fob_gross_brl_bag / 0.06, 2),
-                round(-bk.elevation_brl_bag / 0.06, 2),
-                round(-bk.other_port_costs_brl_bag / 0.06, 2),
-                round(bk.fas_brl_bag / 0.06, 2),
-                round(-bk.freight_brl_bag / 0.06, 2),
-                round(-bk.state_fund_brl_bag / 0.06, 2),
-                round(-bk.shrinkage_brl_bag / 0.06, 2),
-                round(-bk.funrural_brl_bag / 0.06, 2),
-                round(-bk.trading_margin_brl_bag / 0.06, 2),
-                round(bk.net_parity_brl_bag / 0.06, 2),
+                f"R$ {bk.fob_gross_brl_bag / 0.06:,.2f}",
+                f"-R$ {bk.elevation_brl_bag / 0.06:,.2f}",
+                f"-R$ {bk.other_port_costs_brl_bag / 0.06:,.2f}",
+                f"R$ {bk.fas_brl_bag / 0.06:,.2f}",
+                f"-R$ {bk.freight_brl_bag / 0.06:,.2f}",
+                f"-R$ {bk.state_fund_brl_bag / 0.06:,.2f}",
+                f"-R$ {bk.shrinkage_brl_bag / 0.06:,.2f}",
+                f"-R$ {bk.funrural_brl_bag / 0.06:,.2f}",
+                f"-R$ {bk.trading_margin_brl_bag / 0.06:,.2f}",
+                f"R$ {bk.net_parity_brl_bag / 0.06:,.2f}",
             ],
         })
         st.dataframe(summary_df, hide_index=True, use_container_width=True)
 
     # Comparativo Multi-Praças
+    st.markdown("<br>", unsafe_allow_html=True)
     st.write("##### 🗺️ Comparativo Regional de Paridade e Margem de Originação")
     batch_rows = []
     for h_id, hub in ORIGINATION_HUBS.items():
@@ -409,10 +472,10 @@ with tab_paridade:
         batch_rows.append({
             "Praça": hub.name,
             "Estado": hub.state,
-            "Frete (R$/ton)": hub.freight_to_port_brl_ton.get(selected_port_id, "-"),
-            "Paridade (R$/sc)": p_res.net_parity_price_brl_bag,
-            "Balcão Mercado (R$/sc)": c_price or "-",
-            "Spread Trading (R$/sc)": p_res.originator_spread_brl_bag if p_res.originator_spread_brl_bag is not None else "-",
+            "Frete (R$/ton)": f"R$ {hub.freight_to_port_brl_ton.get(selected_port_id, 0.0):.2f}",
+            "Paridade (R$/sc)": f"R$ {p_res.net_parity_price_brl_bag:.2f}",
+            "Balcão Físico (R$/sc)": f"R$ {c_price:.2f}" if c_price else "-",
+            "Spread Trading (R$/sc)": f"R$ {p_res.originator_spread_brl_bag:+.2f}" if p_res.originator_spread_brl_bag is not None else "-",
             "Margem (%)": f"{p_res.originator_margin_pct:+.2f}%" if p_res.originator_margin_pct is not None else "-",
         })
     df_batch = pd.DataFrame(batch_rows)
@@ -423,10 +486,11 @@ with tab_paridade:
 # TAB 2: CURVA FORWARD & CUSTO DE CARREGO
 # ==============================================================================
 with tab_forward:
-    st.subheader("Análise de Custo de Carrego (Carry Trade: Spot vs Forward)")
+    st.subheader("Análise de Custo de Carrego (Carry Trade: Vender Spot vs Forward)")
     st.markdown(
-        "Avalie se a estrutura a termo de preços remunera os custos de armazenagem física, "
-        "juros do capital imobilizado (CDI) e perdas técnicas."
+        f"<p style='color: #475569;'>Avalie se o spread entre contratos futuros/forward cobre os custos "
+        f"de armazenagem física, custo financeiro de oportunidade (CDI) e quebra técnica de estoque.</p>",
+        unsafe_allow_html=True,
     )
 
     c_col1, c_col2, c_col3 = st.columns(3)
@@ -440,7 +504,6 @@ with tab_forward:
             options=["Maio", "Julho", "Agosto", "Setembro"],
             index=1,
         )
-        # Default forward price with premium
         months_dict = {"Maio": 2.0, "Julho": 4.0, "Agosto": 5.0, "Setembro": 6.0}
         months_forward = months_dict[forward_name]
         default_fwd_price = round(spot_price_in + (months_forward * 2.20), 2)
@@ -471,15 +534,51 @@ with tab_forward:
     )
     carry_res = CarryCostEngine.calculate(carry_input)
 
-    st.markdown("---")
+    st.markdown("<br>", unsafe_allow_html=True)
 
-    # Banner de Recomendação
+    # Banner de Decisão com Alto Contraste
     if "CARREGAR" in carry_res.recommendation:
-        st.success(f"### 🚀 DECISÃO: {carry_res.recommendation}\n{carry_res.detailed_rationale}")
+        st.markdown(
+            f"""
+            <div style="background-color: #f0fdf4; border: 2px solid #16a34a; border-radius: 10px; padding: 20px 24px;">
+                <div style="color: #166534; font-size: 1.3rem; font-weight: 700; margin-bottom: 6px;">
+                    🚀 DECISÃO RECOMENDADA: {carry_res.recommendation}
+                </div>
+                <div style="color: #15803d; font-size: 1.0rem; line-height: 1.5;">
+                    {carry_res.detailed_rationale}
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
     elif "VENDER" in carry_res.recommendation:
-        st.error(f"### 🛑 DECISÃO: {carry_res.recommendation}\n{carry_res.detailed_rationale}")
+        st.markdown(
+            f"""
+            <div style="background-color: #fef2f2; border: 2px solid #dc2626; border-radius: 10px; padding: 20px 24px;">
+                <div style="color: #991b1b; font-size: 1.3rem; font-weight: 700; margin-bottom: 6px;">
+                    🛑 DECISÃO RECOMENDADA: {carry_res.recommendation}
+                </div>
+                <div style="color: #b91c1c; font-size: 1.0rem; line-height: 1.5;">
+                    {carry_res.detailed_rationale}
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
     else:
-        st.warning(f"### ⚖️ DECISÃO: {carry_res.recommendation}\n{carry_res.detailed_rationale}")
+        st.markdown(
+            f"""
+            <div style="background-color: #fffbeb; border: 2px solid #d97706; border-radius: 10px; padding: 20px 24px;">
+                <div style="color: #92400e; font-size: 1.3rem; font-weight: 700; margin-bottom: 6px;">
+                    ⚖️ DECISÃO RECOMENDADA: {carry_res.recommendation}
+                </div>
+                <div style="color: #b45309; font-size: 1.0rem; line-height: 1.5;">
+                    {carry_res.detailed_rationale}
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
     st.markdown("<br>", unsafe_allow_html=True)
     k_col1, k_col2, k_col3, k_col4 = st.columns(4)
@@ -511,7 +610,8 @@ with tab_forward:
         )
 
     # Gráfico de evolução do custo de carrego
-    st.write("##### 📈 Simulação Temporal do Custo de Carrego")
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.write("##### 📈 Evolução Mensal do Custo de Carrego (R$/saca)")
     time_points = [m for m in range(1, int(months_input) + 3)]
     sim_storage = [storage_month * m for m in time_points]
     sim_fin = [spot_price_in * (((1 + financial_month/100)**m) - 1) for m in time_points]
@@ -528,19 +628,28 @@ with tab_forward:
         carry_chart_df,
         x="Mês",
         y=["Armazenagem Física", "Custo de Oportunidade (CDI)", "Custo Total Acumulado"],
-        title="Evolução Mensal do Custo de Carrego por Saca (R$)",
         color_discrete_map={
-            "Armazenagem Física": "#fb8c00",
-            "Custo de Oportunidade (CDI)": "#7e57c2",
-            "Custo Total Acumulado": "#d32f2f",
+            "Armazenagem Física": "#d97706",
+            "Custo de Oportunidade (CDI)": "#7c3aed",
+            "Custo Total Acumulado": "#dc2626",
         },
     )
     carry_fig.add_hline(
         y=carry_res.gross_spread_brl_bag,
-        line_dash="dot",
-        line_color="#2e7d32",
+        line_dash="dash",
+        line_color="#16a34a",
         annotation_text=f"Spread Bruto Forward (R$ {carry_res.gross_spread_brl_bag:.2f})",
         annotation_position="bottom right",
+    )
+    carry_fig.update_layout(
+        template="plotly_white",
+        font=dict(color="#0f172a", size=12),
+        paper_bgcolor="#ffffff",
+        plot_bgcolor="#ffffff",
+        yaxis=dict(title="R$ por saca (60kg)", gridcolor="#f1f5f9"),
+        xaxis=dict(title="Meses de Carregamento", gridcolor="#f1f5f9"),
+        height=380,
+        margin=dict(l=20, r=20, t=30, b=20),
     )
     st.plotly_chart(carry_fig, use_container_width=True)
 
@@ -550,7 +659,11 @@ with tab_forward:
 # ==============================================================================
 with tab_stress:
     st.subheader("⚡ Simulador de Estresse de Mercado & Análise de Sensibilidade")
-    st.markdown("Avalie instantaneamente o impacto de choques severos de Dólar, CBOT, Prêmio e Frete na margem do negócio.")
+    st.markdown(
+        f"<p style='color: #475569;'>Avalie instantaneamente o impacto de choques simultâneos de "
+        f"Câmbio, CBOT, Prêmios e Fretes Rodoviários na rentabilidade da operação.</p>",
+        unsafe_allow_html=True,
+    )
 
     sim_c1, sim_c2 = st.columns(2)
     with sim_c1:
@@ -571,7 +684,7 @@ with tab_stress:
     sim_res = StressTesterEngine.simulate_scenario(scenario_input)
 
     with sim_c2:
-        st.write("###### Impacto no Preço e na Margem")
+        st.write("###### Impacto Comparativo")
         s_res1, s_res2 = st.columns(2)
         with s_res1:
             st.metric(
@@ -579,7 +692,7 @@ with tab_stress:
                 value=f"R$ {sim_res.base_parity_brl_bag:.2f} / sc",
             )
             st.metric(
-                label="Impacto Absoluto",
+                label="Variação Absoluta",
                 value=f"R$ {sim_res.diff_brl_bag:+.2f} / sc",
                 delta=f"{sim_res.diff_pct:+.2f}%",
                 delta_color="normal" if sim_res.diff_brl_bag >= 0 else "inverse",
@@ -598,8 +711,8 @@ with tab_stress:
                 )
 
     st.markdown("<br>", unsafe_allow_html=True)
-    st.write("##### 🌡️ Matriz de Calor de Sensibilidade: Dólar vs Chicago")
-    st.caption("Preço de Paridade Balcão resultante (R$/saca) para diferentes combinações de câmbio e CBOT.")
+    st.write("##### 🌡️ Matriz de Sensibilidade: Dólar vs Chicago (R$/saca)")
+    st.caption("Preço de Paridade Balcão resultante para combinações de taxa cambial e CBOT.")
 
     # Matriz de Sensibilidade
     matrix_df = StressTesterEngine.generate_sensitivity_matrix(parity_input)
@@ -609,10 +722,18 @@ with tab_stress:
         labels=dict(x="Variação CBOT", y="Variação Câmbio", color="Paridade (R$/sc)"),
         x=matrix_df.columns,
         y=matrix_df.index,
-        color_continuous_scale="Viridis",
+        color_continuous_scale="YlGnBu",
         text_auto=".2f",
+        aspect="auto",
     )
-    heatmap_fig.update_layout(height=420, margin=dict(l=20, r=20, t=30, b=20))
+    heatmap_fig.update_layout(
+        template="plotly_white",
+        font=dict(color="#0f172a", size=12),
+        paper_bgcolor="#ffffff",
+        plot_bgcolor="#ffffff",
+        height=420,
+        margin=dict(l=20, r=20, t=30, b=20),
+    )
     st.plotly_chart(heatmap_fig, use_container_width=True)
 
 
@@ -621,7 +742,11 @@ with tab_stress:
 # ==============================================================================
 with tab_tabelas:
     st.subheader("Tabelas de Referência Logística e Tributária")
-    st.markdown("Consulte os custos cadastrados de frete rodoviário, elevação portuária e fundos tributários estaduais.")
+    st.markdown(
+        f"<p style='color: #475569;'>Parâmetros de fretes rodoviários, taxas portuárias e "
+        f"fundos agropecuários estaduais cadastrados.</p>",
+        unsafe_allow_html=True,
+    )
 
     tab_c1, tab_c2 = st.columns(2)
     with tab_c1:
@@ -633,9 +758,8 @@ with tab_tabelas:
                     "Origem": hub.name,
                     "Estado": hub.state,
                     "Porto Destino": PORTS[p_id].name,
-                    "Cód Porto": p_id,
-                    "Frete (R$/ton)": f_val,
-                    "Equiv. (R$/saca)": round(f_val * 0.06, 2),
+                    "Frete (R$/ton)": f"R$ {f_val:.2f}",
+                    "Equiv. (R$/saca)": f"R$ {f_val * 0.06:.2f}",
                 })
         st.dataframe(pd.DataFrame(freight_data), hide_index=True, use_container_width=True)
 
@@ -646,18 +770,19 @@ with tab_tabelas:
             port_data.append({
                 "Porto": port.name,
                 "UF": port.state,
-                "Elevação (USD/ton)": port.elevation_cost_usd_ton,
-                "Outras Taxas (R$/ton)": port.other_port_costs_brl_ton,
+                "Elevação (USD/ton)": f"${port.elevation_cost_usd_ton:.2f}",
+                "Outras Taxas (R$/ton)": f"R$ {port.other_port_costs_brl_ton:.2f}",
             })
         st.dataframe(pd.DataFrame(port_data), hide_index=True, use_container_width=True)
 
+        st.markdown("<br>", unsafe_allow_html=True)
         st.write("##### 🏛️ Fundos Tributários Estaduais Incidentes")
         tax_data = [
-            {"Estado": "Mato Grosso (MT)", "Tributo": "FETHAB", "Soja (R$/sc)": 2.85, "Milho (R$/sc)": 1.45, "Observação": "Fundo Estadual de Transporte e Habitação"},
-            {"Estado": "Goiás (GO)", "Tributo": "FUNDEINFRA", "Soja (R$/sc)": 1.65, "Milho (R$/sc)": 0.90, "Observação": "Fundo Estadual de Infraestrutura"},
-            {"Estado": "Paraná (PR)", "Tributo": "Isento", "Soja (R$/sc)": 0.00, "Milho (R$/sc)": 0.00, "Observação": "Imunidade de ICMS (Lei Kandir)"},
-            {"Estado": "Rio Grande do Sul (RS)", "Tributo": "Isento", "Soja (R$/sc)": 0.00, "Milho (R$/sc)": 0.00, "Observação": "Imunidade de ICMS"},
-            {"Estado": "Bahia (BA)", "Tributo": "PRODEAGRO", "Soja (R$/sc)": 0.60, "Milho (R$/sc)": 0.35, "Observação": "Fundo de desenvolvimento agropecuário"},
+            {"Estado": "Mato Grosso (MT)", "Tributo": "FETHAB", "Soja (R$/sc)": "R$ 2,85", "Milho (R$/sc)": "R$ 1,45", "Finalidade": "Fundo Estadual de Transporte e Habitação"},
+            {"Estado": "Goiás (GO)", "Tributo": "FUNDEINFRA", "Soja (R$/sc)": "R$ 1,65", "Milho (R$/sc)": "R$ 0,90", "Finalidade": "Fundo Estadual de Infraestrutura"},
+            {"Estado": "Paraná (PR)", "Tributo": "Isento", "Soja (R$/sc)": "R$ 0,00", "Milho (R$/sc)": "R$ 0,00", "Finalidade": "Imunidade de ICMS (Lei Kandir)"},
+            {"Estado": "Rio Grande do Sul (RS)", "Tributo": "Isento", "Soja (R$/sc)": "R$ 0,00", "Milho (R$/sc)": "R$ 0,00", "Finalidade": "Imunidade de ICMS"},
+            {"Estado": "Bahia (BA)", "Tributo": "PRODEAGRO", "Soja (R$/sc)": "R$ 0,60", "Milho (R$/sc)": "R$ 0,35", "Finalidade": "Fundo de desenvolvimento agropecuário"},
         ]
         st.dataframe(pd.DataFrame(tax_data), hide_index=True, use_container_width=True)
 
@@ -667,21 +792,21 @@ with tab_tabelas:
 # ==============================================================================
 with tab_database:
     st.subheader("🗄️ Repositório Relacional de Market Data & Governança")
-    st.markdown("Consulte as cotações persistidas na base de dados PostgreSQL, visualize séries temporais e monitore os logs de extração.")
-
-    from src.db.connection import SessionLocal
-    from src.db.repository import MarketDataRepository
-    from src.db.models import ExtractionLog, MarketQuote
+    st.markdown(
+        f"<p style='color: #475569;'>Cotações ativas persistidas na base relacional PostgreSQL, "
+        f"consultas de séries temporais históricas e registros de auditoria ETL.</p>",
+        unsafe_allow_html=True,
+    )
 
     try:
         with SessionLocal() as db:
             all_quotes = MarketDataRepository.get_all_latest_quotes(db)
             recent_logs = db.query(ExtractionLog).order_by(ExtractionLog.id.desc()).limit(5).all()
             
-            # KPIs do Banco de Dados
+            # KPIs do Banco de Dados com visual claro
             db_col1, db_col2, db_col3 = st.columns(3)
             with db_col1:
-                st.metric("Total de Cotações no Snapshot", len(all_quotes))
+                st.metric("Total de Cotações Ativas", len(all_quotes))
             with db_col2:
                 last_log_status = recent_logs[0].status if recent_logs else "Nenhum"
                 st.metric("Status do Último Pipeline ETL", last_log_status)
@@ -708,21 +833,21 @@ with tab_database:
                         "Símbolo": q.symbol,
                         "Commodity": q.commodity or "-",
                         "Praça / Local": q.location_id or "-",
-                        "Preço": q.price,
+                        "Preço": f"{q.price:.4f}" if q.category == "FX" else f"{q.price:.2f}",
                         "Unidade": q.unit,
                         "Fonte": q.source,
-                        "Última Atualização": q.timestamp.strftime("%H:%M:%S") if q.timestamp else "-",
+                        "Horário": q.timestamp.strftime("%H:%M:%S") if q.timestamp else "-",
                     }
                     for q in filtered_quotes
                 ])
                 st.dataframe(quotes_df, hide_index=True, use_container_width=True)
             else:
-                st.info("Nenhuma cotação persistida encontrada. Clique em '⚡ Extrair & Persistir Market Data' na barra lateral para popular a base!")
+                st.info("Nenhuma cotação encontrada no banco. Clique no botão '⚡ Extrair & Persistir Market Data' na barra lateral para popular a base!")
 
             # Histórico e Gráficos
             if all_quotes:
                 st.markdown("<br>", unsafe_allow_html=True)
-                st.write("##### 📈 Consulta de Série Histórica por Ticker")
+                st.write("##### 📈 Consulta de Série Histórica por Ativo")
                 symbols_available = sorted(list({q.symbol for q in all_quotes}))
                 chosen_symbol = st.selectbox("Selecione o Ativo para Análise Temporal", symbols_available)
                 
@@ -742,13 +867,23 @@ with tab_database:
                         y="Preço",
                         markers=True,
                         title=f"Evolução Temporal: {chosen_symbol}",
+                        color_discrete_sequence=["#16a34a"],
                     )
-                    fig_hist.update_layout(height=350, margin=dict(l=20, r=20, t=35, b=20))
+                    fig_hist.update_layout(
+                        template="plotly_white",
+                        font=dict(color="#0f172a", size=12),
+                        paper_bgcolor="#ffffff",
+                        plot_bgcolor="#ffffff",
+                        height=350,
+                        margin=dict(l=20, r=20, t=40, b=20),
+                        yaxis=dict(gridcolor="#f1f5f9"),
+                        xaxis=dict(gridcolor="#f1f5f9"),
+                    )
                     st.plotly_chart(fig_hist, use_container_width=True)
 
             # Logs de Auditoria
             st.markdown("<br>", unsafe_allow_html=True)
-            st.write("##### 🛡️ Auditoria de Extrações (Extraction Logs)")
+            st.write("##### 🛡️ Auditoria de Execuções ETL (Extraction Logs)")
             if recent_logs:
                 logs_df = pd.DataFrame([
                     {
@@ -768,4 +903,3 @@ with tab_database:
 
     except Exception as e:
         st.error(f"Erro ao conectar com a base de dados: {e}")
-
