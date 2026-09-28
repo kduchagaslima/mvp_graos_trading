@@ -49,6 +49,7 @@ services:
     restart: unless-stopped
     networks:
       - trading_net
+      - nginx-proxy_default
 
   # 3. API Backend REST & Cálculo (FastAPI)
   api:
@@ -76,6 +77,7 @@ services:
     restart: unless-stopped
     networks:
       - trading_net
+      - nginx-proxy_default
 
 volumes:
   postgres_data:
@@ -84,3 +86,5 @@ volumes:
 networks:
   trading_net:
     driver: bridge
+  nginx-proxy_default:
+    external: true
