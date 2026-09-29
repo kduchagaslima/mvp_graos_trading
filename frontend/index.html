@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AgriTrading - Market Data & Motor de Projeções de Grãos</title>
+  
+  <!-- Tailwind CSS & Inter Font -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Lucide Icons & Chart.js -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .tab-btn.active {
+      background-color: #ffffff;
+      color: #16a34a;
+      border-bottom: 2px solid #16a34a;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col">
+
+  <!-- TOP HEADER -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-lg bg-green-600 flex items-center justify-center text-white font-bold text-xl shadow-sm">
+          🌾
+        </div>
+        <div>
+          <h1 class="text-lg font-bold text-slate-900 leading-tight">AgriTrading</h1>
+          <p class="text-xs text-slate-500">Market Data & Paridade de Exportação (Serverless)</p>
+        </div>
+      </div>
+
+      <!-- LIVE TOP TICKER -->
+      <div class="hidden md:flex items-center space-x-6 text-sm">
+        <div class="flex items-center space-x-2 bg-slate-100 px-3 py-1.5 rounded-md border border-slate-200">
+          <span class="text-slate-500 font-medium text-xs">PTAX (USD/BRL):</span>
+          <span id="ticker-fx" class="font-bold text-slate-800">R$ 5,4850</span>
+        </div>
+        <div class="flex items-center space-x-2 bg-slate-100 px-3 py-1.5 rounded-md border border-slate-200">
+          <span class="text-slate-500 font-medium text-xs">SOJA CBOT:</span>
+          <span id="ticker-soja" class="font-bold text-slate-800">1.180,00 ¢/bu</span>
+        </div>
+        <div class="flex items-center space-x-2 bg-slate-100 px-3 py-1.5 rounded-md border border-slate-200">
+          <span class="text-slate-500 font-medium text-xs">MILHO CBOT:</span>
+          <span id="ticker-milho" class="font-bold text-slate-800">445,00 ¢/bu</span>
+        </div>
+        <div class="flex items-center space-x-1.5 text-xs text-green-700 bg-green-50 px-2.5 py-1 rounded-full border border-green-200 font-medium">
+          <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+          <span>AWS Serverless + Neon</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- NAVIGATION TABS -->
+  <nav class="bg-slate-100 border-b border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-1 sm:space-x-4 overflow-x-auto">
+      <button onclick="switchTab('parity')" id="tab-btn-parity" class="tab-btn active px-4 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 flex items-center space-x-2 whitespace-nowrap">
+        <i data-lucide="calculator" class="w-4 h-4"></i>
+        <span>Paridade Exportação (FAS/FOB)</span>
+      </button>
+      <button onclick="switchTab('matrix')" id="tab-btn-matrix" class="tab-btn px-4 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 flex items-center space-x-2 whitespace-nowrap">
+        <i data-lucide="map" class="w-4 h-4"></i>
+        <span>Matriz Regional de Praças</span>
+      </button>
+      <button onclick="switchTab('carry')" id="tab-btn-carry" class="tab-btn px-4 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 flex items-center space-x-2 whitespace-nowrap">
+        <i data-lucide="trending-up" class="w-4 h-4"></i>
+        <span>Custo de Carrego (Carry)</span>
+      </button>
+      <button onclick="switchTab('b3')" id="tab-btn-b3" class="tab-btn px-4 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 flex items-center space-x-2 whitespace-nowrap">
+        <i data-lucide="badge-percent" class="w-4 h-4"></i>
+        <span>Derivativos B3 & CEPEA</span>
+      </button>
+      <button onclick="switchTab('scheduler')" id="tab-btn-scheduler" class="tab-btn px-4 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 flex items-center space-x-2 whitespace-nowrap">
+        <i data-lucide="clock" class="w-4 h-4"></i>
+        <span>Agendamentos & Auditoria</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- MAIN CONTENT CONTAINER -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full">
+
+    <!-- ============================================================== -->
+    <!-- TAB 1: PARIDADE DE EXPORTAÇÃO -->
+    <!-- ============================================================== -->
+    <section id="tab-parity" class="tab-content space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Formulário de Parâmetros -->
+        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+          <h2 class="text-base font-bold text-slate-900 flex items-center space-x-2 pb-2 border-b border-slate-100">
+            <i data-lucide="sliders" class="w-5 h-5 text-green-600"></i>
+            <span>Parâmetros de Mercado</span>
+          </h2>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Commodity</label>
+            <select id="input-commodity" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:outline-none">
+              <option value="SOJA" selected>Soja em Grão (CBOT ZS)</option>
+              <option value="MILHO">Milho em Grão (CBOT ZC)</option>
+            </select>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Porto</label>
+              <select id="input-port" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:outline-none">
+                <option value="STS" selected>Santos (STS)</option>
+                <option value="PNG">Paranaguá (PNG)</option>
+                <option value="RIG">Rio Grande (RIG)</option>
+                <option value="BCR">Barcarena (BCR)</option>
+                <option value="ITA">Itaqui (ITA)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Origem (Interior)</label>
+              <select id="input-hub" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:outline-none">
+                <option value="MT_SORRISO" selected>Sorriso (MT)</option>
+                <option value="MT_RONDONOPOLIS">Rondonópolis (MT)</option>
+                <option value="GO_RIO_VERDE">Rio Verde (GO)</option>
+                <option value="PR_LONDRINA">Londrina (PR)</option>
+                <option value="PR_CASCAVEL">Cascavel (PR)</option>
+                <option value="RS_PASSO_FUNDO">Passo Fundo (RS)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Chicago CBOT (¢/bu)</label>
+              <input type="number" id="input-cbot" value="1180.0" step="1.0" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold focus:ring-2 focus:ring-green-500 focus:outline-none" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Prêmio FOB (¢/bu)</label>
+              <input type="number" id="input-premium" value="65.0" step="1.0" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold focus:ring-2 focus:ring-green-500 focus:outline-none" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Dólar PTAX (R$/USD)</label>
+              <input type="number" id="input-fx" value="5.4850" step="0.005" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold focus:ring-2 focus:ring-green-500 focus:outline-none" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Preço Balcão (R$/sc)</label>
+              <input type="number" id="input-cash" value="122.50" step="0.5" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold focus:ring-2 focus:ring-green-500 focus:outline-none" />
+            </div>
+          </div>
+
+          <button onclick="calculateParity()" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 rounded-lg shadow-sm transition flex items-center justify-center space-x-2">
+            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+            <span>Recalcular Paridade FAS</span>
+          </button>
+        </div>
+
+        <!-- Cards de Resultados da Paridade -->
+        <div class="lg:col-span-2 space-y-6">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+              <span class="text-xs font-semibold text-slate-500 uppercase">Preço FOB Porto</span>
+              <div class="text-2xl font-bold text-slate-900 mt-1" id="res-fob-usd">$457.46 <span class="text-xs font-normal text-slate-500">/ton</span></div>
+              <div class="text-sm font-medium text-slate-600 mt-1" id="res-fob-brl">R$ 150,56 / saca</div>
+            </div>
+
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm border-l-4 border-l-green-500">
+              <span class="text-xs font-semibold text-slate-500 uppercase">Paridade Líquida FAS</span>
+              <div class="text-2xl font-bold text-green-700 mt-1" id="res-fas-brl">R$ 126,85 <span class="text-xs font-normal text-slate-500">/sc</span></div>
+              <div class="text-sm font-medium text-slate-600 mt-1" id="res-fas-usd">$385.42 / ton</div>
+            </div>
+
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+              <span class="text-xs font-semibold text-slate-500 uppercase">Margem Bruta Trader</span>
+              <div class="text-2xl font-bold mt-1" id="res-margin-brl">+R$ 4,35 <span class="text-xs font-normal text-slate-500">/sc</span></div>
+              <div class="text-sm font-semibold mt-1" id="res-margin-pct">+3,55% de margem</div>
+            </div>
+          </div>
+
+          <!-- Tabela Waterfall de Formação de Preço -->
+          <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+            <h3 class="text-sm font-bold text-slate-900 mb-4 flex items-center space-x-2">
+              <i data-lucide="layers" class="w-4 h-4 text-green-600"></i>
+              <span>Decomposição de Custos e Formação FAS (Waterfall)</span>
+            </h3>
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm text-left">
+                <thead class="text-xs uppercase bg-slate-50 text-slate-600 border-y border-slate-200">
+                  <tr>
+                    <th class="px-4 py-2.5">Componente de Preço</th>
+                    <th class="px-4 py-2.5 text-right">Valor USD/ton</th>
+                    <th class="px-4 py-2.5 text-right">Equiv. R$/saca</th>
+                    <th class="px-4 py-2.5 text-right">% do FOB</th>
+                  </tr>
+                </thead>
+                <tbody id="waterfall-body" class="divide-y divide-slate-100 text-slate-700">
+                  <!-- Injetado via Javascript -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- TAB 2: MATRIZ REGIONAL -->
+    <!-- ============================================================== -->
+    <section id="tab-matrix" class="tab-content hidden space-y-6">
+      <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 class="text-base font-bold text-slate-900">Matriz Regional de Atratividade de Originação</h2>
+            <p class="text-xs text-slate-500">Compara paridade líquida FAS e margem do trader em todas as praças produtoras.</p>
+          </div>
+          <button onclick="loadRegionalMatrix()" class="bg-green-600 hover:bg-green-700 text-white font-medium text-xs px-4 py-2 rounded-lg transition flex items-center space-x-1.5 self-start">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+            <span>Atualizar Matriz</span>
+          </button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm text-left">
+            <thead class="text-xs uppercase bg-slate-50 text-slate-600 border-y border-slate-200">
+              <tr>
+                <th class="px-4 py-3">Praça / Origem</th>
+                <th class="px-4 py-3">UF</th>
+                <th class="px-4 py-3 text-right">Frete Rodoviário</th>
+                <th class="px-4 py-3 text-right">Tributo Est.</th>
+                <th class="px-4 py-3 text-right">Paridade FAS</th>
+                <th class="px-4 py-3 text-right">Preço Balcão</th>
+                <th class="px-4 py-3 text-right">Margem Líquida</th>
+                <th class="px-4 py-3 text-center">Decisão</th>
+              </tr>
+            </thead>
+            <tbody id="matrix-body" class="divide-y divide-slate-100">
+              <!-- Injetado via Javascript -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- TAB 3: CUSTO DE CARREGO -->
+    <!-- ============================================================== -->
+    <section id="tab-carry" class="tab-content hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+          <h2 class="text-base font-bold text-slate-900 pb-2 border-b border-slate-100">Parâmetros de Armazenagem</h2>
+          
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Preço à Vista Spot (R$/sc)</label>
+            <input type="number" id="carry-spot" value="125.00" step="0.5" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Preço Futuro Forward (R$/sc)</label>
+            <input type="number" id="carry-forward" value="132.50" step="0.5" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Prazo de Carregamento (Meses)</label>
+            <input type="number" id="carry-months" value="3" min="1" max="12" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Taxa de Juros CDI / Selic (% a.a.)</label>
+            <input type="number" id="carry-interest" value="10.5" step="0.25" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Armazenagem Mensal (R$/sc/mês)</label>
+            <input type="number" id="carry-storage" value="0.45" step="0.05" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold" />
+          </div>
+
+          <button onclick="calculateCarry()" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 rounded-lg shadow-sm transition">
+            Calcular Viabilidade de Carrego
+          </button>
+        </div>
+
+        <div class="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+          <h3 class="text-sm font-bold text-slate-900">Análise de Arbitragem Temporal e Carrego</h3>
+          
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
+              <span class="text-xs text-slate-500 font-medium">Spread Temporal Bruto</span>
+              <div class="text-xl font-bold text-slate-900 mt-1" id="carry-spread">+R$ 7,50 / sc</div>
+            </div>
+            <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
+              <span class="text-xs text-slate-500 font-medium">Custo Total de Carrego</span>
+              <div class="text-xl font-bold text-red-600 mt-1" id="carry-cost">-R$ 4,62 / sc</div>
+            </div>
+            <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 border-l-4 border-l-green-500">
+              <span class="text-xs text-slate-500 font-medium">Carry Líquido</span>
+              <div class="text-xl font-bold text-green-700 mt-1" id="carry-net">+R$ 2,88 / sc</div>
+            </div>
+          </div>
+
+          <div id="carry-decision-box" class="p-4 rounded-lg bg-green-50 border border-green-200 text-green-900 text-sm">
+            <span class="font-bold">Recomendação Estratégica:</span> <span id="carry-decision-text">Carregar a posição compensa os custos financeiros e de armazenagem.</span>
+          </div>
+
+          <div class="mt-4">
+            <canvas id="carryChart" height="120"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- TAB 4: DERIVATIVOS B3 & CEPEA -->
+    <!-- ============================================================== -->
+    <section id="tab-b3" class="tab-content hidden space-y-6">
+      <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-100">
+          <div>
+            <h2 class="text-base font-bold text-slate-900">Contratos Futuros B3 & Indicadores Oficiais CEPEA/ESALQ</h2>
+            <p class="text-xs text-slate-500">Cotações de ajuste oficial diário persistidas no Neon Serverless Postgres.</p>
+          </div>
+          <button onclick="triggerB3Extract()" id="btn-extract-b3" class="bg-green-600 hover:bg-green-700 text-white font-medium text-xs px-4 py-2 rounded-lg transition flex items-center space-x-1.5 self-start">
+            <i data-lucide="play" class="w-3.5 h-3.5"></i>
+            <span>Disparar Ingestão B3 Agora</span>
+          </button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm text-left">
+            <thead class="text-xs uppercase bg-slate-50 text-slate-600 border-y border-slate-200">
+              <tr>
+                <th class="px-4 py-3">Código do Ativo</th>
+                <th class="px-4 py-3">Commodity</th>
+                <th class="px-4 py-3">Categoria</th>
+                <th class="px-4 py-3 text-right">Preço / Ajuste</th>
+                <th class="px-4 py-3">Unidade</th>
+                <th class="px-4 py-3">Fonte</th>
+                <th class="px-4 py-3">Data Ref.</th>
+              </tr>
+            </thead>
+            <tbody id="b3-table-body" class="divide-y divide-slate-100">
+              <!-- Injetado via Javascript -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- TAB 5: AGENDAMENTOS & AUDITORIA -->
+    <!-- ============================================================== -->
+    <section id="tab-scheduler" class="tab-content hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Status do Scheduler -->
+        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+          <h2 class="text-base font-bold text-slate-900 flex items-center space-x-2">
+            <i data-lucide="shield-check" class="w-5 h-5 text-green-600"></i>
+            <span>Status do Agendador</span>
+          </h2>
+          <div class="space-y-3 text-sm">
+            <div class="flex justify-between py-1.5 border-b border-slate-100">
+              <span class="text-slate-500">Mecanismo:</span>
+              <span class="font-bold text-slate-800">EventBridge + Lambda</span>
+            </div>
+            <div class="flex justify-between py-1.5 border-b border-slate-100">
+              <span class="text-slate-500">Fuso Horário:</span>
+              <span class="font-bold text-slate-800">America/Sao_Paulo</span>
+            </div>
+            <div class="flex justify-between py-1.5 border-b border-slate-100">
+              <span class="text-slate-500">Status Geral:</span>
+              <span class="px-2 py-0.5 rounded text-xs font-semibold bg-green-100 text-green-800">ONLINE</span>
+            </div>
+            <div class="flex justify-between py-1.5 border-b border-slate-100">
+              <span class="text-slate-500">Custo Computacional:</span>
+              <span class="font-bold text-green-700">R$ 0,00 (Serverless)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rotinas Programadas -->
+        <div class="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-3">
+          <h2 class="text-base font-bold text-slate-900">Rotinas Oficiais Configuradas na AWS</h2>
+          <div class="space-y-3" id="scheduler-jobs-list">
+            <!-- Injetado via Javascript -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Logs de Auditoria -->
+      <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+        <h3 class="text-sm font-bold text-slate-900 flex items-center space-x-2">
+          <i data-lucide="database" class="w-4 h-4 text-green-600"></i>
+          <span>Logs Recentes de Ingestão ETL (Auditoria no Neon Postgres)</span>
+        </h3>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs text-left">
+            <thead class="uppercase bg-slate-50 text-slate-600 border-y border-slate-200">
+              <tr>
+                <th class="px-3 py-2">ID</th>
+                <th class="px-3 py-2">Início</th>
+                <th class="px-3 py-2">Fim</th>
+                <th class="px-3 py-2">Status</th>
+                <th class="px-3 py-2 text-right">Extraídos</th>
+                <th class="px-3 py-2 text-right">Upsertados</th>
+                <th class="px-3 py-2">Fontes Consultadas</th>
+              </tr>
+            </thead>
+            <tbody id="logs-table-body" class="divide-y divide-slate-100">
+              <!-- Injetado via Javascript -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500">
+    AgriTrading MVP © 2026 | Arquitetura Serverless AWS (CloudFront, API Gateway, Lambda) + Neon Postgres
+  </footer>
+
+  <!-- SCRIPT DE CONSUMO DA API -->
+  <script>
+    // Lucide Icons
+    lucide.createIcons();
+
+    // Rota da API: Como o CloudFront roteia /api/* para o API Gateway, usamos o caminho relativo!
+    const API_BASE = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1')
+      ? 'http://localhost:8000/api'
+      : '/api';
+
+    // Gerenciamento de Abas
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      
+      document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+      document.getElementById(`tab-btn-${tabId}`).classList.add('active');
+
+      if (tabId === 'matrix') loadRegionalMatrix();
+      if (tabId === 'carry') calculateCarry();
+      if (tabId === 'b3') loadB3Quotes();
+      if (tabId === 'scheduler') loadSchedulerStatus();
+      
+      lucide.createIcons();
+    }
+
+    // 1. CÁLCULO DE PARIDADE
+    async function calculateParity() {
+      const payload = {
+        commodity: document.getElementById('input-commodity').value,
+        port_id: document.getElementById('input-port').value,
+        hub_id: document.getElementById('input-hub').value,
+        cbot_price_cents: parseFloat(document.getElementById('input-cbot').value),
+        port_premium_cents: parseFloat(document.getElementById('input-premium').value),
+        usd_brl_fx: parseFloat(document.getElementById('input-fx').value),
+        current_cash_price_brl_bag: parseFloat(document.getElementById('input-cash').value)
+      };
+
+      try {
+        const res = await fetch(`${API_BASE}/parity/calculate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        // Cards de Resultado
+        document.getElementById('res-fob-usd').innerHTML = `$${data.fob_price_usd_ton.toFixed(2)} <span class="text-xs font-normal text-slate-500">/ton</span>`;
+        document.getElementById('res-fob-brl').innerText = `R$ ${data.fob_price_brl_bag.toFixed(2)} / saca`;
+        document.getElementById('res-fas-brl').innerHTML = `R$ ${data.fas_parity_brl_bag.toFixed(2)} <span class="text-xs font-normal text-slate-500">/sc</span>`;
+        document.getElementById('res-fas-usd').innerText = `$${data.fas_parity_usd_ton.toFixed(2)} / ton`;
+        
+        const marginEl = document.getElementById('res-margin-brl');
+        const marginPctEl = document.getElementById('res-margin-pct');
+        const marginVal = data.trader_margin_brl_bag;
+        marginEl.innerText = `${marginVal >= 0 ? '+' : ''}R$ ${marginVal.toFixed(2)} / sc`;
+        marginPctEl.innerText = `${data.margin_percent.toFixed(2)}% de margem`;
+        
+        if (marginVal >= 0) {
+          marginEl.className = 'text-2xl font-bold mt-1 text-green-700';
+        } else {
+          marginEl.className = 'text-2xl font-bold mt-1 text-red-600';
+        }
+
+        // Tabela Waterfall
+        const wBody = document.getElementById('waterfall-body');
+        wBody.innerHTML = `
+          <tr class="font-medium bg-slate-50">
+            <td class="px-4 py-2 font-bold text-slate-900">Preço FOB Exportação (Porto)</td>
+            <td class="px-4 py-2 text-right">$${data.fob_price_usd_ton.toFixed(2)}</td>
+            <td class="px-4 py-2 text-right font-bold text-slate-900">R$ ${data.fob_price_brl_bag.toFixed(2)}</td>
+            <td class="px-4 py-2 text-right">100.0%</td>
+          </tr>
+          <tr>
+            <td class="px-4 py-2 text-red-600">(-) Frete Rodoviário Origem-Porto</td>
+            <td class="px-4 py-2 text-right">-$${(data.freight_cost_brl_ton / payload.usd_brl_fx).toFixed(2)}</td>
+            <td class="px-4 py-2 text-right text-red-600">-R$ ${(data.freight_cost_brl_ton * 0.06).toFixed(2)}</td>
+            <td class="px-4 py-2 text-right">${((data.freight_cost_brl_ton * 0.06 / data.fob_price_brl_bag) * 100).toFixed(1)}%</td>
+          </tr>
+          <tr>
+            <td class="px-4 py-2 text-red-600">(-) Despesas Portuárias & Elevação</td>
+            <td class="px-4 py-2 text-right">-$${data.port_elevation_usd_ton.toFixed(2)}</td>
+            <td class="px-4 py-2 text-right text-red-600">-R$ ${(data.port_elevation_usd_ton * payload.usd_brl_fx * 0.06).toFixed(2)}</td>
+            <td class="px-4 py-2 text-right">${((data.port_elevation_usd_ton * payload.usd_brl_fx * 0.06 / data.fob_price_brl_bag) * 100).toFixed(1)}%</td>
+          </tr>
+          <tr>
+            <td class="px-4 py-2 text-red-600">(-) Fundo Tributário Estadual (${data.tax_name || 'Isento'})</td>
+            <td class="px-4 py-2 text-right">-$${(data.tax_cost_brl_bag / (0.06 * payload.usd_brl_fx)).toFixed(2)}</td>
+            <td class="px-4 py-2 text-right text-red-600">-R$ ${data.tax_cost_brl_bag.toFixed(2)}</td>
+            <td class="px-4 py-2 text-right">${((data.tax_cost_brl_bag / data.fob_price_brl_bag) * 100).toFixed(1)}%</td>
+          </tr>
+          <tr class="bg-green-50 font-bold text-green-900 border-t border-green-200">
+            <td class="px-4 py-2">(=) Paridade Líquida FAS Interior</td>
+            <td class="px-4 py-2 text-right">$${data.fas_parity_usd_ton.toFixed(2)}</td>
+            <td class="px-4 py-2 text-right text-green-800 text-base">R$ ${data.fas_parity_brl_bag.toFixed(2)}</td>
+            <td class="px-4 py-2 text-right">${((data.fas_parity_brl_bag / data.fob_price_brl_bag) * 100).toFixed(1)}%</td>
+          </tr>
+        `;
+
+      } catch (err) {
+        console.error('Erro ao calcular paridade:', err);
+      }
+    }
+
+    // 2. MATRIZ REGIONAL BATCH
+    async function loadRegionalMatrix() {
+      const comm = document.getElementById('input-commodity').value;
+      const port = document.getElementById('input-port').value;
+      const cbot = document.getElementById('input-cbot').value;
+      const premium = document.getElementById('input-premium').value;
+      const fx = document.getElementById('input-fx').value;
+
+      try {
+        const res = await fetch(`${API_BASE}/parity/batch?commodity=${comm}&port_id=${port}&cbot_price_cents=${cbot}&port_premium_cents=${premium}&usd_brl_fx=${fx}`, {
+          method: 'POST'
+        });
+        const list = await res.json();
+        
+        const mBody = document.getElementById('matrix-body');
+        mBody.innerHTML = list.map(item => `
+          <tr class="hover:bg-slate-50">
+            <td class="px-4 py-3 font-semibold text-slate-900">${item.hub_name}</td>
+            <td class="px-4 py-3 text-slate-500">${item.state}</td>
+            <td class="px-4 py-3 text-right">R$ ${item.freight_cost_brl_ton.toFixed(2)}/t</td>
+            <td class="px-4 py-3 text-right text-slate-600">R$ ${item.tax_cost_brl_bag.toFixed(2)}</td>
+            <td class="px-4 py-3 text-right font-bold text-slate-900">R$ ${item.fas_parity_brl_bag.toFixed(2)}</td>
+            <td class="px-4 py-3 text-right text-slate-700">R$ ${item.current_cash_price_brl_bag.toFixed(2)}</td>
+            <td class="px-4 py-3 text-right font-bold ${item.trader_margin_brl_bag >= 0 ? 'text-green-700' : 'text-red-600'}">
+              ${item.trader_margin_brl_bag >= 0 ? '+' : ''}R$ ${item.trader_margin_brl_bag.toFixed(2)}
+            </td>
+            <td class="px-4 py-3 text-center">
+              <span class="px-2.5 py-1 text-xs font-semibold rounded-full ${item.trader_margin_brl_bag >= 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                ${item.trader_margin_brl_bag >= 0 ? 'COMPRAR' : 'AGUARDAR'}
+              </span>
+            </td>
+          </tr>
+        `).join('');
+
+      } catch (err) {
+        console.error('Erro ao carregar matriz regional:', err);
+      }
+    }
+
+    // 3. CUSTO DE CARREGO (CARRY COST)
+    let carryChartInstance = null;
+    async function calculateCarry() {
+      const payload = {
+        commodity: document.getElementById('input-commodity').value,
+        spot_price_brl_bag: parseFloat(document.getElementById('carry-spot').value),
+        forward_price_brl_bag: parseFloat(document.getElementById('carry-forward').value),
+        months: parseInt(document.getElementById('carry-months').value),
+        annual_interest_rate_pct: parseFloat(document.getElementById('carry-interest').value),
+        monthly_storage_brl_bag: parseFloat(document.getElementById('carry-storage').value)
+      };
+
+      try {
+        const res = await fetch(`${API_BASE}/carry/calculate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        document.getElementById('carry-spread').innerText = `+R$ ${data.gross_spread_brl_bag.toFixed(2)} / sc`;
+        document.getElementById('carry-cost').innerText = `-R$ ${data.total_carry_cost_brl_bag.toFixed(2)} / sc`;
+        
+        const netEl = document.getElementById('carry-net');
+        netEl.innerText = `${data.net_carry_brl_bag >= 0 ? '+' : ''}R$ ${data.net_carry_brl_bag.toFixed(2)} / sc`;
+        netEl.className = `text-xl font-bold mt-1 ${data.net_carry_brl_bag >= 0 ? 'text-green-700' : 'text-red-600'}`;
+
+        const decBox = document.getElementById('carry-decision-box');
+        const decText = document.getElementById('carry-decision-text');
+        if (data.is_carry_viable) {
+          decBox.className = 'p-4 rounded-lg bg-green-50 border border-green-200 text-green-900 text-sm';
+          decText.innerText = 'CARREGAR POSIÇÃO: O prêmio futuro remunera o custo de oportunidade (juros) e armazenagem física.';
+        } else {
+          decBox.className = 'p-4 rounded-lg bg-red-50 border border-red-200 text-red-900 text-sm';
+          decText.innerText = 'VENDER SPOT: Mercado em inversão ou spread insuficiente para cobrir o custo de carrego.';
+        }
+
+        // Gráfico de Decomposição do Carry
+        const ctx = document.getElementById('carryChart').getContext('2d');
+        if (carryChartInstance) carryChartInstance.destroy();
+        carryChartInstance = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: ['Preço Spot', 'Custo Financeiro', 'Armazenagem', 'Quebra/Seguro', 'Preço Breakeven', 'Preço Forward'],
+            datasets: [{
+              label: 'R$ por Saca',
+              data: [
+                payload.spot_price_brl_bag,
+                data.financial_cost_brl_bag,
+                data.storage_cost_brl_bag,
+                data.technical_loss_brl_bag + data.insurance_cost_brl_bag,
+                data.breakeven_price_brl_bag,
+                payload.forward_price_brl_bag
+              ],
+              backgroundColor: ['#64748b', '#ef4444', '#f97316', '#eab308', '#0284c7', '#16a34a']
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: false } }
+          }
+        });
+
+      } catch (err) {
+        console.error('Erro no cálculo de carry:', err);
+      }
+    }
+
+    // 4. DERIVATIVOS B3 & CEPEA
+    async function loadB3Quotes() {
+      try {
+        const res = await fetch(`${API_BASE}/b3/quotes`);
+        const quotes = await res.json();
+        
+        const tBody = document.getElementById('b3-table-body');
+        tBody.innerHTML = quotes.map(q => `
+          <tr class="hover:bg-slate-50">
+            <td class="px-4 py-3 font-bold text-slate-900">${q.symbol}</td>
+            <td class="px-4 py-3">${q.commodity || '-'}</td>
+            <td class="px-4 py-3 text-xs">
+              <span class="px-2 py-0.5 rounded font-medium ${q.category === 'B3_FUTURES' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}">
+                ${q.category === 'B3_FUTURES' ? 'Futuro B3' : 'Indicador CEPEA'}
+              </span>
+            </td>
+            <td class="px-4 py-3 text-right font-bold text-slate-900">
+              ${q.unit.includes('R$') ? 'R$ ' : '$ '}${q.price.toFixed(2)}
+            </td>
+            <td class="px-4 py-3 text-slate-500">${q.unit}</td>
+            <td class="px-4 py-3 text-slate-600">${q.source}</td>
+            <td class="px-4 py-3 text-slate-500">${q.quote_date || '-'}</td>
+          </tr>
+        `).join('');
+
+      } catch (err) {
+        console.error('Erro ao carregar cotações B3:', err);
+      }
+    }
+
+    async function triggerB3Extract() {
+      const btn = document.getElementById('btn-extract-b3');
+      btn.disabled = true;
+      btn.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i><span>Coletando...</span>`;
+      lucide.createIcons();
+
+      try {
+        const res = await fetch(`${API_BASE}/b3/extract?session_type=UI_TRIGGER`, { method: 'POST' });
+        const data = await res.json();
+        alert(`✅ Sucesso! ${data.total_persisted} cotações da B3 e CEPEA foram persistidas no Neon Postgres.`);
+        loadB3Quotes();
+      } catch (err) {
+        alert('Erro ao disparar ingestão B3: ' + err);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i data-lucide="play" class="w-3.5 h-3.5"></i><span>Disparar Ingestão B3 Agora</span>`;
+        lucide.createIcons();
+      }
+    }
+
+    // 5. AGENDAMENTOS & LOGS
+    async function loadSchedulerStatus() {
+      try {
+        const resSched = await fetch(`${API_BASE}/scheduler/status`);
+        const sched = await resSched.json();
+
+        const sList = document.getElementById('scheduler-jobs-list');
+        sList.innerHTML = sched.jobs.map(job => `
+          <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <span class="font-bold text-slate-900 text-sm">${job.name}</span>
+              <p class="text-xs text-slate-500 mt-0.5">${job.description}</p>
+            </div>
+            <span class="text-xs font-semibold px-2.5 py-1 bg-white border border-slate-200 text-green-700 rounded-md whitespace-nowrap self-start sm:self-center">
+              ${job.frequency}
+            </span>
+          </div>
+        `).join('');
+
+        const resLogs = await fetch(`${API_BASE}/market-data/logs?limit=5`);
+        const logs = await resLogs.json();
+        
+        const lBody = document.getElementById('logs-table-body');
+        lBody.innerHTML = logs.map(l => `
+          <tr class="hover:bg-slate-50">
+            <td class="px-3 py-2 font-semibold">#${l.id}</td>
+            <td class="px-3 py-2 text-slate-500">${l.started_at ? l.started_at.replace('T', ' ').substring(0, 19) : '-'}</td>
+            <td class="px-3 py-2 text-slate-500">${l.finished_at ? l.finished_at.replace('T', ' ').substring(0, 19) : '-'}</td>
+            <td class="px-3 py-2">
+              <span class="px-1.5 py-0.5 rounded font-bold ${l.status === 'SUCCESS' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                ${l.status}
+              </span>
+            </td>
+            <td class="px-3 py-2 text-right font-medium">${l.records_extracted}</td>
+            <td class="px-3 py-2 text-right font-bold text-slate-900">${l.records_upserted}</td>
+            <td class="px-3 py-2 text-slate-600 truncate max-w-xs">${l.sources_contacted}</td>
+          </tr>
+        `).join('');
+
+      } catch (err) {
+        console.error('Erro ao carregar status do scheduler e logs:', err);
+      }
+    }
+
+    // Inicialização ao carregar a página
+    document.addEventListener('DOMContentLoaded', () => {
+      calculateParity();
+    });
+  </script>
+</body>
+</html>

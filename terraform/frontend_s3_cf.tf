@@ -42,7 +42,16 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "frontend" {
   }
 }
 
-# 2. Origin Access Control (OAC) do CloudFront
+# 2. Upload automático do index.html para o bucket S3
+resource "aws_s3_object" "frontend_index" {
+  bucket       = aws_s3_bucket.frontend.id
+  key          = "index.html"
+  source       = "${path.module}/../frontend/index.html"
+  content_type = "text/html"
+  etag         = filemd5("${path.module}/../frontend/index.html")
+}
+
+# 3. Origin Access Control (OAC) do CloudFront
 resource "aws_cloudfront_origin_access_control" "oac" {
   name                              = "${var.project_name}-oac-${var.environment}"
   description                       = "OAC para acesso seguro ao S3 do AgriTrading"
