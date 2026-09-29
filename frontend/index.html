@@ -283,68 +283,146 @@
     </section>
 
     <!-- ============================================================== -->
-    <!-- TAB 3: CUSTO DE CARREGO -->
+    <!-- TAB 3: CUSTO DE CARREGO & CURVA FORWARD -->
     <!-- ============================================================== -->
     <section id="tab-carry" class="tab-content hidden space-y-6">
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Formulário de Parâmetros de Carrego -->
         <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-          <h2 class="text-base font-bold text-slate-900 pb-2 border-b border-slate-100">Parâmetros de Armazenagem</h2>
-          
+          <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+            <h2 class="text-base font-bold text-slate-900">Parâmetros de Carrego</h2>
+            <span class="text-[11px] bg-amber-50 text-amber-800 px-2 py-0.5 rounded font-semibold border border-amber-200">Curva Forward</span>
+          </div>
+
           <div>
             <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Preço à Vista Spot (R$/sc)</label>
-            <input type="number" id="carry-spot" value="125.00" step="0.5" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold" />
+            <input type="number" id="carry-spot" value="125.00" step="0.5" oninput="onCarrySpotChange()" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold focus:ring-2 focus:ring-green-500 focus:outline-none" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Contrato Forward</label>
+              <select id="carry-contract" onchange="onCarryContractSelect()" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-2 text-xs font-semibold focus:ring-2 focus:ring-green-500 focus:outline-none">
+                <option value="MAI" data-months="2">Maio (+2m)</option>
+                <option value="JUL" data-months="4" selected>Julho (+4m)</option>
+                <option value="AGO" data-months="5">Agosto (+5m)</option>
+                <option value="SET" data-months="6">Setembro (+6m)</option>
+                <option value="CUSTOM">Personalizado</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Prazo (Meses)</label>
+              <input type="number" id="carry-months" value="4" min="0.5" max="18" step="0.5" oninput="calculateCarry()" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold focus:ring-2 focus:ring-green-500 focus:outline-none" />
+            </div>
           </div>
 
           <div>
-            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Preço Futuro Forward (R$/sc)</label>
-            <input type="number" id="carry-forward" value="132.50" step="0.5" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold" />
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Preço Futuro Travado (R$/sc)</label>
+            <input type="number" id="carry-forward" value="133.80" step="0.5" oninput="calculateCarry()" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold focus:ring-2 focus:ring-green-500 focus:outline-none" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">CDI / Selic (% a.a.)</label>
+              <input type="number" id="carry-interest" value="10.5" step="0.25" oninput="calculateCarry()" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-2 text-sm font-semibold focus:ring-2 focus:ring-green-500 focus:outline-none" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Armazém (R$/sc/mês)</label>
+              <input type="number" id="carry-storage" value="0.50" step="0.05" oninput="calculateCarry()" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-2 text-sm font-semibold focus:ring-2 focus:ring-green-500 focus:outline-none" />
+            </div>
           </div>
 
           <div>
-            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Prazo de Carregamento (Meses)</label>
-            <input type="number" id="carry-months" value="3" min="1" max="12" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold" />
+            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Quebra Técnica / Seguro (%)</label>
+            <input type="number" id="carry-loss" value="0.25" step="0.05" oninput="calculateCarry()" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold focus:ring-2 focus:ring-green-500 focus:outline-none" />
           </div>
 
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Taxa de Juros CDI / Selic (% a.a.)</label>
-            <input type="number" id="carry-interest" value="10.5" step="0.25" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold" />
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Armazenagem Mensal (R$/sc/mês)</label>
-            <input type="number" id="carry-storage" value="0.45" step="0.05" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold" />
-          </div>
-
-          <button onclick="calculateCarry()" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 rounded-lg shadow-sm transition">
-            Calcular Viabilidade de Carrego
+          <button onclick="calculateCarry()" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 rounded-lg shadow-sm transition flex items-center justify-center space-x-2">
+            <i data-lucide="calculator" class="w-4 h-4"></i>
+            <span>Simular Curva & Carrego</span>
           </button>
         </div>
 
+        <!-- Painel de Resultados & Gráficos da Curva -->
         <div class="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-          <h3 class="text-sm font-bold text-slate-900">Análise de Arbitragem Temporal e Carrego</h3>
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-100">
+            <div>
+              <h3 class="text-base font-bold text-slate-900">Análise de Arbitragem Temporal e Curva Forward</h3>
+              <p class="text-xs text-slate-500">Avaliação da viabilidade de estocar e carregar posições na curva a termo.</p>
+            </div>
+            <!-- Toggle de Visualização do Gráfico -->
+            <div class="inline-flex bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs">
+              <button onclick="setCarryChartType('curve')" id="btn-chart-curve" class="px-3 py-1 font-semibold rounded bg-white text-slate-900 shadow-sm">
+                📈 Curva Temporal
+              </button>
+              <button onclick="setCarryChartType('waterfall')" id="btn-chart-waterfall" class="px-3 py-1 font-medium text-slate-600 hover:text-slate-900">
+                📊 Decomposição
+              </button>
+            </div>
+          </div>
           
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
-              <span class="text-xs text-slate-500 font-medium">Spread Temporal Bruto</span>
-              <div class="text-xl font-bold text-slate-900 mt-1" id="carry-spread">+R$ 7,50 / sc</div>
+          <!-- 4 Cards de Métricas -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div class="bg-slate-50 p-3.5 rounded-lg border border-slate-200">
+              <span class="text-[11px] text-slate-500 font-medium">Spread Forward</span>
+              <div class="text-lg font-bold text-slate-900 mt-0.5" id="carry-spread">+R$ 8,80 / sc</div>
+              <span class="text-[10px] text-slate-400" id="carry-spread-pct">+7.04%</span>
             </div>
-            <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
-              <span class="text-xs text-slate-500 font-medium">Custo Total de Carrego</span>
-              <div class="text-xl font-bold text-red-600 mt-1" id="carry-cost">-R$ 4,62 / sc</div>
+            <div class="bg-slate-50 p-3.5 rounded-lg border border-slate-200">
+              <span class="text-[11px] text-slate-500 font-medium">Custo Total Carrego</span>
+              <div class="text-lg font-bold text-red-600 mt-0.5" id="carry-cost">-R$ 5,72 / sc</div>
+              <span class="text-[10px] text-slate-400" id="carry-breakdown-sub">Juros + Armazém</span>
             </div>
-            <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 border-l-4 border-l-green-500">
-              <span class="text-xs text-slate-500 font-medium">Carry Líquido</span>
-              <div class="text-xl font-bold text-green-700 mt-1" id="carry-net">+R$ 2,88 / sc</div>
+            <div class="bg-slate-50 p-3.5 rounded-lg border border-slate-200 border-l-4 border-l-green-500">
+              <span class="text-[11px] text-slate-500 font-medium">Carry Líquido</span>
+              <div class="text-lg font-bold text-green-700 mt-0.5" id="carry-net">+R$ 3,08 / sc</div>
+              <span class="text-[10px] text-green-600 font-medium">Margem Adicional</span>
+            </div>
+            <div class="bg-slate-50 p-3.5 rounded-lg border border-slate-200">
+              <span class="text-[11px] text-slate-500 font-medium">Rentabilidade Anual</span>
+              <div class="text-lg font-bold text-slate-900 mt-0.5" id="carry-annual">+7,39% a.a.</div>
+              <span class="text-[10px] text-slate-400" id="carry-period-ret">Período: +2,46%</span>
             </div>
           </div>
 
+          <!-- Banner de Decisão com Alto Contraste -->
           <div id="carry-decision-box" class="p-4 rounded-lg bg-green-50 border border-green-200 text-green-900 text-sm">
-            <span class="font-bold">Recomendação Estratégica:</span> <span id="carry-decision-text">Carregar a posição compensa os custos financeiros e de armazenagem.</span>
+            <span class="font-bold flex items-center gap-1.5"><i data-lucide="check-circle-2" class="w-4 h-4 text-green-600"></i> Recomendação Estratégica:</span>
+            <span id="carry-decision-text" class="block mt-1 font-medium">Carregar a posição compensa os custos financeiros e de armazenagem.</span>
           </div>
 
-          <div class="mt-4">
-            <canvas id="carryChart" height="120"></canvas>
+          <!-- Gráfico -->
+          <div class="mt-2 bg-slate-50/50 p-3 rounded-xl border border-slate-200 relative h-80 sm:h-96">
+            <canvas id="carryChart"></canvas>
           </div>
+
+          <!-- Tabela da Estrutura a Termo da Curva Forward (Março -> Setembro) -->
+          <div class="pt-2">
+            <h4 class="text-xs font-bold text-slate-700 uppercase mb-2 flex items-center space-x-1.5">
+              <i data-lucide="git-commit" class="w-3.5 h-3.5 text-blue-600"></i>
+              <span>Estrutura a Termo da Curva Forward (Simulação Multi-Contratos)</span>
+            </h4>
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs text-left">
+                <thead class="bg-slate-100 text-slate-600 uppercase border-y border-slate-200">
+                  <tr>
+                    <th class="px-3 py-2">Vencimento</th>
+                    <th class="px-3 py-2 text-right">Prazo</th>
+                    <th class="px-3 py-2 text-right">Preço Forward</th>
+                    <th class="px-3 py-2 text-right">Spread Bruto</th>
+                    <th class="px-3 py-2 text-right">Custo Carrego</th>
+                    <th class="px-3 py-2 text-right">Carry Líquido</th>
+                    <th class="px-3 py-2 text-center">Decisão</th>
+                  </tr>
+                </thead>
+                <tbody id="carry-curve-tbody" class="divide-y divide-slate-100">
+                  <!-- Injetado dinamicamente -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
         </div>
       </div>
     </section>
@@ -1019,46 +1097,176 @@
       }
     }
 
-    // 3. CUSTO DE CARREGO (CARRY COST)
+    // 3. CUSTO DE CARREGO & CURVA FORWARD (CARRY TRADE)
     let carryChartInstance = null;
-    async function calculateCarry() {
-      const payload = {
-        spot_price_brl_bag: parseFloat(document.getElementById('carry-spot').value) || 125.0,
-        forward_price_brl_bag: parseFloat(document.getElementById('carry-forward').value) || 132.5,
-        months_to_forward: parseFloat(document.getElementById('carry-months').value) || 3.0,
-        financial_cost_pct_month: (parseFloat(document.getElementById('carry-interest').value) || 10.5) / 12.0,
-        storage_cost_brl_bag_month: parseFloat(document.getElementById('carry-storage').value) || 0.45
-      };
+    let currentCarryChartType = 'curve';
+    let lastCarryData = null;
+    let lastCarryPayload = null;
 
-      try {
-        const res = await fetch(`${API_BASE}/carry/calculate`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        const data = await res.json();
+    const CONTRACT_MONTHS = {
+      'MAI': 2.0,
+      'JUL': 4.0,
+      'AGO': 5.0,
+      'SET': 6.0
+    };
 
-        document.getElementById('carry-spread').innerText = `+R$ ${(data.gross_spread_brl_bag || 0).toFixed(2)} / sc`;
-        document.getElementById('carry-cost').innerText = `-R$ ${(data.total_carry_cost_brl_bag || 0).toFixed(2)} / sc`;
-        
-        const netEl = document.getElementById('carry-net');
-        const netVal = data.net_carry_brl_bag || 0;
-        netEl.innerText = `${netVal >= 0 ? '+' : ''}R$ ${netVal.toFixed(2)} / sc`;
-        netEl.className = `text-xl font-bold mt-1 ${netVal >= 0 ? 'text-green-700' : 'text-red-600'}`;
+    function onCarryContractSelect() {
+      const select = document.getElementById('carry-contract');
+      const val = select.value;
+      if (val !== 'CUSTOM' && CONTRACT_MONTHS[val]) {
+        const months = CONTRACT_MONTHS[val];
+        document.getElementById('carry-months').value = months;
+        const spot = parseFloat(document.getElementById('carry-spot').value) || 125.0;
+        // Preço futuro padrão: spot + (meses * R$ 2.20/sc)
+        const fwd = spot + (months * 2.20);
+        document.getElementById('carry-forward').value = fwd.toFixed(2);
+      }
+      calculateCarry();
+    }
 
-        const decBox = document.getElementById('carry-decision-box');
-        const decText = document.getElementById('carry-decision-text');
-        if (netVal >= 0) {
-          decBox.className = 'p-4 rounded-lg bg-green-50 border border-green-200 text-green-900 text-sm';
-          decText.innerText = data.detailed_rationale || 'CARREGAR POSIÇÃO: O prêmio futuro remunera o custo de oportunidade (juros) e armazenagem física.';
-        } else {
-          decBox.className = 'p-4 rounded-lg bg-red-50 border border-red-200 text-red-900 text-sm';
-          decText.innerText = data.detailed_rationale || 'VENDER SPOT: Mercado em inversão ou spread insuficiente para cobrir o custo de carrego.';
+    function onCarrySpotChange() {
+      const select = document.getElementById('carry-contract');
+      const val = select.value;
+      if (val !== 'CUSTOM' && CONTRACT_MONTHS[val]) {
+        const months = CONTRACT_MONTHS[val];
+        const spot = parseFloat(document.getElementById('carry-spot').value) || 125.0;
+        const fwd = spot + (months * 2.20);
+        document.getElementById('carry-forward').value = fwd.toFixed(2);
+      }
+      calculateCarry();
+    }
+
+    function setCarryChartType(type) {
+      currentCarryChartType = type;
+      const btnCurve = document.getElementById('btn-chart-curve');
+      const btnWaterfall = document.getElementById('btn-chart-waterfall');
+      
+      if (type === 'curve') {
+        btnCurve.className = 'px-3 py-1 font-semibold rounded bg-white text-slate-900 shadow-sm';
+        btnWaterfall.className = 'px-3 py-1 font-medium text-slate-600 hover:text-slate-900';
+      } else {
+        btnCurve.className = 'px-3 py-1 font-medium text-slate-600 hover:text-slate-900';
+        btnWaterfall.className = 'px-3 py-1 font-semibold rounded bg-white text-slate-900 shadow-sm';
+      }
+
+      if (lastCarryData && lastCarryPayload) {
+        renderCarryChart(lastCarryData, lastCarryPayload);
+      }
+    }
+
+    function renderCarryChart(data, payload) {
+      const ctx = document.getElementById('carryChart').getContext('2d');
+      if (carryChartInstance) carryChartInstance.destroy();
+
+      if (currentCarryChartType === 'curve') {
+        // CURVA TEMPORAL (Evolução Mensal do Custo de Carrego vs Spread Travado)
+        const maxMonths = Math.max(6, Math.ceil(payload.months_to_forward) + 2);
+        const labels = [];
+        const simStorage = [];
+        const simFinancial = [];
+        const simTotal = [];
+        const spreadLine = [];
+
+        const monthlyRate = payload.financial_cost_pct_month / 100.0;
+        const techLoss = payload.spot_price_brl_bag * (payload.technical_loss_pct / 100.0);
+        const lockedSpread = data.gross_spread_brl_bag !== undefined ? data.gross_spread_brl_bag : (payload.forward_price_brl_bag - payload.spot_price_brl_bag);
+
+        for (let m = 1; m <= maxMonths; m++) {
+          labels.push(`Mês ${m}`);
+          const stg = payload.storage_cost_brl_bag_month * m;
+          const fin = payload.spot_price_brl_bag * (Math.pow(1.0 + monthlyRate, m) - 1.0);
+          const tot = stg + fin + techLoss;
+
+          simStorage.push(Number(stg.toFixed(2)));
+          simFinancial.push(Number(fin.toFixed(2)));
+          simTotal.push(Number(tot.toFixed(2)));
+          spreadLine.push(Number(lockedSpread.toFixed(2)));
         }
 
-        // Gráfico de Decomposição do Carry
-        const ctx = document.getElementById('carryChart').getContext('2d');
-        if (carryChartInstance) carryChartInstance.destroy();
+        carryChartInstance = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: 'Custo Total Acumulado',
+                data: simTotal,
+                borderColor: '#dc2626',
+                backgroundColor: 'rgba(220, 38, 38, 0.08)',
+                borderWidth: 2.5,
+                fill: true,
+                tension: 0.2,
+                pointRadius: 4,
+                pointBackgroundColor: '#dc2626'
+              },
+              {
+                label: 'Spread Forward Travado',
+                data: spreadLine,
+                borderColor: '#16a34a',
+                borderWidth: 2,
+                borderDash: [6, 4],
+                fill: false,
+                pointRadius: 0
+              },
+              {
+                label: 'Custo de Oportunidade (CDI)',
+                data: simFinancial,
+                borderColor: '#7c3aed',
+                borderWidth: 1.5,
+                fill: false,
+                tension: 0.2,
+                pointRadius: 3,
+                pointBackgroundColor: '#7c3aed'
+              },
+              {
+                label: 'Armazenagem Física',
+                data: simStorage,
+                borderColor: '#d97706',
+                borderWidth: 1.5,
+                fill: false,
+                tension: 0.1,
+                pointRadius: 3,
+                pointBackgroundColor: '#d97706'
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+              mode: 'index',
+              intersect: false
+            },
+            plugins: {
+              legend: {
+                position: 'top',
+                labels: { boxWidth: 12, font: { size: 11, weight: 'bold' } }
+              },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    return `${context.dataset.label}: R$ ${context.parsed.y.toFixed(2)} / sc`;
+                  }
+                }
+              }
+            },
+            scales: {
+              y: {
+                title: { display: true, text: 'R$ por saca (60kg)', font: { size: 11 } },
+                grid: { color: '#f1f5f9' },
+                ticks: {
+                  callback: function(val) { return 'R$ ' + Number(val).toFixed(2); }
+                }
+              },
+              x: {
+                title: { display: true, text: 'Meses de Carregamento', font: { size: 11 } },
+                grid: { color: '#f8fafc' }
+              }
+            }
+          }
+        });
+      } else {
+        // WATERFALL / DECOMPOSIÇÃO
         const finCost = data.total_financial_cost_brl_bag || 0;
         const storCost = data.total_storage_cost_brl_bag || 0;
         const lossCost = data.total_technical_loss_brl_bag || 0;
@@ -1078,15 +1286,176 @@
                 breakeven,
                 payload.forward_price_brl_bag
               ],
-              backgroundColor: ['#64748b', '#ef4444', '#f97316', '#eab308', '#0284c7', '#16a34a']
+              backgroundColor: ['#64748b', '#ef4444', '#f97316', '#eab308', '#0284c7', '#16a34a'],
+              borderRadius: 4
             }]
           },
           options: {
             responsive: true,
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: false } }
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    return `R$ ${context.parsed.y.toFixed(2)} / sc`;
+                  }
+                }
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: false,
+                ticks: {
+                  callback: function(val) { return 'R$ ' + Number(val).toFixed(2); }
+                },
+                grid: { color: '#f1f5f9' }
+              }
+            }
           }
         });
+      }
+    }
+
+    function updateTermStructureTable(spot, storagePerMonth, annualInterest, lossPct, selectedContract) {
+      const tbody = document.getElementById('carry-curve-tbody');
+      if (!tbody) return;
+
+      const monthlyRate = (annualInterest / 12.0) / 100.0;
+      const techLoss = spot * (lossPct / 100.0);
+
+      const contracts = [
+        { name: 'Março (Spot)', months: 0, fwd: spot, isSpot: true },
+        { name: 'Maio', key: 'MAI', months: 2, fwd: spot + 2 * 2.20 },
+        { name: 'Julho', key: 'JUL', months: 4, fwd: spot + 4 * 2.20 },
+        { name: 'Agosto', key: 'AGO', months: 5, fwd: spot + 5 * 2.20 },
+        { name: 'Setembro', key: 'SET', months: 6, fwd: spot + 6 * 2.20 }
+      ];
+
+      tbody.innerHTML = contracts.map(c => {
+        if (c.isSpot) {
+          return `
+          <tr class="bg-slate-50/70 font-medium">
+            <td class="px-3 py-2 font-bold text-slate-900">${c.name}</td>
+            <td class="px-3 py-2 text-right text-slate-500">Imediato</td>
+            <td class="px-3 py-2 text-right font-bold text-slate-900">R$ ${c.fwd.toFixed(2)}</td>
+            <td class="px-3 py-2 text-right text-slate-400">-</td>
+            <td class="px-3 py-2 text-right text-slate-400">-</td>
+            <td class="px-3 py-2 text-right text-slate-400">-</td>
+            <td class="px-3 py-2 text-center">
+              <span class="px-2 py-0.5 text-[10px] font-semibold rounded bg-slate-200 text-slate-700">BASE SPOT</span>
+            </td>
+          </tr>`;
+        }
+
+        const spread = c.fwd - spot;
+        const stg = storagePerMonth * c.months;
+        const fin = spot * (Math.pow(1.0 + monthlyRate, c.months) - 1.0);
+        const cost = stg + fin + techLoss;
+        const net = spread - cost;
+        const isSelected = selectedContract === c.key;
+        const isCarry = net >= 0;
+
+        return `
+        <tr class="hover:bg-slate-50 ${isSelected ? 'bg-green-50/40 border-l-2 border-l-green-600' : ''}">
+          <td class="px-3 py-2 font-bold text-slate-900">
+            ${c.name} ${isSelected ? '<span class="ml-1 text-[10px] bg-green-100 text-green-800 px-1.5 py-0.5 rounded">Selecionado</span>' : ''}
+          </td>
+          <td class="px-3 py-2 text-right text-slate-600">+${c.months} meses</td>
+          <td class="px-3 py-2 text-right font-semibold text-slate-900">R$ ${c.fwd.toFixed(2)}</td>
+          <td class="px-3 py-2 text-right font-semibold text-slate-700">+R$ ${spread.toFixed(2)}</td>
+          <td class="px-3 py-2 text-right text-red-600">-R$ ${cost.toFixed(2)}</td>
+          <td class="px-3 py-2 text-right font-bold ${isCarry ? 'text-green-700' : 'text-red-600'}">
+            ${net >= 0 ? '+' : ''}R$ ${net.toFixed(2)}
+          </td>
+          <td class="px-3 py-2 text-center">
+            <span class="px-2 py-0.5 text-[10px] font-bold rounded-full ${isCarry ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+              ${isCarry ? 'CARREGAR' : 'VENDER SPOT'}
+            </span>
+          </td>
+        </tr>`;
+      }).join('');
+    }
+
+    async function calculateCarry() {
+      const spot = parseFloat(document.getElementById('carry-spot').value) || 125.0;
+      const forward = parseFloat(document.getElementById('carry-forward').value) || 133.80;
+      const months = parseFloat(document.getElementById('carry-months').value) || 4.0;
+      const annualInterest = parseFloat(document.getElementById('carry-interest').value) || 10.5;
+      const storage = parseFloat(document.getElementById('carry-storage').value) || 0.50;
+      const loss = parseFloat(document.getElementById('carry-loss').value) || 0.25;
+      const contractKey = document.getElementById('carry-contract').value;
+
+      const payload = {
+        spot_price_brl_bag: spot,
+        forward_price_brl_bag: forward,
+        months_to_forward: months,
+        financial_cost_pct_month: annualInterest / 12.0,
+        storage_cost_brl_bag_month: storage,
+        technical_loss_pct: loss
+      };
+
+      try {
+        const res = await fetch(`${API_BASE}/carry/calculate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        lastCarryData = data;
+        lastCarryPayload = payload;
+
+        // Spread Card
+        const spreadVal = data.gross_spread_brl_bag !== undefined ? data.gross_spread_brl_bag : (forward - spot);
+        const spreadPct = spot > 0 ? ((spreadVal / spot) * 100) : 0;
+        document.getElementById('carry-spread').innerText = `+R$ ${spreadVal.toFixed(2)} / sc`;
+        const spreadPctEl = document.getElementById('carry-spread-pct');
+        if (spreadPctEl) spreadPctEl.innerText = `${spreadPct >= 0 ? '+' : ''}${spreadPct.toFixed(2)}%`;
+
+        // Total Cost Card
+        const costVal = data.total_carry_cost_brl_bag || 0;
+        document.getElementById('carry-cost').innerText = `-R$ ${costVal.toFixed(2)} / sc`;
+        const breakdownSubEl = document.getElementById('carry-breakdown-sub');
+        if (breakdownSubEl) {
+          breakdownSubEl.innerText = `Arm: R$ ${(data.total_storage_cost_brl_bag || 0).toFixed(2)} | Juros: R$ ${(data.total_financial_cost_brl_bag || 0).toFixed(2)}`;
+        }
+
+        // Net Carry Card
+        const netEl = document.getElementById('carry-net');
+        const netVal = data.net_carry_brl_bag !== undefined ? data.net_carry_brl_bag : (spreadVal - costVal);
+        netEl.innerText = `${netVal >= 0 ? '+' : ''}R$ ${netVal.toFixed(2)} / sc`;
+        netEl.className = `text-lg font-bold mt-0.5 ${netVal >= 0 ? 'text-green-700' : 'text-red-600'}`;
+
+        // Annualized Return Card
+        const annualEl = document.getElementById('carry-annual');
+        const annualVal = data.annualized_return_pct || 0;
+        if (annualEl) annualEl.innerText = `${annualVal >= 0 ? '+' : ''}${annualVal.toFixed(2)}% a.a.`;
+        const periodRetEl = document.getElementById('carry-period-ret');
+        if (periodRetEl) {
+          periodRetEl.innerText = `Período: ${(data.net_return_pct || 0) >= 0 ? '+' : ''}${(data.net_return_pct || 0).toFixed(2)}%`;
+        }
+
+        // Banner de Decisão
+        const decBox = document.getElementById('carry-decision-box');
+        const decText = document.getElementById('carry-decision-text');
+        if (netVal > 0.75) {
+          decBox.className = 'p-4 rounded-lg bg-green-50 border border-green-200 text-green-900 text-sm';
+          decText.innerText = data.detailed_rationale || 'CARREGAR POSIÇÃO: O prêmio da curva forward supera os custos totais de carrego.';
+        } else if (netVal < -0.75) {
+          decBox.className = 'p-4 rounded-lg bg-red-50 border border-red-200 text-red-900 text-sm';
+          decText.innerText = data.detailed_rationale || 'VENDER SPOT: Mercado em inversão ou spread insuficiente para cobrir o custo de carrego.';
+        } else {
+          decBox.className = 'p-4 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-sm';
+          decText.innerText = data.detailed_rationale || 'NEUTRO / INDIFERENTE: O spread forward empata com os custos de carrego.';
+        }
+
+        // Renderizar Gráfico
+        renderCarryChart(data, payload);
+
+        // Atualizar Tabela de Estrutura a Termo
+        updateTermStructureTable(spot, storage, annualInterest, loss, contractKey);
+
+        if (window.lucide) lucide.createIcons();
 
       } catch (err) {
         console.error('Erro no cálculo de carry:', err);
