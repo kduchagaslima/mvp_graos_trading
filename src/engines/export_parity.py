@@ -70,9 +70,11 @@ class ExportParityEngine:
         # 3. Deduções portuárias
         elevation_brl_bag = (elevation_usd_ton * inp.usd_brl_fx) * ton_to_bag_factor
         other_port_costs_brl_bag = other_port_costs_ton * ton_to_bag_factor
+        demurrage_usd_ton = inp.demurrage_usd_ton or 0.0
+        demurrage_brl_bag = (demurrage_usd_ton * inp.usd_brl_fx) * ton_to_bag_factor
         
         # Preço FAS (Free Alongside Ship) entregue no porto
-        fas_brl_bag = fob_brl_bag - elevation_brl_bag - other_port_costs_brl_bag
+        fas_brl_bag = fob_brl_bag - elevation_brl_bag - other_port_costs_brl_bag - demurrage_brl_bag
         
         # 4. Frete Rodoviário interior-porto
         freight_brl_bag = freight_ton * ton_to_bag_factor
@@ -114,6 +116,8 @@ class ExportParityEngine:
             fob_gross_brl_bag=round(fob_brl_bag, 2),
             elevation_brl_bag=round(elevation_brl_bag, 2),
             other_port_costs_brl_bag=round(other_port_costs_brl_bag, 2),
+            demurrage_brl_bag=round(demurrage_brl_bag, 2),
+            demurrage_usd_ton=round(demurrage_usd_ton, 2),
             fas_brl_bag=round(fas_brl_bag, 2),
             freight_brl_bag=round(freight_brl_bag, 2),
             brokerage_fee_brl_bag=round(inp.brokerage_fee_brl_bag, 2),

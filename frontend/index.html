@@ -11,9 +11,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   
-  <!-- Lucide Icons & Chart.js -->
+  <!-- Lucide Icons, Chart.js & Lightweight Charts -->
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
 
   <style>
     body { font-family: 'Inter', sans-serif; }
@@ -121,7 +122,7 @@
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Porto</label>
-              <select id="input-port" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:outline-none">
+              <select id="input-port" onchange="onPortChange()" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:outline-none">
                 <option value="STS" selected>Santos (STS)</option>
                 <option value="PNG">Paranaguá (PNG)</option>
                 <option value="RG">Rio Grande (RG)</option>
@@ -185,6 +186,34 @@
               <div>
                 <label class="block text-[11px] font-semibold text-slate-500 mb-1">Comissão (R$/sc)</label>
                 <input type="number" id="input-broker-fee" value="0.50" step="0.05" min="0" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:ring-2 focus:ring-green-500 focus:outline-none" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Seção de Custos Portuários & Demurrage -->
+          <div class="pt-3 border-t border-slate-200 space-y-2">
+            <div class="flex items-center justify-between">
+              <label class="block text-xs font-bold text-slate-700 uppercase flex items-center space-x-1.5">
+                <i data-lucide="anchor" class="w-3.5 h-3.5 text-sky-600"></i>
+                <span>Custos Portuários & Fila</span>
+              </label>
+              <button type="button" onclick="openPortsModal()" class="text-[11px] text-sky-700 hover:text-sky-900 font-semibold flex items-center space-x-1 transition">
+                <i data-lucide="layers" class="w-3 h-3"></i>
+                <span>Comparar Portos</span>
+              </button>
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-1" title="Terminal Handling Charge">Elevação (USD/t)</label>
+                <input type="number" id="input-elevation" value="8.00" step="0.25" min="0" oninput="calculateParity()" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:ring-2 focus:ring-green-500 focus:outline-none" />
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-1" title="Amostragem, classificação e despacho">Acessórias (R$/t)</label>
+                <input type="number" id="input-other-port" value="15.00" step="0.5" min="0" oninput="calculateParity()" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:ring-2 focus:ring-green-500 focus:outline-none" />
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-1" title="Provisão de sobreestadia de navio">Demurrage (USD/t)</label>
+                <input type="number" id="input-demurrage" value="2.50" step="0.25" min="0" oninput="calculateParity()" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:ring-2 focus:ring-green-500 focus:outline-none" />
               </div>
             </div>
           </div>
@@ -325,7 +354,7 @@
           <div class="grid grid-cols-2 gap-2">
             <div>
               <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">CDI / Selic (% a.a.)</label>
-              <input type="number" id="carry-interest" value="10.5" step="0.25" oninput="calculateCarry()" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-2 text-sm font-semibold focus:ring-2 focus:ring-green-500 focus:outline-none" />
+              <input type="number" id="carry-interest" value="13.65" step="0.25" oninput="this.dataset.userEdited='true'; calculateCarry()" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-2 text-sm font-semibold focus:ring-2 focus:ring-green-500 focus:outline-none" />
             </div>
             <div>
               <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Armazém (R$/sc/mês)</label>
@@ -431,6 +460,123 @@
     <!-- TAB 4: DERIVATIVOS B3 & CEPEA -->
     <!-- ============================================================== -->
     <section id="tab-b3" class="tab-content hidden space-y-6">
+      
+      <!-- 1. PAINEL DE INDICADORES MACROECONÔMICOS (BACEN SGS) -->
+      <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-100">
+          <div class="flex items-center space-x-2.5">
+            <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
+              <i data-lucide="landmark" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <h2 class="text-base font-bold text-slate-900">Indicadores Macroeconômicos Oficiais (Banco Central do Brasil)</h2>
+              <p class="text-xs text-slate-500">Taxas oficiais do SGS/BACEN utilizadas no cálculo de custo de oportunidade, funding e reajustes.</p>
+            </div>
+          </div>
+          <button onclick="triggerMacroExtract()" id="btn-extract-macro" class="bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-xs px-3.5 py-2 rounded-lg transition flex items-center space-x-1.5 self-start sm:self-center shadow-sm">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+            <span>Sincronizar BACEN</span>
+          </button>
+        </div>
+
+        <!-- 4 Cards Macro -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] text-slate-500 font-semibold">Taxa CDI Over</span>
+              <span class="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-semibold">BACEN 4389</span>
+            </div>
+            <div class="text-xl font-bold text-slate-900 mt-1" id="macro-cdi">13,65% <span class="text-xs font-normal text-slate-500">a.a.</span></div>
+            <span class="text-[10px] text-slate-400" id="macro-cdi-sub">Custo Carry Trade</span>
+          </div>
+
+          <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] text-slate-500 font-semibold">Meta Selic (Copom)</span>
+              <span class="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.2 rounded font-semibold">SGS 432</span>
+            </div>
+            <div class="text-xl font-bold text-slate-900 mt-1" id="macro-selic">13,75% <span class="text-xs font-normal text-slate-500">a.a.</span></div>
+            <span class="text-[10px] text-slate-400" id="macro-selic-sub">Taxa Básica</span>
+          </div>
+
+          <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] text-slate-500 font-semibold">IPCA (12 Meses)</span>
+              <span class="text-[10px] bg-purple-100 text-purple-800 px-1.5 py-0.2 rounded font-semibold">SGS 13522</span>
+            </div>
+            <div class="text-xl font-bold text-slate-900 mt-1" id="macro-ipca">4,22%</div>
+            <span class="text-[10px] text-slate-400" id="macro-ipca-sub">Reajuste de Armazém</span>
+          </div>
+
+          <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] text-slate-500 font-semibold">IGP-M Geral (FGV)</span>
+              <span class="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded font-semibold">SGS 189</span>
+            </div>
+            <div class="text-xl font-bold text-slate-900 mt-1" id="macro-igpm">1,57% <span class="text-xs font-normal text-slate-500">12m</span></div>
+            <span class="text-[10px] text-slate-400" id="macro-igpm-sub">Arrendamento Rural</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. GRÁFICO CANDLESTICK (VOLATILIDADE & ACOMPANHAMENTO DE COTAÇÕES) -->
+      <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-2 border-b border-slate-100">
+          <div>
+            <h2 class="text-base font-bold text-slate-900 flex items-center space-x-2">
+              <i data-lucide="candlestick-chart" class="w-4 h-4 text-emerald-600"></i>
+              <span>Gráfico de Velas (Candlestick OHLC) & Volatilidade de Cotações</span>
+            </h2>
+            <p class="text-xs text-slate-500">Acompanhamento de preços de abertura, máxima, mínima e fechamento para apoiar decisões de hedge e originação.</p>
+          </div>
+
+          <!-- Seletores de Ativo e Prazo -->
+          <div class="flex flex-wrap items-center gap-2">
+            <!-- Seleção de Ativo -->
+            <div class="inline-flex bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs font-semibold">
+              <button onclick="setCandleAsset('CBOT_SOJA')" id="btn-candle-CBOT_SOJA" class="candle-asset-btn px-2.5 py-1 rounded bg-white text-slate-900 shadow-sm">
+                🌾 Soja CBOT
+              </button>
+              <button onclick="setCandleAsset('CBOT_MILHO')" id="btn-candle-CBOT_MILHO" class="candle-asset-btn px-2.5 py-1 rounded text-slate-600 hover:text-slate-900">
+                🌽 Milho CBOT
+              </button>
+              <button onclick="setCandleAsset('USD_BRL')" id="btn-candle-USD_BRL" class="candle-asset-btn px-2.5 py-1 rounded text-slate-600 hover:text-slate-900">
+                💵 Dólar
+              </button>
+              <button onclick="setCandleAsset('B3_MILHO')" id="btn-candle-B3_MILHO" class="candle-asset-btn px-2.5 py-1 rounded text-slate-600 hover:text-slate-900">
+                🇧🇷 B3 Milho
+              </button>
+              <button onclick="setCandleAsset('PARIDADE_FAS')" id="btn-candle-PARIDADE_FAS" class="candle-asset-btn px-2.5 py-1 rounded text-slate-600 hover:text-slate-900">
+                🚢 Paridade FAS
+              </button>
+            </div>
+
+            <!-- Seleção de Prazo -->
+            <div class="inline-flex bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs font-medium">
+              <button onclick="setCandleDays(30)" id="btn-days-30" class="candle-days-btn px-2 py-1 rounded bg-white text-slate-900 shadow-sm font-semibold">30D</button>
+              <button onclick="setCandleDays(60)" id="btn-days-60" class="candle-days-btn px-2 py-1 rounded text-slate-600 hover:text-slate-900">60D</button>
+              <button onclick="setCandleDays(90)" id="btn-days-90" class="candle-days-btn px-2 py-1 rounded text-slate-600 hover:text-slate-900">90D</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Barra de Status do Candle Selecionado -->
+        <div id="candle-legend" class="flex flex-wrap items-center gap-4 text-xs font-medium bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+          <span class="text-slate-500 font-semibold" id="candle-legend-title">CBOT Soja (¢/bu):</span>
+          <span class="text-slate-700">Abertura: <strong id="candle-open" class="text-slate-900 font-bold">-</strong></span>
+          <span class="text-slate-700">Máxima: <strong id="candle-high" class="text-green-700 font-bold">-</strong></span>
+          <span class="text-slate-700">Mínima: <strong id="candle-low" class="text-red-700 font-bold">-</strong></span>
+          <span class="text-slate-700">Fechamento: <strong id="candle-close" class="text-slate-900 font-bold">-</strong></span>
+          <span id="candle-change-badge" class="px-2 py-0.5 rounded font-bold text-[11px] bg-slate-200 text-slate-700">-</span>
+        </div>
+
+        <!-- Container do Gráfico Candlestick -->
+        <div class="relative bg-slate-50/50 p-2 rounded-xl border border-slate-200 w-full overflow-hidden">
+          <div id="candlestickChart" class="w-full h-80 sm:h-96"></div>
+        </div>
+      </div>
+
+      <!-- 3. TABELA DE DERIVATIVOS B3 & CEPEA -->
       <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-100">
           <div>
@@ -640,8 +786,12 @@
                 <span class="text-slate-600">100% (Base Exportação)</span>
               </div>
               <div class="flex justify-between p-2 rounded bg-red-50/70 border border-red-200 text-red-700">
-                <span>(-) Elevação Portuária & Despacho</span>
-                <span>USD 7,00 a 8,50 / ton</span>
+                <span>(-) Elevação (THC) & Acessórias Portuárias</span>
+                <span>USD 7,00 a 8,50/t + R$ 10 a 15/t</span>
+              </div>
+              <div class="flex justify-between p-2 rounded bg-red-50/70 border border-red-200 text-red-700">
+                <span>(-) Provisão de Demurrage / Fila do Navio</span>
+                <span>USD 0,80 a 2,50/t (conforme fila do porto)</span>
               </div>
               <div class="flex justify-between p-2 rounded bg-red-50/70 border border-red-200 text-red-700">
                 <span>(-) Frete Rodoviário Origem-Porto</span>
@@ -959,7 +1109,64 @@
 
     </section>
 
-  </main>
+  <!-- MODAL: MATRIZ COMPARATIVA DE CUSTOS PORTUÁRIOS -->
+  <div id="ports-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+      <!-- Header do Modal -->
+      <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+        <div class="flex items-center space-x-2.5">
+          <div class="w-8 h-8 rounded-lg bg-sky-100 text-sky-800 flex items-center justify-center font-bold">
+            <i data-lucide="anchor" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-slate-900">Matriz Comparativa de Custos Portuários (Safra Brasileira)</h3>
+            <p class="text-xs text-slate-500">Tarifas de elevação (THC), despesas acessórias e estimativa de sobreestadia/demurrage.</p>
+          </div>
+        </div>
+        <button onclick="closePortsModal()" class="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-200 transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Tabela Comparativa -->
+      <div class="p-6 overflow-y-auto space-y-4">
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs text-left">
+            <thead class="bg-slate-100 text-slate-700 uppercase border-y border-slate-200 font-bold">
+              <tr>
+                <th class="px-3 py-2.5">Porto</th>
+                <th class="px-3 py-2.5">Estado</th>
+                <th class="px-3 py-2.5 text-right">Elevação (USD/t)</th>
+                <th class="px-3 py-2.5 text-right">Acessórias (R$/t)</th>
+                <th class="px-3 py-2.5 text-center">Fila Média Safra</th>
+                <th class="px-3 py-2.5 text-right">Risco Demurrage (USD/t)</th>
+                <th class="px-3 py-2.5 text-right">Total (USD/t)</th>
+                <th class="px-3 py-2.5 text-right">Total (R$/saca)</th>
+                <th class="px-3 py-2.5 text-center">Ação</th>
+              </tr>
+            </thead>
+            <tbody id="ports-modal-tbody" class="divide-y divide-slate-100">
+              <!-- Preenchido dinamicamente via Javascript -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="p-4 bg-sky-50 rounded-xl border border-sky-100 text-xs text-sky-900 space-y-1">
+          <strong class="font-bold flex items-center gap-1.5"><i data-lucide="info" class="w-4 h-4 text-sky-600"></i> Observação Técnica sobre Demurrage:</strong>
+          <p class="text-slate-600 leading-relaxed text-[11px]">
+            O risco de sobreestadia considera a média de espera de navios tipo Panamax (60k-70k toneladas) durante os meses de pico de escoamento. Terminais do Arco Norte (Barcarena e Itaqui) possuem histórico de filas significativamente menores do que Santos e Paranaguá, reduzindo o custo efetivo total.
+          </p>
+        </div>
+      </div>
+
+      <!-- Footer do Modal -->
+      <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
+        <button onclick="closePortsModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold rounded-lg transition">
+          Fechar
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- FOOTER -->
   <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500">
@@ -986,16 +1193,96 @@
 
       if (tabId === 'matrix') loadRegionalMatrix();
       if (tabId === 'carry') calculateCarry();
-      if (tabId === 'b3') loadB3Quotes();
+      if (tabId === 'b3') {
+        loadB3Quotes();
+        loadMacroIndices();
+        renderCandlestickChart();
+      }
       if (tabId === 'scheduler') loadSchedulerStatus();
       
       lucide.createIcons();
+    }
+
+    // CONFIGURAÇÕES E MODAL DE CUSTOS PORTUÁRIOS
+    const PORT_CONFIGS = {
+      STS: { elevation: 8.00, other: 15.00, demurrage: 2.50 },
+      PNG: { elevation: 7.50, other: 12.00, demurrage: 2.00 },
+      BCR: { elevation: 8.50, other: 14.00, demurrage: 0.80 },
+      ITQ: { elevation: 8.00, other: 12.00, demurrage: 1.20 },
+      RG:  { elevation: 7.00, other: 10.00, demurrage: 1.00 },
+    };
+
+    function onPortChange() {
+      const p = document.getElementById('input-port').value;
+      if (PORT_CONFIGS[p]) {
+        document.getElementById('input-elevation').value = PORT_CONFIGS[p].elevation.toFixed(2);
+        document.getElementById('input-other-port').value = PORT_CONFIGS[p].other.toFixed(2);
+        document.getElementById('input-demurrage').value = PORT_CONFIGS[p].demurrage.toFixed(2);
+      }
+      calculateParity();
+    }
+
+    function openPortsModal() {
+      document.getElementById('ports-modal').classList.remove('hidden');
+      loadPortsSummary();
+    }
+
+    function closePortsModal() {
+      document.getElementById('ports-modal').classList.add('hidden');
+    }
+
+    async function loadPortsSummary() {
+      try {
+        const fx = parseFloat(document.getElementById('input-fx')?.value || 5.485);
+        const res = await fetch(`${API_BASE}/ports/summary?usd_brl_fx=${fx}`);
+        const list = await res.json();
+        const tbody = document.getElementById('ports-modal-tbody');
+        tbody.innerHTML = list.map(p => {
+          const isCurr = document.getElementById('input-port').value === p.id;
+          return `
+            <tr class="hover:bg-slate-50 ${isCurr ? 'bg-sky-50/60 font-semibold' : ''}">
+              <td class="px-3 py-2.5 font-bold text-slate-900 flex items-center space-x-1.5">
+                <span>${p.name}</span>
+                ${isCurr ? '<span class="text-[9px] bg-sky-100 text-sky-800 px-1.5 py-0.5 rounded font-bold">Ativo</span>' : ''}
+              </td>
+              <td class="px-3 py-2.5 text-slate-500 font-medium">${p.state}</td>
+              <td class="px-3 py-2.5 text-right font-medium">$${p.elevation_usd_ton.toFixed(2)}</td>
+              <td class="px-3 py-2.5 text-right text-slate-600">R$ ${p.other_port_costs_brl_ton.toFixed(2)}</td>
+              <td class="px-3 py-2.5 text-center">
+                <span class="px-2 py-0.5 rounded text-[11px] font-semibold ${p.typical_waiting_days > 20 ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}">
+                  ${p.typical_waiting_days} dias
+                </span>
+              </td>
+              <td class="px-3 py-2.5 text-right text-amber-700 font-medium">$${p.demurrage_risk_usd_ton.toFixed(2)}</td>
+              <td class="px-3 py-2.5 text-right font-bold text-slate-800">$${p.total_port_cost_usd_ton.toFixed(2)}</td>
+              <td class="px-3 py-2.5 text-right font-bold text-sky-700">R$ ${p.total_port_cost_brl_bag.toFixed(2)}</td>
+              <td class="px-3 py-2.5 text-center">
+                <button onclick="selectPortFromModal('${p.id}')" class="px-2.5 py-1 text-xs font-semibold rounded bg-sky-600 hover:bg-sky-700 text-white transition shadow-sm">
+                  Usar
+                </button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+        if (window.lucide) lucide.createIcons();
+      } catch (err) {
+        console.error('Erro ao carregar comparativo de portos:', err);
+      }
+    }
+
+    function selectPortFromModal(portId) {
+      document.getElementById('input-port').value = portId;
+      onPortChange();
+      closePortsModal();
     }
 
     // 1. CÁLCULO DE PARIDADE
     async function calculateParity() {
       const brokerPayer = document.getElementById('input-broker-payer') ? document.getElementById('input-broker-payer').value : 'NONE';
       const brokerFee = parseFloat(document.getElementById('input-broker-fee')?.value || 0.50);
+      const elevationUsd = parseFloat(document.getElementById('input-elevation')?.value || 8.00);
+      const otherPortBrl = parseFloat(document.getElementById('input-other-port')?.value || 15.00);
+      const demurrageUsd = parseFloat(document.getElementById('input-demurrage')?.value || 0.0);
 
       const payload = {
         commodity: document.getElementById('input-commodity').value,
@@ -1004,6 +1291,9 @@
         cbot_price_cents: parseFloat(document.getElementById('input-cbot').value),
         port_premium_cents: parseFloat(document.getElementById('input-premium').value),
         usd_brl_fx: parseFloat(document.getElementById('input-fx').value),
+        elevation_usd_ton: elevationUsd,
+        other_port_costs_brl_ton: otherPortBrl,
+        demurrage_usd_ton: demurrageUsd,
         current_cash_price_brl_bag: parseFloat(document.getElementById('input-cash').value),
         brokerage_payer: brokerPayer,
         brokerage_fee_brl_bag: brokerPayer === 'NONE' ? 0.0 : brokerFee
@@ -1046,8 +1336,12 @@
         // Tabela Waterfall
         const freightBag = data.cost_breakdown ? data.cost_breakdown.freight_brl_bag : 0;
         const freightTon = freightBag / 0.06;
-        const portElevBag = data.cost_breakdown ? (data.cost_breakdown.elevation_brl_bag + data.cost_breakdown.other_port_costs_brl_bag) : 0;
-        const portElevUsdTon = portElevBag / (0.06 * payload.usd_brl_fx);
+        const elevBag = data.cost_breakdown ? data.cost_breakdown.elevation_brl_bag : 0;
+        const elevUsdTon = elevBag / (0.06 * payload.usd_brl_fx);
+        const otherPortBag = data.cost_breakdown ? data.cost_breakdown.other_port_costs_brl_bag : 0;
+        const otherPortUsdTon = otherPortBag / (0.06 * payload.usd_brl_fx);
+        const demurrageBag = data.cost_breakdown ? (data.cost_breakdown.demurrage_brl_bag || 0) : 0;
+        const demurrageUsdTon = demurrageBag / (0.06 * payload.usd_brl_fx);
         const taxBag = data.cost_breakdown ? data.cost_breakdown.state_fund_brl_bag : 0;
 
         const wBody = document.getElementById('waterfall-body');
@@ -1065,11 +1359,25 @@
             <td class="px-4 py-2 text-right">${fobBrl > 0 ? ((freightBag / fobBrl) * 100).toFixed(1) : 0}%</td>
           </tr>
           <tr>
-            <td class="px-4 py-2 text-red-600">(-) Despesas Portuárias & Elevação</td>
-            <td class="px-4 py-2 text-right">-$${portElevUsdTon.toFixed(2)}</td>
-            <td class="px-4 py-2 text-right text-red-600">-R$ ${portElevBag.toFixed(2)}</td>
-            <td class="px-4 py-2 text-right">${fobBrl > 0 ? ((portElevBag / fobBrl) * 100).toFixed(1) : 0}%</td>
+            <td class="px-4 py-2 text-red-600">(-) Elevação Portuária (Terminal Handling THC)</td>
+            <td class="px-4 py-2 text-right">-$${elevUsdTon.toFixed(2)}</td>
+            <td class="px-4 py-2 text-right text-red-600">-R$ ${elevBag.toFixed(2)}</td>
+            <td class="px-4 py-2 text-right">${fobBrl > 0 ? ((elevBag / fobBrl) * 100).toFixed(1) : 0}%</td>
           </tr>
+          <tr>
+            <td class="px-4 py-2 text-red-600">(-) Despesas Acessórias (Classificação/Despacho)</td>
+            <td class="px-4 py-2 text-right">-$${otherPortUsdTon.toFixed(2)}</td>
+            <td class="px-4 py-2 text-right text-red-600">-R$ ${otherPortBag.toFixed(2)}</td>
+            <td class="px-4 py-2 text-right">${fobBrl > 0 ? ((otherPortBag / fobBrl) * 100).toFixed(1) : 0}%</td>
+          </tr>
+          ${demurrageBag > 0 ? `
+          <tr class="bg-amber-50/40">
+            <td class="px-4 py-2 text-amber-700">(-) Provisão de Demurrage / Fila Portuária</td>
+            <td class="px-4 py-2 text-right text-amber-700">-$${demurrageUsdTon.toFixed(2)}</td>
+            <td class="px-4 py-2 text-right text-amber-700 font-medium">-R$ ${demurrageBag.toFixed(2)}</td>
+            <td class="px-4 py-2 text-right text-amber-700">${fobBrl > 0 ? ((demurrageBag / fobBrl) * 100).toFixed(1) : 0}%</td>
+          </tr>
+          ` : ''}
           ${brokerPayer === 'TRADING' ? `
           <tr class="bg-amber-50/50">
             <td class="px-4 py-2 text-amber-700 font-medium">(-) Corretagem de Originação (Pago pela Trading)</td>
@@ -1526,7 +1834,227 @@
       }
     }
 
-    // 4. DERIVATIVOS B3 & CEPEA
+    // 4. ÍNDICES MACROECONÔMICOS (BACEN SGS)
+    async function loadMacroIndices() {
+      try {
+        const res = await fetch(`${API_BASE}/macro/indices`);
+        const indices = await res.json();
+        if (!indices || typeof indices !== 'object') return;
+
+        if (indices.CDI_ANNUAL) {
+          const cdiVal = indices.CDI_ANNUAL.value;
+          const el = document.getElementById('macro-cdi');
+          if (el) el.innerHTML = `${cdiVal.toFixed(2)}% <span class="text-xs font-normal text-slate-500">a.a.</span>`;
+          const sub = document.getElementById('macro-cdi-sub');
+          if (sub && indices.CDI_ANNUAL.ref_date) sub.innerText = `Ref: ${indices.CDI_ANNUAL.ref_date}`;
+
+          // Auto-preenche o CDI no Custo de Carrego (se o usuário não editou manualmente)
+          const carryInterest = document.getElementById('carry-interest');
+          if (carryInterest && (!carryInterest.dataset.userEdited || carryInterest.dataset.userEdited === 'false')) {
+            carryInterest.value = cdiVal.toFixed(2);
+          }
+        }
+
+        if (indices.SELIC_META) {
+          const selicVal = indices.SELIC_META.value;
+          const el = document.getElementById('macro-selic');
+          if (el) el.innerHTML = `${selicVal.toFixed(2)}% <span class="text-xs font-normal text-slate-500">a.a.</span>`;
+          const sub = document.getElementById('macro-selic-sub');
+          if (sub && indices.SELIC_META.ref_date) sub.innerText = `Ref: ${indices.SELIC_META.ref_date}`;
+        }
+
+        if (indices.IPCA_12M) {
+          const ipcaVal = indices.IPCA_12M.value;
+          const el = document.getElementById('macro-ipca');
+          if (el) el.innerHTML = `${ipcaVal.toFixed(2)}%`;
+          const sub = document.getElementById('macro-ipca-sub');
+          if (sub && indices.IPCA_12M.ref_date) sub.innerText = `Ref: ${indices.IPCA_12M.ref_date}`;
+        }
+
+        if (indices.IGPM_12M) {
+          const igpmVal = indices.IGPM_12M.value;
+          const el = document.getElementById('macro-igpm');
+          if (el) el.innerHTML = `${igpmVal.toFixed(2)}% <span class="text-xs font-normal text-slate-500">12m</span>`;
+          const sub = document.getElementById('macro-igpm-sub');
+          if (sub && indices.IGPM_12M.ref_date) sub.innerText = `Ref: ${indices.IGPM_12M.ref_date}`;
+        }
+
+      } catch (err) {
+        console.error('Erro ao carregar índices macroeconômicos:', err);
+      }
+    }
+
+    async function triggerMacroExtract() {
+      const btn = document.getElementById('btn-extract-macro');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i><span>Sincronizando...</span>`;
+        if (window.lucide) lucide.createIcons();
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/macro/extract`, { method: 'POST' });
+        const data = await res.json();
+        alert(`✅ Sucesso! ${data.total_upserted || 0} índices do Banco Central (SGS) atualizados no Neon Postgres.`);
+        loadMacroIndices();
+      } catch (err) {
+        alert('Erro ao sincronizar BACEN: ' + err);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = `<i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i><span>Sincronizar BACEN</span>`;
+          if (window.lucide) lucide.createIcons();
+        }
+      }
+    }
+
+    // 5. GRÁFICO CANDLESTICK (LIGHTWEIGHT CHARTS)
+    let candleChartInstance = null;
+    let candleSeries = null;
+    let lastCandle = null;
+    let currentCandleAsset = 'CBOT_SOJA';
+    let currentCandleDays = 30;
+
+    const CANDLE_ASSET_INFO = {
+      'CBOT_SOJA': { title: 'CBOT Soja (¢/bu)', format: val => `${val.toFixed(2)} ¢/bu` },
+      'CBOT_MILHO': { title: 'CBOT Milho (¢/bu)', format: val => `${val.toFixed(2)} ¢/bu` },
+      'USD_BRL': { title: 'Dólar Spot (R$/USD)', format: val => `R$ ${val.toFixed(4)}` },
+      'B3_MILHO': { title: 'Futuro B3 Milho (R$/sc)', format: val => `R$ ${val.toFixed(2)}` },
+      'PARIDADE_FAS': { title: 'Paridade FAS Santos (R$/sc)', format: val => `R$ ${val.toFixed(2)}` }
+    };
+
+    function updateCandleLegend(candle) {
+      if (!candle) return;
+      const assetCfg = CANDLE_ASSET_INFO[currentCandleAsset] || { title: currentCandleAsset, format: val => val.toFixed(2) };
+      const titleEl = document.getElementById('candle-legend-title');
+      if (titleEl) titleEl.innerText = `${assetCfg.title}:`;
+      
+      const openEl = document.getElementById('candle-open');
+      if (openEl) openEl.innerText = assetCfg.format(candle.open);
+      const highEl = document.getElementById('candle-high');
+      if (highEl) highEl.innerText = assetCfg.format(candle.high);
+      const lowEl = document.getElementById('candle-low');
+      if (lowEl) lowEl.innerText = assetCfg.format(candle.low);
+      const closeEl = document.getElementById('candle-close');
+      if (closeEl) closeEl.innerText = assetCfg.format(candle.close);
+
+      const diff = candle.close - candle.open;
+      const pct = candle.open > 0 ? (diff / candle.open) * 100 : 0;
+      const badge = document.getElementById('candle-change-badge');
+      if (badge) {
+        if (diff >= 0) {
+          badge.className = 'px-2 py-0.5 rounded font-bold text-[11px] bg-green-100 text-green-800';
+          badge.innerText = `+${diff.toFixed(2)} (+${pct.toFixed(2)}%)`;
+        } else {
+          badge.className = 'px-2 py-0.5 rounded font-bold text-[11px] bg-red-100 text-red-800';
+          badge.innerText = `${diff.toFixed(2)} (${pct.toFixed(2)}%)`;
+        }
+      }
+    }
+
+    function setCandleAsset(symbol) {
+      currentCandleAsset = symbol;
+      document.querySelectorAll('.candle-asset-btn').forEach(btn => {
+        btn.className = 'candle-asset-btn px-2.5 py-1 rounded text-slate-600 hover:text-slate-900';
+      });
+      const activeBtn = document.getElementById(`btn-candle-${symbol}`);
+      if (activeBtn) {
+        activeBtn.className = 'candle-asset-btn px-2.5 py-1 rounded bg-white text-slate-900 shadow-sm font-semibold';
+      }
+      renderCandlestickChart();
+    }
+
+    function setCandleDays(days) {
+      currentCandleDays = days;
+      document.querySelectorAll('.candle-days-btn').forEach(btn => {
+        btn.className = 'candle-days-btn px-2 py-1 rounded text-slate-600 hover:text-slate-900';
+      });
+      const activeBtn = document.getElementById(`btn-days-${days}`);
+      if (activeBtn) {
+        activeBtn.className = 'candle-days-btn px-2 py-1 rounded bg-white text-slate-900 shadow-sm font-semibold';
+      }
+      renderCandlestickChart();
+    }
+
+    async function renderCandlestickChart() {
+      const container = document.getElementById('candlestickChart');
+      if (!container || typeof LightweightCharts === 'undefined') return;
+
+      try {
+        const res = await fetch(`${API_BASE}/market-data/candlestick/${currentCandleAsset}?days=${currentCandleDays}`);
+        const data = await res.json();
+        if (!Array.isArray(data) || data.length === 0) return;
+
+        if (!candleChartInstance) {
+          container.innerHTML = '';
+          candleChartInstance = LightweightCharts.createChart(container, {
+            width: container.clientWidth || 800,
+            height: container.clientHeight || 360,
+            layout: {
+              background: { type: 'solid', color: 'transparent' },
+              textColor: '#475569',
+              fontFamily: 'Inter, system-ui, sans-serif',
+              fontSize: 11,
+            },
+            grid: {
+              vertLines: { color: '#f1f5f9' },
+              horzLines: { color: '#f1f5f9' },
+            },
+            crosshair: {
+              mode: LightweightCharts.CrosshairMode.Normal,
+            },
+            rightPriceScale: {
+              borderColor: '#e2e8f0',
+            },
+            timeScale: {
+              borderColor: '#e2e8f0',
+              timeVisible: true,
+              secondsVisible: false,
+            },
+          });
+
+          candleSeries = candleChartInstance.addCandlestickSeries({
+            upColor: '#16a34a',
+            downColor: '#dc2626',
+            borderVisible: false,
+            wickUpColor: '#16a34a',
+            wickDownColor: '#dc2626',
+          });
+
+          candleChartInstance.subscribeCrosshairMove(param => {
+            if (!param || !param.time || !param.seriesData) {
+              if (lastCandle) updateCandleLegend(lastCandle);
+              return;
+            }
+            const candle = param.seriesData.get(candleSeries);
+            if (candle) {
+              updateCandleLegend(candle);
+            }
+          });
+
+          window.addEventListener('resize', () => {
+            if (candleChartInstance && container) {
+              candleChartInstance.applyOptions({ width: container.clientWidth });
+            }
+          });
+        } else {
+          candleChartInstance.applyOptions({
+            width: container.clientWidth,
+          });
+        }
+
+        candleSeries.setData(data);
+        candleChartInstance.timeScale().fitContent();
+
+        lastCandle = data[data.length - 1];
+        updateCandleLegend(lastCandle);
+
+      } catch (err) {
+        console.error('Erro ao renderizar gráfico candlestick:', err);
+      }
+    }
+
+    // 6. DERIVATIVOS B3 & CEPEA
     async function loadB3Quotes() {
       try {
         const res = await fetch(`${API_BASE}/b3/quotes`);
@@ -1623,6 +2151,7 @@
     // Inicialização ao carregar a página
     document.addEventListener('DOMContentLoaded', () => {
       calculateParity();
+      loadMacroIndices();
     });
   </script>
 </body>

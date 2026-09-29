@@ -12,6 +12,9 @@ class Port(BaseModel):
     state: str
     elevation_cost_usd_ton: float  # Custo de elevação (THC / Terminal Handling) em USD/ton
     other_port_costs_brl_ton: float  # Amostragem, classificação, despacho em R$/ton
+    typical_waiting_days: int = 15  # Tempo médio de espera de navio em dias (pico de safra)
+    demurrage_risk_usd_ton: float = 1.50  # Provisão típica de demurrage por tonelada em USD/ton
+    main_terminals: List[str] = []
 
 
 class OriginationHub(BaseModel):
@@ -25,26 +28,25 @@ class OriginationHub(BaseModel):
 
 
 PORTS: Dict[str, Port] = {
-    "PNG": Port(
-        id="PNG",
-        name="Porto de Paranaguá",
-        state="PR",
-        elevation_cost_usd_ton=7.50,
-        other_port_costs_brl_ton=12.00,
-    ),
     "STS": Port(
         id="STS",
         name="Porto de Santos",
         state="SP",
         elevation_cost_usd_ton=8.00,
         other_port_costs_brl_ton=15.00,
+        typical_waiting_days=28,
+        demurrage_risk_usd_ton=2.50,
+        main_terminals=["CLI / Rumo", "T-139 Cargill", "ADM Ponta da Praia", "Tiplam VLI", "Cutrale"],
     ),
-    "RG": Port(
-        id="RG",
-        name="Porto de Rio Grande",
-        state="RS",
-        elevation_cost_usd_ton=7.00,
-        other_port_costs_brl_ton=10.00,
+    "PNG": Port(
+        id="PNG",
+        name="Porto de Paranaguá",
+        state="PR",
+        elevation_cost_usd_ton=7.50,
+        other_port_costs_brl_ton=12.00,
+        typical_waiting_days=24,
+        demurrage_risk_usd_ton=2.00,
+        main_terminals=["Corredor Público (APPA)", "Cotriguaçu", "Bunge", "Cargill"],
     ),
     "BCR": Port(
         id="BCR",
@@ -52,6 +54,9 @@ PORTS: Dict[str, Port] = {
         state="PA",
         elevation_cost_usd_ton=8.50,
         other_port_costs_brl_ton=14.00,
+        typical_waiting_days=10,
+        demurrage_risk_usd_ton=0.80,
+        main_terminals=["Terfron (Bunge/Amaggi)", "Ponta da Montanha (Hidrovias)"],
     ),
     "ITQ": Port(
         id="ITQ",
@@ -59,6 +64,19 @@ PORTS: Dict[str, Port] = {
         state="MA",
         elevation_cost_usd_ton=8.00,
         other_port_costs_brl_ton=12.00,
+        typical_waiting_days=14,
+        demurrage_risk_usd_ton=1.20,
+        main_terminals=["Tegram (Consórcio)", "Viterra", "NovaAgri"],
+    ),
+    "RG": Port(
+        id="RG",
+        name="Porto de Rio Grande",
+        state="RS",
+        elevation_cost_usd_ton=7.00,
+        other_port_costs_brl_ton=10.00,
+        typical_waiting_days=12,
+        demurrage_risk_usd_ton=1.00,
+        main_terminals=["Termasa", "Tergrasa", "Bunge"],
     ),
 }
 

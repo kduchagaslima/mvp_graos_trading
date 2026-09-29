@@ -29,7 +29,9 @@ from src.engines.stress_tester import StressTesterEngine
 from src.services.market_data import market_service
 from src.services.extractor import extract_and_persist_market_data
 from src.services.b3_extractor import extract_and_persist_b3_data
+from src.services.bacen_extractor import extract_and_persist_macro_data, BacenMacroExtractor
 from src.scheduler.runner import get_scheduler_status
+import json
 
 
 @asynccontextmanager
@@ -163,6 +165,88 @@ def get_scheduler_info():
     return get_scheduler_status()
 
 
+@app.get("/api/macro/indices")
+def get_macro_indices(db: Session = Depends(get_db)):
+    """Retorna os índices macroeconômicos mais recentes (CDI, Selic, IPCA, IGPM)."""
+    quotes = (
+        db.query(MarketQuote)
+        .filter(MarketQuote.category == "MACRO_INDEX")
+        .order_by(MarketQuote.symbol, MarketQuote.id.desc())
+        .all()
+    )
+    if not quotes:
+        try:
+            summary = extract_and_persist_macro_data(db=db, session_type="FIRST_RUN")
+            return summary.get("indicators", {})
+        except Exception:
+            return BacenMacroExtractor.extract_macro_indicators()
+
+    result = {}
+    for q in quotes:
+        if q.symbol not in result:
+            meta = json.loads(q.metadata_json) if q.metadata_json else {}
+            result[q.symbol] = {
+                "symbol": q.symbol,
+                "name": meta.get("name", q.symbol),
+                "value": q.price,
+                "unit": q.unit,
+                "ref_date": meta.get("ref_date", q.quote_date.strftime("%d/%m/%Y")),
+                "source": q.source,
+            }
+    return result
+
+
+@app.post("/api/macro/extract")
+def trigger_macro_extraction(session_type: str = "MANUAL", db: Session = Depends(get_db)):
+    """Dispara a extração e persistência dos índices oficiais do BACEN SGS."""
+    try:
+        summary = extract_and_persist_macro_data(db=db, session_type=session_type)
+        return summary
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/ports/summary")
+def get_ports_summary(usd_brl_fx: Optional[float] = None):
+    """
+    Retorna o comparativo detalhado de tarifas e riscos de sobreestadia
+    para todos os portos brasileiros de escoamento.
+    """
+    fx = usd_brl_fx or market_service.get_fx_usd_brl()
+    summary = []
+    for port_id, p in PORTS.items():
+        elev_brl_ton = p.elevation_cost_usd_ton * fx
+        demurrage_brl_ton = p.demurrage_risk_usd_ton * fx
+        total_port_brl_ton = elev_brl_ton + p.other_port_costs_brl_ton + demurrage_brl_ton
+        total_port_usd_ton = total_port_brl_ton / fx
+        total_port_brl_bag = total_port_brl_ton * 0.06
+
+        summary.append({
+            "id": p.id,
+            "name": p.name,
+            "state": p.state,
+            "elevation_usd_ton": p.elevation_cost_usd_ton,
+            "other_port_costs_brl_ton": p.other_port_costs_brl_ton,
+            "typical_waiting_days": p.typical_waiting_days,
+            "demurrage_risk_usd_ton": p.demurrage_risk_usd_ton,
+            "main_terminals": p.main_terminals,
+            "total_port_cost_usd_ton": round(total_port_usd_ton, 2),
+            "total_port_cost_brl_ton": round(total_port_brl_ton, 2),
+            "total_port_cost_brl_bag": round(total_port_brl_bag, 2),
+        })
+    return summary
+
+
+@app.get("/api/market-data/candlestick/{symbol}")
+def get_candlestick_data(symbol: str, days: int = 30, db: Session = Depends(get_db)):
+    """
+    Gera histórico em formato OHLC (Open, High, Low, Close) para gráficos Candlestick.
+    Suporta: CBOT_SOJA, CBOT_MILHO, USD_BRL, B3_MILHO, PARIDADE_FAS.
+    """
+    candles = market_service.get_candlestick_series(symbol=symbol, days=days, db=db)
+    return candles
+
+
 # ==============================================================================
 # ENDPOINTS DE CÁLCULO E MOTORES DE PROJEÇÃO
 # ==============================================================================
@@ -183,6 +267,7 @@ def calculate_batch_parity(
     cbot_price_cents: Optional[float] = None,
     port_premium_cents: Optional[float] = None,
     usd_brl_fx: Optional[float] = None,
+    demurrage_usd_ton: Optional[float] = 0.0,
 ):
     """
     Calcula a paridade de exportação simultaneamente para todas as praças de originação,
@@ -202,6 +287,7 @@ def calculate_batch_parity(
             usd_brl_fx=fx,
             hub_id=hub_id,
             port_id=port_id,
+            demurrage_usd_ton=demurrage_usd_ton or 0.0,
             current_cash_price_brl_bag=cash_price,
         )
         res = ExportParityEngine.calculate(inp)

@@ -19,6 +19,7 @@ class ParityCalculationInput(BaseModel):
     freight_brl_ton: Optional[float] = Field(default=None, description="Frete rodoviário interior-porto em R$/tonelada")
     elevation_usd_ton: Optional[float] = Field(default=None, description="Custo de elevação portuária em USD/tonelada")
     other_port_costs_brl_ton: Optional[float] = Field(default=None, description="Outras despesas portuárias em R$/tonelada")
+    demurrage_usd_ton: float = Field(default=0.0, ge=0.0, description="Provisão de sobreestadia/demurrage portuário em USD/tonelada")
     state_tax_fund_brl_bag: Optional[float] = Field(default=None, description="Fundo tributário estadual em R$/saca")
     
     # Margens e deduções comerciais
@@ -36,6 +37,8 @@ class CostBreakdownBag(BaseModel):
     fob_gross_brl_bag: float
     elevation_brl_bag: float
     other_port_costs_brl_bag: float
+    demurrage_brl_bag: float = 0.0
+    demurrage_usd_ton: float = 0.0
     fas_brl_bag: float
     freight_brl_bag: float
     brokerage_fee_brl_bag: float = 0.0

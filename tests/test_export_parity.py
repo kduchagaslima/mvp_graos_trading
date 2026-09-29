@@ -65,3 +65,40 @@ def test_export_parity_missing_hub_raises_error():
     )
     with pytest.raises(ValueError, match="não encontrada"):
         ExportParityEngine.calculate(inp)
+
+
+def test_export_parity_with_demurrage():
+    # Cenário com demurrage de USD 2.50/ton
+    inp_without = ParityCalculationInput(
+        commodity=CommodityType.SOJA,
+        cbot_price_cents=1200.0,
+        port_premium_cents=80.0,
+        usd_brl_fx=5.50,
+        hub_id="sorriso_mt",
+        port_id="STS",
+        freight_brl_ton=420.0,
+        demurrage_usd_ton=0.0,
+    )
+    res_without = ExportParityEngine.calculate(inp_without)
+
+    inp_with = ParityCalculationInput(
+        commodity=CommodityType.SOJA,
+        cbot_price_cents=1200.0,
+        port_premium_cents=80.0,
+        usd_brl_fx=5.50,
+        hub_id="sorriso_mt",
+        port_id="STS",
+        freight_brl_ton=420.0,
+        demurrage_usd_ton=2.50,
+    )
+    res_with = ExportParityEngine.calculate(inp_with)
+
+    # Demurrage R$/saca = 2.50 * 5.50 * 0.06 = 0.825
+    expected_demurrage_bag = 2.50 * 5.50 * 0.06
+    assert res_with.cost_breakdown.demurrage_usd_ton == 2.50
+    assert pytest.approx(res_with.cost_breakdown.demurrage_brl_bag, abs=0.01) == expected_demurrage_bag
+    # No FAS o impacto é direto
+    assert pytest.approx(res_without.cost_breakdown.fas_brl_bag - res_with.cost_breakdown.fas_brl_bag, abs=0.02) == expected_demurrage_bag
+    # Na paridade líquida do interior, o impacto considera quebra e funrural
+    assert res_with.net_parity_price_brl_bag < res_without.net_parity_price_brl_bag
+
