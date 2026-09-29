@@ -14,6 +14,9 @@ echo "=========================================================="
 echo "📦 Empacotando Lambda Serverless para AgriTrading"
 echo "=========================================================="
 
+if [ -d "$PACKAGE_DIR" ] && command -v docker &> /dev/null; then
+    docker run --rm -v "$BUILD_DIR:/build" python:3.11-slim rm -rf /build/package /build/lambda_function.zip 2>/dev/null || true
+fi
 rm -rf "$PACKAGE_DIR" "$OUTPUT_ZIP"
 mkdir -p "$PACKAGE_DIR"
 

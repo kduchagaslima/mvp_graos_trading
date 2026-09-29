@@ -25,6 +25,8 @@ class ParityCalculationInput(BaseModel):
     funrural_pct: float = Field(default=1.5, ge=0.0, le=10.0, description="Funrural percentual (%)")
     shrinkage_loss_pct: float = Field(default=0.3, ge=0.0, le=5.0, description="Quebra técnica / umidade (%)")
     brokerage_margin_usd_ton: float = Field(default=2.0, ge=0.0, description="Margem desejada da trading em USD/ton")
+    brokerage_payer: str = Field(default="NONE", description="Responsável pela corretagem: 'NONE' (direto), 'TRADING' (paga pela trading), 'SELLER' (retida do produtor)")
+    brokerage_fee_brl_bag: float = Field(default=0.0, ge=0.0, description="Comissão do corretor em R$/saca (ex: 0.50)")
     
     # Preço de mercado balcão atual (para cálculo de Basis e margem da originação)
     current_cash_price_brl_bag: Optional[float] = Field(default=None, description="Preço de balcão praticado na praça (R$/saca)")
@@ -36,6 +38,7 @@ class CostBreakdownBag(BaseModel):
     other_port_costs_brl_bag: float
     fas_brl_bag: float
     freight_brl_bag: float
+    brokerage_fee_brl_bag: float = 0.0
     state_fund_brl_bag: float
     funrural_brl_bag: float
     shrinkage_brl_bag: float

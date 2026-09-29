@@ -80,8 +80,12 @@ class ExportParityEngine:
         # 5. Margem da Trading (USD/ton convertida para R$/saca)
         trading_margin_brl_bag = (inp.brokerage_margin_usd_ton * inp.usd_brl_fx) * ton_to_bag_factor
         
+        # 5.1 Comissão do Corretor de Grãos
+        # Se a corretagem for assumida pela trading (TRADING), ela deduz da paridade máxima ofertada
+        brokerage_fee_bag = inp.brokerage_fee_brl_bag if inp.brokerage_payer == "TRADING" else 0.0
+
         # 6. Base preliminar antes de impostos sobre originação
-        price_before_taxes = fas_brl_bag - freight_brl_bag - trading_margin_brl_bag
+        price_before_taxes = fas_brl_bag - freight_brl_bag - trading_margin_brl_bag - brokerage_fee_bag
         
         # 7. Dedução de Fundo Estadual (FETHAB / FUNDEINFRA / etc)
         # O FETHAB é em R$/saca fixa
@@ -112,6 +116,7 @@ class ExportParityEngine:
             other_port_costs_brl_bag=round(other_port_costs_brl_bag, 2),
             fas_brl_bag=round(fas_brl_bag, 2),
             freight_brl_bag=round(freight_brl_bag, 2),
+            brokerage_fee_brl_bag=round(inp.brokerage_fee_brl_bag, 2),
             state_fund_brl_bag=round(state_tax_bag, 2),
             funrural_brl_bag=round(funrural_brl_bag, 2),
             shrinkage_brl_bag=round(shrinkage_brl_bag, 2),
