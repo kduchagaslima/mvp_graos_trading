@@ -478,16 +478,24 @@
         const data = await res.json();
 
         // Cards de Resultado
-        document.getElementById('res-fob-usd').innerHTML = `$${data.fob_price_usd_ton.toFixed(2)} <span class="text-xs font-normal text-slate-500">/ton</span>`;
-        document.getElementById('res-fob-brl').innerText = `R$ ${data.fob_price_brl_bag.toFixed(2)} / saca`;
-        document.getElementById('res-fas-brl').innerHTML = `R$ ${data.fas_parity_brl_bag.toFixed(2)} <span class="text-xs font-normal text-slate-500">/sc</span>`;
-        document.getElementById('res-fas-usd').innerText = `$${data.fas_parity_usd_ton.toFixed(2)} / ton`;
+        const fobUsd = data.fob_usd_ton || 0;
+        const fobBrl = data.fob_brl_bag || 0;
+        const fasBrl = data.net_parity_price_brl_bag || 0;
+        const fasUsd = data.net_parity_price_brl_ton ? (data.net_parity_price_brl_ton / payload.usd_brl_fx) : 0;
+        const marginVal = (data.originator_spread_brl_bag !== null && data.originator_spread_brl_bag !== undefined)
+          ? data.originator_spread_brl_bag 
+          : (fasBrl - (payload.current_cash_price_brl_bag || 0));
+        const marginPct = data.originator_margin_pct || 0;
+
+        document.getElementById('res-fob-usd').innerHTML = `$${fobUsd.toFixed(2)} <span class="text-xs font-normal text-slate-500">/ton</span>`;
+        document.getElementById('res-fob-brl').innerText = `R$ ${fobBrl.toFixed(2)} / saca`;
+        document.getElementById('res-fas-brl').innerHTML = `R$ ${fasBrl.toFixed(2)} <span class="text-xs font-normal text-slate-500">/sc</span>`;
+        document.getElementById('res-fas-usd').innerText = `$${fasUsd.toFixed(2)} / ton`;
         
         const marginEl = document.getElementById('res-margin-brl');
         const marginPctEl = document.getElementById('res-margin-pct');
-        const marginVal = data.trader_margin_brl_bag;
         marginEl.innerText = `${marginVal >= 0 ? '+' : ''}R$ ${marginVal.toFixed(2)} / sc`;
-        marginPctEl.innerText = `${data.margin_percent.toFixed(2)}% de margem`;
+        marginPctEl.innerText = `${marginPct.toFixed(2)}% de margem`;
         
         if (marginVal >= 0) {
           marginEl.className = 'text-2xl font-bold mt-1 text-green-700';
@@ -496,37 +504,43 @@
         }
 
         // Tabela Waterfall
+        const freightBag = data.cost_breakdown ? data.cost_breakdown.freight_brl_bag : 0;
+        const freightTon = freightBag / 0.06;
+        const portElevBag = data.cost_breakdown ? (data.cost_breakdown.elevation_brl_bag + data.cost_breakdown.other_port_costs_brl_bag) : 0;
+        const portElevUsdTon = portElevBag / (0.06 * payload.usd_brl_fx);
+        const taxBag = data.cost_breakdown ? data.cost_breakdown.state_fund_brl_bag : 0;
+
         const wBody = document.getElementById('waterfall-body');
         wBody.innerHTML = `
           <tr class="font-medium bg-slate-50">
             <td class="px-4 py-2 font-bold text-slate-900">Preço FOB Exportação (Porto)</td>
-            <td class="px-4 py-2 text-right">$${data.fob_price_usd_ton.toFixed(2)}</td>
-            <td class="px-4 py-2 text-right font-bold text-slate-900">R$ ${data.fob_price_brl_bag.toFixed(2)}</td>
+            <td class="px-4 py-2 text-right">$${fobUsd.toFixed(2)}</td>
+            <td class="px-4 py-2 text-right font-bold text-slate-900">R$ ${fobBrl.toFixed(2)}</td>
             <td class="px-4 py-2 text-right">100.0%</td>
           </tr>
           <tr>
             <td class="px-4 py-2 text-red-600">(-) Frete Rodoviário Origem-Porto</td>
-            <td class="px-4 py-2 text-right">-$${(data.freight_cost_brl_ton / payload.usd_brl_fx).toFixed(2)}</td>
-            <td class="px-4 py-2 text-right text-red-600">-R$ ${(data.freight_cost_brl_ton * 0.06).toFixed(2)}</td>
-            <td class="px-4 py-2 text-right">${((data.freight_cost_brl_ton * 0.06 / data.fob_price_brl_bag) * 100).toFixed(1)}%</td>
+            <td class="px-4 py-2 text-right">-$${(freightTon / payload.usd_brl_fx).toFixed(2)}</td>
+            <td class="px-4 py-2 text-right text-red-600">-R$ ${freightBag.toFixed(2)}</td>
+            <td class="px-4 py-2 text-right">${fobBrl > 0 ? ((freightBag / fobBrl) * 100).toFixed(1) : 0}%</td>
           </tr>
           <tr>
             <td class="px-4 py-2 text-red-600">(-) Despesas Portuárias & Elevação</td>
-            <td class="px-4 py-2 text-right">-$${data.port_elevation_usd_ton.toFixed(2)}</td>
-            <td class="px-4 py-2 text-right text-red-600">-R$ ${(data.port_elevation_usd_ton * payload.usd_brl_fx * 0.06).toFixed(2)}</td>
-            <td class="px-4 py-2 text-right">${((data.port_elevation_usd_ton * payload.usd_brl_fx * 0.06 / data.fob_price_brl_bag) * 100).toFixed(1)}%</td>
+            <td class="px-4 py-2 text-right">-$${portElevUsdTon.toFixed(2)}</td>
+            <td class="px-4 py-2 text-right text-red-600">-R$ ${portElevBag.toFixed(2)}</td>
+            <td class="px-4 py-2 text-right">${fobBrl > 0 ? ((portElevBag / fobBrl) * 100).toFixed(1) : 0}%</td>
           </tr>
           <tr>
-            <td class="px-4 py-2 text-red-600">(-) Fundo Tributário Estadual (${data.tax_name || 'Isento'})</td>
-            <td class="px-4 py-2 text-right">-$${(data.tax_cost_brl_bag / (0.06 * payload.usd_brl_fx)).toFixed(2)}</td>
-            <td class="px-4 py-2 text-right text-red-600">-R$ ${data.tax_cost_brl_bag.toFixed(2)}</td>
-            <td class="px-4 py-2 text-right">${((data.tax_cost_brl_bag / data.fob_price_brl_bag) * 100).toFixed(1)}%</td>
+            <td class="px-4 py-2 text-red-600">(-) Fundo Tributário Estadual</td>
+            <td class="px-4 py-2 text-right">-$${(taxBag / (0.06 * payload.usd_brl_fx)).toFixed(2)}</td>
+            <td class="px-4 py-2 text-right text-red-600">-R$ ${taxBag.toFixed(2)}</td>
+            <td class="px-4 py-2 text-right">${fobBrl > 0 ? ((taxBag / fobBrl) * 100).toFixed(1) : 0}%</td>
           </tr>
           <tr class="bg-green-50 font-bold text-green-900 border-t border-green-200">
             <td class="px-4 py-2">(=) Paridade Líquida FAS Interior</td>
-            <td class="px-4 py-2 text-right">$${data.fas_parity_usd_ton.toFixed(2)}</td>
-            <td class="px-4 py-2 text-right text-green-800 text-base">R$ ${data.fas_parity_brl_bag.toFixed(2)}</td>
-            <td class="px-4 py-2 text-right">${((data.fas_parity_brl_bag / data.fob_price_brl_bag) * 100).toFixed(1)}%</td>
+            <td class="px-4 py-2 text-right">$${fasUsd.toFixed(2)}</td>
+            <td class="px-4 py-2 text-right text-green-800 text-base">R$ ${fasBrl.toFixed(2)}</td>
+            <td class="px-4 py-2 text-right">${fobBrl > 0 ? ((fasBrl / fobBrl) * 100).toFixed(1) : 0}%</td>
           </tr>
         `;
 
@@ -550,24 +564,42 @@
         const list = await res.json();
         
         const mBody = document.getElementById('matrix-body');
-        mBody.innerHTML = list.map(item => `
+        if (!Array.isArray(list) || list.length === 0) {
+          mBody.innerHTML = `<tr><td colspan="8" class="px-4 py-8 text-center text-slate-500">Nenhuma praça encontrada.</td></tr>`;
+          return;
+        }
+
+        mBody.innerHTML = list.map(item => {
+          const state = (item.hub_id || '').split('_')[1]?.toUpperCase() || '-';
+          const freightBag = item.cost_breakdown ? item.cost_breakdown.freight_brl_bag : 0;
+          const freightTon = freightBag / 0.06;
+          const taxBag = item.cost_breakdown ? item.cost_breakdown.state_fund_brl_bag : 0;
+          const fasBag = item.net_parity_price_brl_bag || 0;
+          const cashBag = item.current_cash_price_brl_bag || 0;
+          const marginBag = (item.originator_spread_brl_bag !== null && item.originator_spread_brl_bag !== undefined)
+            ? item.originator_spread_brl_bag 
+            : (fasBag - cashBag);
+          const isBuy = marginBag >= 0;
+
+          return `
           <tr class="hover:bg-slate-50">
-            <td class="px-4 py-3 font-semibold text-slate-900">${item.hub_name}</td>
-            <td class="px-4 py-3 text-slate-500">${item.state}</td>
-            <td class="px-4 py-3 text-right">R$ ${item.freight_cost_brl_ton.toFixed(2)}/t</td>
-            <td class="px-4 py-3 text-right text-slate-600">R$ ${item.tax_cost_brl_bag.toFixed(2)}</td>
-            <td class="px-4 py-3 text-right font-bold text-slate-900">R$ ${item.fas_parity_brl_bag.toFixed(2)}</td>
-            <td class="px-4 py-3 text-right text-slate-700">R$ ${item.current_cash_price_brl_bag.toFixed(2)}</td>
-            <td class="px-4 py-3 text-right font-bold ${item.trader_margin_brl_bag >= 0 ? 'text-green-700' : 'text-red-600'}">
-              ${item.trader_margin_brl_bag >= 0 ? '+' : ''}R$ ${item.trader_margin_brl_bag.toFixed(2)}
+            <td class="px-4 py-3 font-semibold text-slate-900">${item.hub_name || item.hub_id}</td>
+            <td class="px-4 py-3 text-slate-500 font-medium">${state}</td>
+            <td class="px-4 py-3 text-right">R$ ${freightTon.toFixed(2)}/t</td>
+            <td class="px-4 py-3 text-right text-slate-600">R$ ${taxBag.toFixed(2)}</td>
+            <td class="px-4 py-3 text-right font-bold text-slate-900">R$ ${fasBag.toFixed(2)}</td>
+            <td class="px-4 py-3 text-right text-slate-700">${cashBag > 0 ? 'R$ ' + cashBag.toFixed(2) : '-'}</td>
+            <td class="px-4 py-3 text-right font-bold ${isBuy ? 'text-green-700' : 'text-red-600'}">
+              ${marginBag >= 0 ? '+' : ''}R$ ${marginBag.toFixed(2)}
             </td>
             <td class="px-4 py-3 text-center">
-              <span class="px-2.5 py-1 text-xs font-semibold rounded-full ${item.trader_margin_brl_bag >= 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
-                ${item.trader_margin_brl_bag >= 0 ? 'COMPRAR' : 'AGUARDAR'}
+              <span class="px-2.5 py-1 text-xs font-semibold rounded-full ${isBuy ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                ${isBuy ? 'COMPRAR' : 'AGUARDAR'}
               </span>
             </td>
           </tr>
-        `).join('');
+          `;
+        }).join('');
 
       } catch (err) {
         console.error('Erro ao carregar matriz regional:', err);
@@ -578,12 +610,11 @@
     let carryChartInstance = null;
     async function calculateCarry() {
       const payload = {
-        commodity: document.getElementById('input-commodity').value,
-        spot_price_brl_bag: parseFloat(document.getElementById('carry-spot').value),
-        forward_price_brl_bag: parseFloat(document.getElementById('carry-forward').value),
-        months: parseInt(document.getElementById('carry-months').value),
-        annual_interest_rate_pct: parseFloat(document.getElementById('carry-interest').value),
-        monthly_storage_brl_bag: parseFloat(document.getElementById('carry-storage').value)
+        spot_price_brl_bag: parseFloat(document.getElementById('carry-spot').value) || 125.0,
+        forward_price_brl_bag: parseFloat(document.getElementById('carry-forward').value) || 132.5,
+        months_to_forward: parseFloat(document.getElementById('carry-months').value) || 3.0,
+        financial_cost_pct_month: (parseFloat(document.getElementById('carry-interest').value) || 10.5) / 12.0,
+        storage_cost_brl_bag_month: parseFloat(document.getElementById('carry-storage').value) || 0.45
       };
 
       try {
@@ -594,38 +625,44 @@
         });
         const data = await res.json();
 
-        document.getElementById('carry-spread').innerText = `+R$ ${data.gross_spread_brl_bag.toFixed(2)} / sc`;
-        document.getElementById('carry-cost').innerText = `-R$ ${data.total_carry_cost_brl_bag.toFixed(2)} / sc`;
+        document.getElementById('carry-spread').innerText = `+R$ ${(data.gross_spread_brl_bag || 0).toFixed(2)} / sc`;
+        document.getElementById('carry-cost').innerText = `-R$ ${(data.total_carry_cost_brl_bag || 0).toFixed(2)} / sc`;
         
         const netEl = document.getElementById('carry-net');
-        netEl.innerText = `${data.net_carry_brl_bag >= 0 ? '+' : ''}R$ ${data.net_carry_brl_bag.toFixed(2)} / sc`;
-        netEl.className = `text-xl font-bold mt-1 ${data.net_carry_brl_bag >= 0 ? 'text-green-700' : 'text-red-600'}`;
+        const netVal = data.net_carry_brl_bag || 0;
+        netEl.innerText = `${netVal >= 0 ? '+' : ''}R$ ${netVal.toFixed(2)} / sc`;
+        netEl.className = `text-xl font-bold mt-1 ${netVal >= 0 ? 'text-green-700' : 'text-red-600'}`;
 
         const decBox = document.getElementById('carry-decision-box');
         const decText = document.getElementById('carry-decision-text');
-        if (data.is_carry_viable) {
+        if (netVal >= 0) {
           decBox.className = 'p-4 rounded-lg bg-green-50 border border-green-200 text-green-900 text-sm';
-          decText.innerText = 'CARREGAR POSIÇÃO: O prêmio futuro remunera o custo de oportunidade (juros) e armazenagem física.';
+          decText.innerText = data.detailed_rationale || 'CARREGAR POSIÇÃO: O prêmio futuro remunera o custo de oportunidade (juros) e armazenagem física.';
         } else {
           decBox.className = 'p-4 rounded-lg bg-red-50 border border-red-200 text-red-900 text-sm';
-          decText.innerText = 'VENDER SPOT: Mercado em inversão ou spread insuficiente para cobrir o custo de carrego.';
+          decText.innerText = data.detailed_rationale || 'VENDER SPOT: Mercado em inversão ou spread insuficiente para cobrir o custo de carrego.';
         }
 
         // Gráfico de Decomposição do Carry
         const ctx = document.getElementById('carryChart').getContext('2d');
         if (carryChartInstance) carryChartInstance.destroy();
+        const finCost = data.total_financial_cost_brl_bag || 0;
+        const storCost = data.total_storage_cost_brl_bag || 0;
+        const lossCost = data.total_technical_loss_brl_bag || 0;
+        const breakeven = payload.spot_price_brl_bag + (data.total_carry_cost_brl_bag || 0);
+
         carryChartInstance = new Chart(ctx, {
           type: 'bar',
           data: {
-            labels: ['Preço Spot', 'Custo Financeiro', 'Armazenagem', 'Quebra/Seguro', 'Preço Breakeven', 'Preço Forward'],
+            labels: ['Preço Spot', 'Custo Financeiro', 'Armazenagem', 'Quebra Técnica', 'Preço Breakeven', 'Preço Forward'],
             datasets: [{
               label: 'R$ por Saca',
               data: [
                 payload.spot_price_brl_bag,
-                data.financial_cost_brl_bag,
-                data.storage_cost_brl_bag,
-                data.technical_loss_brl_bag + data.insurance_cost_brl_bag,
-                data.breakeven_price_brl_bag,
+                finCost,
+                storCost,
+                lossCost,
+                breakeven,
                 payload.forward_price_brl_bag
               ],
               backgroundColor: ['#64748b', '#ef4444', '#f97316', '#eab308', '#0284c7', '#16a34a']
