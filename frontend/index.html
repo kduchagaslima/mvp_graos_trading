@@ -64,31 +64,33 @@
 
   <!-- NAVIGATION TABS -->
   <nav class="bg-slate-100 border-b border-slate-200">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-1 sm:space-x-4 overflow-x-auto">
-      <button onclick="switchTab('parity')" id="tab-btn-parity" class="tab-btn active px-4 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 flex items-center space-x-2 whitespace-nowrap">
-        <i data-lucide="calculator" class="w-4 h-4"></i>
-        <span>Paridade Exportação (FAS/FOB)</span>
-      </button>
-      <button onclick="switchTab('matrix')" id="tab-btn-matrix" class="tab-btn px-4 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 flex items-center space-x-2 whitespace-nowrap">
-        <i data-lucide="map" class="w-4 h-4"></i>
-        <span>Matriz Regional de Praças</span>
-      </button>
-      <button onclick="switchTab('carry')" id="tab-btn-carry" class="tab-btn px-4 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 flex items-center space-x-2 whitespace-nowrap">
-        <i data-lucide="trending-up" class="w-4 h-4"></i>
-        <span>Custo de Carrego (Carry)</span>
-      </button>
-      <button onclick="switchTab('b3')" id="tab-btn-b3" class="tab-btn px-4 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 flex items-center space-x-2 whitespace-nowrap">
-        <i data-lucide="badge-percent" class="w-4 h-4"></i>
-        <span>Derivativos B3 & CEPEA</span>
-      </button>
-      <button onclick="switchTab('scheduler')" id="tab-btn-scheduler" class="tab-btn px-4 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 flex items-center space-x-2 whitespace-nowrap">
-        <i data-lucide="clock" class="w-4 h-4"></i>
-        <span>Agendamentos & Auditoria</span>
-      </button>
-      <button onclick="switchTab('manual')" id="tab-btn-manual" class="tab-btn px-4 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 flex items-center space-x-2 whitespace-nowrap">
-        <i data-lucide="book-open" class="w-4 h-4 text-emerald-600"></i>
-        <span class="font-semibold text-emerald-800">Manual Operacional do Trader</span>
-      </button>
+    <div class="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1 py-1 sm:py-0">
+        <button onclick="switchTab('parity')" id="tab-btn-parity" class="tab-btn active px-2 sm:px-3 py-2.5 sm:py-3 text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 flex items-center justify-center space-x-1.5 transition rounded-t-md">
+          <i data-lucide="calculator" class="w-4 h-4 shrink-0"></i>
+          <span class="truncate">Paridade FAS/FOB</span>
+        </button>
+        <button onclick="switchTab('matrix')" id="tab-btn-matrix" class="tab-btn px-2 sm:px-3 py-2.5 sm:py-3 text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 flex items-center justify-center space-x-1.5 transition rounded-t-md">
+          <i data-lucide="map" class="w-4 h-4 shrink-0"></i>
+          <span class="truncate">Matriz Regional</span>
+        </button>
+        <button onclick="switchTab('carry')" id="tab-btn-carry" class="tab-btn px-2 sm:px-3 py-2.5 sm:py-3 text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 flex items-center justify-center space-x-1.5 transition rounded-t-md">
+          <i data-lucide="trending-up" class="w-4 h-4 shrink-0"></i>
+          <span class="truncate">Custo de Carrego</span>
+        </button>
+        <button onclick="switchTab('b3')" id="tab-btn-b3" class="tab-btn px-2 sm:px-3 py-2.5 sm:py-3 text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 flex items-center justify-center space-x-1.5 transition rounded-t-md">
+          <i data-lucide="badge-percent" class="w-4 h-4 shrink-0"></i>
+          <span class="truncate">Derivativos B3</span>
+        </button>
+        <button onclick="switchTab('scheduler')" id="tab-btn-scheduler" class="tab-btn px-2 sm:px-3 py-2.5 sm:py-3 text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 flex items-center justify-center space-x-1.5 transition rounded-t-md">
+          <i data-lucide="clock" class="w-4 h-4 shrink-0"></i>
+          <span class="truncate">Agendamentos</span>
+        </button>
+        <button onclick="switchTab('manual')" id="tab-btn-manual" class="tab-btn px-2 sm:px-3 py-2.5 sm:py-3 text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 flex items-center justify-center space-x-1.5 transition rounded-t-md">
+          <i data-lucide="book-open" class="w-4 h-4 text-emerald-600 shrink-0"></i>
+          <span class="truncate font-semibold text-emerald-800">Manual do Trader</span>
+        </button>
+      </div>
     </div>
   </nav>
 
