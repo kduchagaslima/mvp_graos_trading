@@ -1,0 +1,16 @@
+# ==============================================================================
+# EXEMPLO DE VARIÁVEIS PARA O TERRAFORM (AGRITRADING SERVERLESS)
+# Copie este arquivo para terraform.tfvars e preencha com seus dados.
+# ==============================================================================
+
+aws_region   = "us-east-1"
+environment  = "prod"
+project_name = "agri-trading"
+
+# Connection String do Neon Serverless Postgres (obtida na aba 'Pooled connection' do Neon)
+# IMPORTANTE: Mantenha sempre o parametro sslmode=require
+database_url = "postgresql://neondb_owner:SEU_PASSWORD@ep-sample-pooler.us-east-1.aws.neon.tech/agri_trading?sslmode=require"
+
+# Opcional: Configuração de domínio customizado (deixe vazio para usar a URL padrão do CloudFront)
+custom_domain_name  = ""
+acm_certificate_arn = ""

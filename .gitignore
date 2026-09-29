@@ -28,3 +28,10 @@ htmlcov/
 .vscode/
 .idea/
 .DS_Store
+
+# Terraform
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/terraform.tfvars
+terraform/build/
