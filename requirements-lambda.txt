@@ -1,0 +1,10 @@
+# Dependências de Produção para AWS Lambda Serverless (Lean & Otimizado)
+fastapi>=0.111.0,<0.112.0
+mangum>=0.17.0
+pydantic>=2.7.0,<3.0.0
+pydantic-settings>=2.2.0
+requests>=2.31.0
+sqlalchemy>=2.0.30
+psycopg2-binary>=2.9.9
+pytz>=2024.1
+httpx>=0.27.0

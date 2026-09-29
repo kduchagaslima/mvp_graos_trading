@@ -1,24 +1,3 @@
-# Empacotamento do código-fonte preservando a estrutura de pastas src/
-data "archive_file" "lambda_zip" {
-  type        = "zip"
-  output_path = "${path.module}/build/lambda_function.zip"
-  source_dir  = "${path.module}/../"
-  excludes = [
-    ".git",
-    ".github",
-    ".pytest_cache",
-    ".streamlit",
-    "tests",
-    "terraform",
-    "docker-compose.yml",
-    "Dockerfile",
-    "sql",
-    ".env",
-    "README.md",
-    "ARCHITECTURE.md"
-  ]
-}
-
 # Role de Execução IAM para o AWS Lambda
 resource "aws_iam_role" "lambda_exec" {
   name = "${var.project_name}-lambda-exec-${var.environment}"
@@ -50,12 +29,12 @@ resource "aws_lambda_function" "api" {
   role          = aws_iam_role.lambda_exec.arn
   handler       = "src.api.lambda_handler.handler"
   runtime       = "python3.11"
-  architectures = ["arm64"]
+  architectures = ["x86_64"]
   memory_size   = 512
   timeout       = 30
 
-  filename         = data.archive_file.lambda_zip.output_path
-  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
+  filename         = "${path.module}/build/lambda_function.zip"
+  source_code_hash = filebase64sha256("${path.module}/build/lambda_function.zip")
 
   environment {
     variables = {

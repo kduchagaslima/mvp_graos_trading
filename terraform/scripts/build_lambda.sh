@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-# Script de empacotamento da AWS Lambda com dependências Python 3.11 ARM64
+# Script de empacotamento da AWS Lambda com dependências Python 3.11
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TERRAFORM_DIR="$(dirname "$SCRIPT_DIR")"
 REPO_ROOT="$(dirname "$TERRAFORM_DIR")"
@@ -20,24 +20,20 @@ mkdir -p "$PACKAGE_DIR"
 echo "1. Copiando código fonte da aplicação (src/)..."
 cp -r "$REPO_ROOT/src" "$PACKAGE_DIR/src"
 
-echo "2. Instalando dependências de produção para Python 3.11 (Linux arm64)..."
-if command -v pip3 &> /dev/null; then
-    pip3 install \
-        --platform manylinux2014_aarch64 \
-        --target "$PACKAGE_DIR" \
-        --implementation cp \
-        --python-version 3.11 \
-        --only-binary=:all: \
-        --upgrade \
-        -r "$REPO_ROOT/requirements.txt" || {
-            echo "Aviso: Instalação com --platform falhou, tentando instalação padrão com pip..."
-            pip3 install -t "$PACKAGE_DIR" -r "$REPO_ROOT/requirements.txt"
-        }
+echo "2. Instalando dependências de produção para Python 3.11..."
+if command -v docker &> /dev/null; then
+    echo "Usando Docker para garantir binários 100% compatíveis com AWS Lambda..."
+    docker run --rm \
+        -v "$REPO_ROOT/requirements-lambda.txt:/requirements.txt:ro" \
+        -v "$PACKAGE_DIR:/package" \
+        python:3.11-slim \
+        pip install --no-cache-dir --upgrade -t /package -r /requirements.txt
+elif command -v pip3 &> /dev/null; then
+    pip3 install -t "$PACKAGE_DIR" -r "$REPO_ROOT/requirements-lambda.txt"
 elif command -v pip &> /dev/null; then
-    pip install -t "$PACKAGE_DIR" -r "$REPO_ROOT/requirements.txt"
+    pip install -t "$PACKAGE_DIR" -r "$REPO_ROOT/requirements-lambda.txt"
 fi
 
-# Remove arquivos desnecessários para reduzir o tamanho do pacote
 echo "3. Otimizando tamanho do pacote (removendo testes, caches e doc)..."
 find "$PACKAGE_DIR" -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 find "$PACKAGE_DIR" -type d -name "*.dist-info" -exec rm -rf {} + 2>/dev/null || true
