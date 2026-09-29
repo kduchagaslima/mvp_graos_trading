@@ -5,7 +5,6 @@ Permite simular choques em Câmbio (USD/BRL), CBOT, Prêmios e Frete Rodoviário
 
 from typing import List, Dict, Any
 from copy import deepcopy
-import pandas as pd
 
 from src.domain.models import (
     ParityCalculationInput,
@@ -75,11 +74,13 @@ class StressTesterEngine:
         base_input: ParityCalculationInput,
         fx_steps_pct: List[float] = [-10.0, -5.0, 0.0, 5.0, 10.0],
         cbot_steps_cents: List[float] = [-60.0, -30.0, 0.0, 30.0, 60.0],
-    ) -> pd.DataFrame:
+    ) -> Any:
         """
         Gera uma matriz bidimensional de sensibilidade (Câmbio vs CBOT)
         indicando o Preço de Paridade Balcão resultante (R$/saca).
         """
+        import pandas as pd
+
         matrix_data: Dict[str, List[float]] = {}
         
         for cbot_shift in cbot_steps_cents:

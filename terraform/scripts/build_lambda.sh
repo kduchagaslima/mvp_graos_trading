@@ -27,7 +27,7 @@ if command -v docker &> /dev/null; then
         -v "$REPO_ROOT/requirements-lambda.txt:/requirements.txt:ro" \
         -v "$PACKAGE_DIR:/package" \
         python:3.11-slim \
-        bash -c "pip install --no-cache-dir --upgrade -t /package -r /requirements.txt && chmod -R a+rwX /package"
+        bash -c "pip install --no-cache-dir --upgrade -t /package -r /requirements.txt && chown -R $(id -u):$(id -g) /package"
 elif command -v pip3 &> /dev/null; then
     pip3 install -t "$PACKAGE_DIR" -r "$REPO_ROOT/requirements-lambda.txt"
 elif command -v pip &> /dev/null; then
