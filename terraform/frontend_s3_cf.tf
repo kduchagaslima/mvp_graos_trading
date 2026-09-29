@@ -1,3 +1,16 @@
+# Politicas gerenciadas oficiais da AWS para Cache e Origin Request
+data "aws_cloudfront_cache_policy" "caching_optimized" {
+  name = "Managed-CachingOptimized"
+}
+
+data "aws_cloudfront_cache_policy" "caching_disabled" {
+  name = "Managed-CachingDisabled"
+}
+
+data "aws_cloudfront_origin_request_policy" "all_viewer_except_host_header" {
+  name = "Managed-AllViewerExceptHostHeader"
+}
+
 resource "random_id" "bucket_suffix" {
   byte_length = 4
 }
@@ -98,8 +111,8 @@ resource "aws_cloudfront_distribution" "cdn" {
     cached_methods         = ["GET", "HEAD"]
     compress               = true
 
-    # AWS Managed Cache Policy: CachingOptimized
-    cache_policy_id = "658327ea-f89d-4fab-a63d-7e88639e58f6"
+    # Politica gerenciada AWS: CachingOptimized
+    cache_policy_id = data.aws_cloudfront_cache_policy.caching_optimized.id
   }
 
   # Comportamento ordenado para /api/*: Roteia diretamente para o API Gateway sem cache
@@ -111,9 +124,9 @@ resource "aws_cloudfront_distribution" "cdn" {
     cached_methods         = ["GET", "HEAD"]
     compress               = true
 
-    # AWS Managed Policies: CachingDisabled & AllViewerExceptHostHeader
-    cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
-    origin_request_policy_id = "b684b08a-5e13-417b-8254-9721d03701ee"
+    # Politicas gerenciadas AWS: CachingDisabled e AllViewerExceptHostHeader
+    cache_policy_id          = data.aws_cloudfront_cache_policy.caching_disabled.id
+    origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer_except_host_header.id
   }
 
   # Roteamento de rotas para Single Page Application (SPA)
