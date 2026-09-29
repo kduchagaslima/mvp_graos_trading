@@ -23,6 +23,21 @@ except ImportError:
     logger.warning("Mangum não instalado no ambiente local. Necessário para deploy no AWS Lambda.")
 
 
+_db_initialized = False
+
+def ensure_db_initialized():
+    """Garante que as tabelas no Neon Postgres sejam criadas na primeira execução da Lambda."""
+    global _db_initialized
+    if not _db_initialized:
+        try:
+            from src.db.connection import init_db
+            init_db()
+            _db_initialized = True
+            logger.info("Tabelas do banco de dados verificadas/criadas com sucesso na inicializacao da Lambda.")
+        except Exception as err:
+            logger.error(f"Erro ao inicializar tabelas no banco durante execucao da Lambda: {err}")
+
+
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
     Entrypoint principal do AWS Lambda.
@@ -30,6 +45,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     1. EventBridge Scheduler (disparos cron de B3 / Macro)
     2. API Gateway HTTP API v2 (requisições REST / Swagger)
     """
+    ensure_db_initialized()
     logger.info(f"Lambda acionada. Origem/Tipo do evento: {list(event.keys())}")
 
     # 1. Trata disparos agendados via Amazon EventBridge Scheduler
