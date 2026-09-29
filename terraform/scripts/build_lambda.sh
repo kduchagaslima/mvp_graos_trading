@@ -34,10 +34,10 @@ elif command -v pip &> /dev/null; then
     pip install -t "$PACKAGE_DIR" -r "$REPO_ROOT/requirements-lambda.txt"
 fi
 
-echo "3. Otimizando tamanho do pacote (removendo testes, caches e doc)..."
+echo "3. Otimizando tamanho do pacote (removendo apenas caches desnecessários)..."
 find "$PACKAGE_DIR" -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
-find "$PACKAGE_DIR" -type d -name "*.dist-info" -exec rm -rf {} + 2>/dev/null || true
 find "$PACKAGE_DIR" -type f -name "*.pyc" -delete 2>/dev/null || true
+find "$PACKAGE_DIR" -type d -name "tests" -exec rm -rf {} + 2>/dev/null || true
 
 echo "4. Gerando arquivo compactado: $OUTPUT_ZIP..."
 (cd "$PACKAGE_DIR" && zip -q -r "$OUTPUT_ZIP" .)
