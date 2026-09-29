@@ -14,14 +14,27 @@ from typing import Generator
 
 logger = logging.getLogger(__name__)
 
-# Diretório padrão para dados persistentes locais
-DEFAULT_DATA_DIR = Path("/app/data") if Path("/app").exists() else Path("./data")
-DEFAULT_DATA_DIR.mkdir(parents=True, exist_ok=True)
+# Detecção de ambiente Serverless AWS Lambda (onde /var/task é somente leitura e /tmp é gravável)
+IS_LAMBDA = bool(os.getenv("AWS_LAMBDA_FUNCTION_NAME") or os.getenv("LAMBDA_TASK_ROOT"))
+
+if IS_LAMBDA:
+    DEFAULT_DATA_DIR = Path("/tmp/data")
+elif Path("/app").exists():
+    DEFAULT_DATA_DIR = Path("/app/data")
+else:
+    DEFAULT_DATA_DIR = Path("./data")
 
 DEFAULT_DB_FILE = DEFAULT_DATA_DIR / "market_data.db"
 DEFAULT_DB_URL = f"sqlite:///{DEFAULT_DB_FILE}"
 
 DATABASE_URL = os.getenv("DATABASE_URL", DEFAULT_DB_URL)
+
+# Cria o diretório de dados apenas se estiver usando banco SQLite local
+if DATABASE_URL.startswith("sqlite"):
+    try:
+        DEFAULT_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    except OSError as err:
+        logger.warning(f"Aviso ao criar diretório local SQLite {DEFAULT_DATA_DIR}: {err}")
 
 # Normalização e detecção inteligente de driver para PostgreSQL
 if DATABASE_URL.startswith("postgres://") or (
