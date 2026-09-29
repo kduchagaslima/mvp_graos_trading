@@ -29,6 +29,8 @@ from src.engines.export_parity import ExportParityEngine
 from src.engines.carry_cost import CarryCostEngine
 from src.engines.stress_tester import StressTesterEngine
 from src.services.market_data import market_service
+from src.services.b3_extractor import extract_and_persist_b3_data
+from src.scheduler.runner import get_scheduler_status, trigger_b3_job_now
 from src.db.connection import SessionLocal
 from src.db.repository import MarketDataRepository
 from src.db.models import ExtractionLog
@@ -197,16 +199,26 @@ cash_price = st.sidebar.number_input(
 
 # Ingestão e Persistência no Banco de Dados
 st.sidebar.markdown("---")
-st.sidebar.subheader("🗄️ Base de Dados & ETL")
-if st.sidebar.button("⚡ Extrair & Persistir Market Data", use_container_width=True, help="Coleta cotações do BCB PTAX, CBOT, Prêmios e Físico e grava no PostgreSQL"):
-    with st.spinner("Extraindo e persistindo dados no banco..."):
+st.sidebar.subheader("🗄️ Ingestão & Base de Dados")
+if st.sidebar.button("⚡ Extrair Market Data Macro", use_container_width=True, help="Coleta cotações do BCB PTAX, CBOT, Prêmios e Físico e grava no PostgreSQL"):
+    with st.spinner("Extraindo e persistindo dados macro no banco..."):
         try:
             from src.services.extractor import extract_and_persist_market_data
             summary = extract_and_persist_market_data()
             st.sidebar.success(f"✅ {summary['total_persisted']} cotações gravadas!")
             st.rerun()
         except Exception as e:
-            st.sidebar.error(f"Erro na extração: {e}")
+            st.sidebar.error(f"Erro na extração macro: {e}")
+
+if st.sidebar.button("🇧🇷 Ingerir Derivativos B3 & CEPEA", use_container_width=True, help="Coleta futuros CCM Milho, SJC Soja e Indicadores CEPEA/ESALQ"):
+    with st.spinner("Ingerindo derivativos B3 e CEPEA..."):
+        try:
+            from src.services.b3_extractor import extract_and_persist_b3_data
+            summary_b3 = extract_and_persist_b3_data(session_type="MANUAL_UI")
+            st.sidebar.success(f"✅ {summary_b3['total_persisted']} cotações B3 gravadas!")
+            st.rerun()
+        except Exception as e:
+            st.sidebar.error(f"Erro na extração B3: {e}")
 
 # Cabeçalho Principal com Tipografia Nítida
 st.title("🌾 AgriTrading - Market Data & Motor de Projeções")
@@ -804,20 +816,79 @@ with tab_database:
             recent_logs = db.query(ExtractionLog).order_by(ExtractionLog.id.desc()).limit(5).all()
             
             # KPIs do Banco de Dados com visual claro
-            db_col1, db_col2, db_col3 = st.columns(3)
+            db_col1, db_col2, db_col3, db_col4 = st.columns(4)
             with db_col1:
                 st.metric("Total de Cotações Ativas", len(all_quotes))
             with db_col2:
-                last_log_status = recent_logs[0].status if recent_logs else "Nenhum"
-                st.metric("Status do Último Pipeline ETL", last_log_status)
+                b3_quotes_count = len([q for q in all_quotes if q.category in ("B3_FUTURES", "CEPEA_INDEX")])
+                st.metric("Derivativos B3 / CEPEA", b3_quotes_count)
             with db_col3:
-                last_exec = recent_logs[0].started_at.strftime("%d/%m/%Y %H:%M:%S") if recent_logs else "-"
+                last_log_status = recent_logs[0].status if recent_logs else "Nenhum"
+                st.metric("Status do Último Pipeline", last_log_status)
+            with db_col4:
+                last_exec = recent_logs[0].started_at.strftime("%d/%m %H:%M:%S") if recent_logs else "-"
                 st.metric("Última Execução ETL", last_exec)
 
             st.markdown("<br>", unsafe_allow_html=True)
 
+            # Painel do Scheduler
+            st.write("##### ⏰ Agendamento Automático de Ingestão (Scheduler B3)")
+            sched_col1, sched_col2 = st.columns([2, 1])
+            with sched_col1:
+                st.markdown(
+                    """
+                    <div style="background-color: #ffffff; padding: 16px; border-radius: 8px; border: 1px solid #cbd5e1;">
+                        <span style="font-weight: 700; color: #0f172a; font-size: 0.95rem;">📅 Rotinas Oficiais Programadas (Horário de Brasília - America/Sao_Paulo):</span>
+                        <ul style="margin-top: 8px; margin-bottom: 0px; padding-left: 20px; color: #334155; font-size: 0.9rem;">
+                            <li><b>Fechamento & Ajuste Diário B3:</b> Seg a Sex às <b>19:15</b> (Ajustes oficiais CCM Milho, SJC Soja e CEPEA/ESALQ)</li>
+                            <li><b>Pregão Intraday B3:</b> Seg a Sex a cada <b>30 minutos</b> das <b>09:30 às 16:30</b></li>
+                            <li><b>Market Data Macro:</b> Seg a Sex às <b>18:30</b> (BCB PTAX, Chicago CBOT, Prêmios e Fretes)</li>
+                        </ul>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+            with sched_col2:
+                st.markdown(
+                    """
+                    <div style="background-color: #ffffff; padding: 14px; border-radius: 8px; border: 1px solid #cbd5e1; height: 100%;">
+                        <div style="font-size: 0.85rem; font-weight: 600; color: #64748b;">SERVIÇO SCHEDULER</div>
+                        <div style="font-size: 1.15rem; font-weight: 700; color: #16a34a; margin-top: 2px;">🟢 Ativo / Monitorando</div>
+                        <div style="font-size: 0.8rem; color: #64748b; margin-top: 4px;">Fuso: America/Sao_Paulo</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+                if st.button("▶️ Disparar Ingestão B3 Agora", use_container_width=True, help="Executa imediatamente a coleta dos contratos B3 e CEPEA"):
+                    with st.spinner("Executando ingestão B3 imediata..."):
+                        b3_res = trigger_b3_job_now(session_type="MANUAL_UI")
+                        st.success(f"Ingestão B3 concluída: {b3_res['total_persisted']} registros salvos!")
+                        st.rerun()
+
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # Seção de Destaque: Cotações B3 e CEPEA
+            b3_and_cepea = [q for q in all_quotes if q.category in ("B3_FUTURES", "CEPEA_INDEX")]
+            if b3_and_cepea:
+                st.write("##### 🇧🇷 Cotações de Referência B3 & Indicadores CEPEA/ESALQ")
+                b3_df = pd.DataFrame([
+                    {
+                        "Ativo": q.symbol,
+                        "Commodity": q.commodity,
+                        "Categoria": "Futuro B3" if q.category == "B3_FUTURES" else "Indicador CEPEA",
+                        "Preço / Ajuste": f"R$ {q.price:.2f}" if "R$" in q.unit else f"${q.price:.2f}",
+                        "Unidade": q.unit,
+                        "Fonte": q.source,
+                        "Data Referência": q.quote_date.strftime("%d/%m/%Y") if q.quote_date else "-",
+                        "Horário Coleta": q.timestamp.strftime("%H:%M:%S") if q.timestamp else "-",
+                    }
+                    for q in b3_and_cepea
+                ])
+                st.dataframe(b3_df, hide_index=True, use_container_width=True)
+                st.markdown("<br>", unsafe_allow_html=True)
+
             # Tabela de Cotações Persistidas com Filtro
-            st.write("##### 📋 Cotações Ativas na Base de Dados")
+            st.write("##### 📋 Todas as Cotações Ativas na Base de Dados")
             categories = ["TODAS"] + sorted(list({q.category for q in all_quotes})) if all_quotes else ["TODAS"]
             selected_cat = st.selectbox("Filtrar por Categoria", categories, index=0)
 
@@ -903,3 +974,4 @@ with tab_database:
 
     except Exception as e:
         st.error(f"Erro ao conectar com a base de dados: {e}")
+

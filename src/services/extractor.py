@@ -238,10 +238,9 @@ def extract_and_persist_market_data(
     Executa a coleta de todos os pilares (FX, CBOT, Prêmios, Físico e Frete),
     realiza o upsert atômico e grava log de auditoria.
     """
-    init_db()
-    
     close_db_after = False
     if db is None:
+        init_db()
         db = SessionLocal()
         close_db_after = True
 

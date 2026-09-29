@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from src.db.connection import init_db, get_db
 from src.db.repository import MarketDataRepository
-from src.db.models import ExtractionLog
+from src.db.models import ExtractionLog, MarketQuote
 from src.domain.commodities import CommodityType, COMMODITY_SPECS
 from src.domain.locations import ORIGINATION_HUBS, PORTS
 from src.domain.models import (
@@ -28,6 +28,8 @@ from src.engines.carry_cost import CarryCostEngine
 from src.engines.stress_tester import StressTesterEngine
 from src.services.market_data import market_service
 from src.services.extractor import extract_and_persist_market_data
+from src.services.b3_extractor import extract_and_persist_b3_data
+from src.scheduler.runner import get_scheduler_status
 
 
 @asynccontextmanager
@@ -128,6 +130,37 @@ def get_extraction_logs(limit: int = 10, db: Session = Depends(get_db)):
 def refresh_live_fx():
     rate = market_service.fetch_live_usd_brl()
     return {"status": "success", "usd_brl_fx": rate}
+
+
+@app.post("/api/b3/extract")
+def trigger_b3_extraction(session_type: str = "MANUAL", db: Session = Depends(get_db)):
+    """
+    Executa a extração dos futuros agrícolas da B3 (CCM Milho e SJC Soja)
+    e indicadores CEPEA/ESALQ, persistindo de forma transacional no banco.
+    """
+    try:
+        summary = extract_and_persist_b3_data(db=db, session_type=session_type)
+        return summary
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/b3/quotes")
+def get_latest_b3_quotes(db: Session = Depends(get_db)):
+    """Retorna as cotações ativas mais recentes de derivativos B3 e índices CEPEA."""
+    quotes = (
+        db.query(MarketQuote)
+        .filter(MarketQuote.category.in_(["B3_FUTURES", "CEPEA_INDEX"]))
+        .order_by(MarketQuote.commodity, MarketQuote.symbol)
+        .all()
+    )
+    return [q.to_dict() for q in quotes]
+
+
+@app.get("/api/scheduler/status")
+def get_scheduler_info():
+    """Retorna o status atual do agendador e metadados das rotinas configuradas."""
+    return get_scheduler_status()
 
 
 # ==============================================================================

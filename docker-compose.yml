@@ -79,6 +79,27 @@ services:
       - trading_net
       - nginx-proxy_default
 
+  # 4. Agendador Automático de Ingestão de Dados (B3 & Agro Scheduler)
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: agri_trading_scheduler
+    command: python -m src.scheduler.runner
+    volumes:
+      - .:/app
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgrespassword@db:5432/agri_trading
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
+      - TZ=America/Sao_Paulo
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - trading_net
+
 volumes:
   postgres_data:
     driver: local
