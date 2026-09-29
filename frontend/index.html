@@ -811,42 +811,106 @@
         </div>
       </div>
 
-      <!-- SEÇÃO 4: DECISÃO DE CARRY TRADE -->
+      <!-- SEÇÃO 4: DECISÃO DE CARRY TRADE & CURVA FORWARD -->
       <div id="manual-carry" class="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
         <div class="flex items-center space-x-3 pb-4 border-b border-slate-100">
           <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-lg">4</div>
           <div>
-            <h3 class="text-lg font-bold text-slate-900">Decisão de Carrego (Venda Spot vs Carry Trade)</h3>
-            <p class="text-xs text-slate-500">Quando vale a pena estocar o grão para entrega em contratos futuros?</p>
+            <h3 class="text-lg font-bold text-slate-900">Arbitragem Temporal, Curva Forward & Custo de Carrego</h3>
+            <p class="text-xs text-slate-500">Como analisar a estrutura a termo da safra e decidir entre vender no spot ou estocar para entrega futura.</p>
           </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-slate-700">
-          <div class="space-y-3 text-xs leading-relaxed">
-            <p>
-              Ao originar grãos na colheita (ex: Março), a trading enfrenta a decisão: <strong>vender imediatamente no spot ou estocar para entregar em contrato futuro (ex: Julho/Agosto)?</strong>
-            </p>
-            <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-1">
-              <span class="font-bold text-slate-900 uppercase">Custo Total de Carrego (Carry Cost) =</span>
-              <ul class="list-disc list-inside text-slate-600 pl-1 space-y-0.5">
-                <li><strong>Custo Financeiro de Capital:</strong> Juros do CDI sobre o valor empatado na saca (~0,85% ao mês).</li>
-                <li><strong>Armazenagem Física:</strong> R$ 0,40 a R$ 0,65 por saca/mês.</li>
-                <li><strong>Quebra Técnica & Seguro:</strong> Perda de 0,20% a 0,30% no período.</li>
-              </ul>
+        <div class="space-y-6 text-sm text-slate-700">
+          
+          <!-- Conceito e Equação Fundamental -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="space-y-3 text-xs leading-relaxed">
+              <p>
+                Ao originar grãos na colheita (ex: Março), o operador enfrenta o dilema: <strong>vender imediatamente no spot ou armazenar para entregar em contratos futuros (Maio, Julho, Agosto, Setembro)?</strong>
+              </p>
+              <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                <span class="font-bold text-slate-900 uppercase">Equação do Carry Líquido da Mesa</span>
+                <div class="font-mono text-xs bg-white p-2.5 rounded border border-slate-200 text-slate-800 leading-relaxed">
+                  Spread Bruto Forward = Preço Forward - Preço Spot<br>
+                  Custo Total Carrego = Custo Capital (CDI) + Armazenagem + Quebra<br>
+                  Carry Líquido = Spread Bruto - Custo Total Carrego
+                </div>
+                <ul class="text-[11px] text-slate-600 space-y-1 pt-1">
+                  <li>• <strong>Custo de Capital (CDI):</strong> \( P_{spot} \times ((1 + i_{mensal})^m - 1) \) — juros compostos sobre o capital empatado.</li>
+                  <li>• <strong>Armazenagem Física:</strong> \( Tarifa_{mês} \times m \) — cobrança em R$/saca/mês de armazém geral.</li>
+                  <li>• <strong>Quebra Técnica & Seguro:</strong> Dedução de 0,20% a 0,30% por perdas de umidade e movimentação.</li>
+                </ul>
+              </div>
+            </div>
+
+            <!-- Critérios de Decisão de Mesa com 3 Limiares -->
+            <div class="space-y-3 text-xs">
+              <h4 class="font-bold text-slate-900 uppercase tracking-wide">Diretrizes de Ação da Mesa (3 Níveis de Recomendação):</h4>
+              <div class="p-3 bg-green-50 rounded-xl border border-green-200 text-green-900 space-y-1">
+                <div class="font-bold flex items-center gap-1.5">
+                  <i data-lucide="check-circle" class="w-4 h-4 text-green-600"></i>
+                  <span>SE Carry Líquido > +R$ 0,75/sc: CARREGAR A POSIÇÃO</span>
+                </div>
+                <p class="text-[11px] leading-relaxed">
+                  O prêmio da curva futura cobre juros e armazém e gera rentabilidade líquida adicional com folga de segurança. <strong>Ação:</strong> Comprar no spot, travar a venda futura na B3/Exportação e alugar armazém credenciado.
+                </p>
+              </div>
+
+              <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-amber-900 space-y-1">
+                <div class="font-bold flex items-center gap-1.5">
+                  <i data-lucide="help-circle" class="w-4 h-4 text-amber-600"></i>
+                  <span>SE -R$ 0,75 ≤ Carry Líquido ≤ +R$ 0,75/sc: NEUTRO / INDIFERENTE</span>
+                </div>
+                <p class="text-[11px] leading-relaxed">
+                  O spread futuro empata rigorosamente com os custos financeiros e operacionais. <strong>Ação:</strong> Avaliar disponibilidade de capacidade estática do armazém e oportunidades logísticas antes de imobilizar capital.
+                </p>
+              </div>
+
+              <div class="p-3 bg-red-50 rounded-xl border border-red-200 text-red-900 space-y-1">
+                <div class="font-bold flex items-center gap-1.5">
+                  <i data-lucide="x-circle" class="w-4 h-4 text-red-600"></i>
+                  <span>SE Carry Líquido < -R$ 0,75/sc: VENDER SPOT IMEDIATAMENTE</span>
+                </div>
+                <p class="text-[11px] leading-relaxed">
+                  Mercado em inversão (backwardation) ou com spread insuficiente. Estocar causa queima de caixa e prejuízo real. <strong>Ação:</strong> Liquidar o grão à vista no balcão e girar o estoque.
+                </p>
+              </div>
             </div>
           </div>
 
-          <div class="space-y-3 text-xs">
-            <h4 class="font-bold text-slate-900">Critério de Decisão da Mesa:</h4>
-            <div class="p-3 bg-green-50 rounded-lg border border-green-200 text-green-900 space-y-1">
-              <span class="font-bold flex items-center gap-1.5"><i data-lucide="arrow-up-circle" class="w-4 h-4"></i> SE Carry Líquido > R$ 0,00 (Contango Remunerador):</span>
-              <p>O prêmio do mercado futuro paga com folga a armazenagem e os juros. <strong>Decisão: CARREGAR A POSIÇÃO</strong> e travar a venda futura na B3/Exportação.</p>
-            </div>
-            <div class="p-3 bg-red-50 rounded-lg border border-red-200 text-red-900 space-y-1">
-              <span class="font-bold flex items-center gap-1.5"><i data-lucide="arrow-down-circle" class="w-4 h-4"></i> SE Carry Líquido ≤ R$ 0,00 (Inversão ou Spread Curto):</span>
-              <p>O spread futuro não cobre o custo de oportunidade do dinheiro e armazenagem. <strong>Decisão: VENDER SPOT</strong> e liberar capacidade estática de armazém.</p>
+          <!-- Guia de Análise Visual e Estrutura a Termo -->
+          <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3 text-xs">
+            <h4 class="font-bold text-slate-900 uppercase tracking-wide flex items-center space-x-2">
+              <i data-lucide="line-chart" class="w-4 h-4 text-blue-600"></i>
+              <span>Como Utilizar as Ferramentas da Plataforma na Prática</span>
+            </h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="bg-white p-3.5 rounded-lg border border-slate-200 space-y-1.5">
+                <strong class="text-slate-900 font-bold block">1. Gráfico da Curva Temporal & Ponto de Breakeven</strong>
+                <p class="text-slate-600 leading-relaxed">
+                  No alternador <strong>📈 Curva Temporal</strong>, observe o cruzamento da linha vermelha (Custo Total Acumulado) com a linha pontilhada verde (Spread Forward Travado):
+                </p>
+                <ul class="list-disc list-inside text-slate-500 space-y-0.5 pt-1">
+                  <li><strong>À esquerda do cruzamento:</strong> O carrego é superavitário (lucro por antecipação).</li>
+                  <li><strong>Ponto de Cruzamento:</strong> Número máximo de meses em que o estoque se paga (breakeven temporal).</li>
+                  <li><strong>À direita do cruzamento:</strong> Os juros compostos do CDI superam o ganho travado no forward.</li>
+                </ul>
+              </div>
+
+              <div class="bg-white p-3.5 rounded-lg border border-slate-200 space-y-1.5">
+                <strong class="text-slate-900 font-bold block">2. Tabela de Estrutura a Termo Multi-Contratos</strong>
+                <p class="text-slate-600 leading-relaxed">
+                  Consulte a tabela inferior para comparar simultaneamente os contratos da safra (<strong>Maio, Julho, Agosto, Setembro</strong>):
+                </p>
+                <ul class="list-disc list-inside text-slate-500 space-y-0.5 pt-1">
+                  <li>Identifique qual vencimento oferece o maior <strong>Carry Líquido em R$/sc</strong>.</li>
+                  <li>Avalie a <strong>Rentabilidade Anualizada (% a.a.)</strong> para garantir que a operação supera a taxa livre de risco (Selic/CDI) com prêmio atrativo.</li>
+                </ul>
+              </div>
             </div>
           </div>
+
         </div>
       </div>
 
