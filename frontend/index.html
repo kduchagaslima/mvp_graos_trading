@@ -113,7 +113,7 @@
 
           <div>
             <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Commodity</label>
-            <select id="input-commodity" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:outline-none">
+            <select id="input-commodity" onchange="onHubOrCommodityChange()" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:outline-none">
               <option value="SOJA" selected>Soja em Grão (CBOT ZS)</option>
               <option value="MILHO">Milho em Grão (CBOT ZC)</option>
             </select>
@@ -132,7 +132,7 @@
             </div>
             <div>
               <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Origem (Interior)</label>
-              <select id="input-hub" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:outline-none">
+              <select id="input-hub" onchange="onHubOrCommodityChange()" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:outline-none">
                 <option value="sorriso_mt" selected>Sorriso (MT)</option>
                 <option value="rondonopolis_mt">Rondonópolis (MT)</option>
                 <option value="rio_verde_go">Rio Verde (GO)</option>
@@ -214,6 +214,35 @@
               <div>
                 <label class="block text-[11px] font-semibold text-slate-500 mb-1" title="Provisão de sobreestadia de navio">Demurrage (USD/t)</label>
                 <input type="number" id="input-demurrage" value="2.50" step="0.25" min="0" oninput="calculateParity()" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:ring-2 focus:ring-green-500 focus:outline-none" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Seção de Fundos Tributários Estaduais -->
+          <div class="pt-3 border-t border-slate-200 space-y-2">
+            <div class="flex items-center justify-between">
+              <label class="block text-xs font-bold text-slate-700 uppercase flex items-center space-x-1.5">
+                <i data-lucide="landmark" class="w-3.5 h-3.5 text-amber-600"></i>
+                <span id="label-state-tax-title">Fundo Tributário Estadual</span>
+              </label>
+              <button type="button" onclick="openTaxFundsModal()" class="text-[11px] text-amber-700 hover:text-amber-900 font-semibold flex items-center space-x-1 transition">
+                <i data-lucide="table" class="w-3 h-3"></i>
+                <span>Ver Alíquotas</span>
+              </button>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-1" id="label-tax-fund-name">FETHAB (MT)</label>
+                <div class="relative">
+                  <input type="number" id="input-state-tax" value="2.85" step="0.05" min="0" oninput="this.dataset.userEdited='true'; calculateParity()" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:ring-2 focus:ring-green-500 focus:outline-none pr-10" />
+                  <span class="absolute right-2.5 top-1.5 text-[11px] text-slate-400 font-medium pointer-events-none">R$/sc</span>
+                </div>
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-1">Regime / Enquadramento</label>
+                <div class="text-[11px] text-slate-700 bg-slate-100 px-2.5 py-1.5 rounded-lg border border-slate-200 truncate font-medium" id="desc-tax-regime" title="Retenção na fonte pelo adquirente ou recolhimento antecipado">
+                  Retenção na Fonte (MT)
+                </div>
               </div>
             </div>
           </div>
@@ -307,6 +336,57 @@
               <!-- Injetado via Javascript -->
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- TABELA DE REFERÊNCIA: FUNDOS TRIBUTÁRIOS ESTADUAIS INCIDENTES -->
+      <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-100">
+          <div class="flex items-center space-x-2.5">
+            <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
+              <i data-lucide="landmark" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <h2 class="text-base font-bold text-slate-900">🏛️ Fundos Tributários Estaduais Incidentes (Safra Brasileira)</h2>
+              <p class="text-xs text-slate-500">Parâmetros tributários e alíquotas oficiais de retenção por saca praticadas nos principais estados produtores.</p>
+            </div>
+          </div>
+          <span class="text-xs font-semibold px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-md self-start sm:self-center">
+            Vigência Safra 2025/2026
+          </span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs text-left">
+            <thead class="uppercase bg-slate-100 text-slate-700 border-y border-slate-200 font-bold">
+              <tr>
+                <th class="px-4 py-3">Estado / UF</th>
+                <th class="px-4 py-3">Fundo Tributário</th>
+                <th class="px-4 py-3 text-right">Soja (R$/saca)</th>
+                <th class="px-4 py-3 text-right">Milho (R$/saca)</th>
+                <th class="px-4 py-3">Base Legal & Finalidade</th>
+                <th class="px-4 py-3">Regime de Recolhimento</th>
+              </tr>
+            </thead>
+            <tbody id="tax-funds-table-body" class="divide-y divide-slate-100">
+              <!-- Injetado via Javascript a partir de /api/tax-funds/summary -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 text-xs">
+          <div class="p-3.5 bg-slate-50 rounded-lg border border-slate-200">
+            <strong class="text-slate-800 block mb-1">📌 Regra para FETHAB (Mato Grosso):</strong>
+            <p class="text-slate-600 text-[11px] leading-relaxed">
+              O FETHAB incide com R$ 2,85/saca na soja e R$ 1,45/saca no milho. É descontado diretamente na liquidação do produtor caso a trading assuma o frete/exportação. Em vendas com diferimento formal SEFAZ/MT, o valor pode ser ajustado manualmente na calculadora.
+            </p>
+          </div>
+          <div class="p-3.5 bg-slate-50 rounded-lg border border-slate-200">
+            <strong class="text-slate-800 block mb-1">⚖️ Imunidade Tributária (Lei Kandir):</strong>
+            <p class="text-slate-600 text-[11px] leading-relaxed">
+              Operações de exportação direta com embarque em portos do Paraná (Paranaguá) e Rio Grande do Sul (Rio Grande) contam com imunidade constitucional tributária plena (alíquota zero de fundos).
+            </p>
+          </div>
         </div>
       </div>
     </section>
@@ -1168,6 +1248,62 @@
     </div>
   </div>
 
+  <!-- MODAL: MATRIZ DE FUNDOS TRIBUTÁRIOS ESTADUAIS -->
+  <div id="tax-funds-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+      <!-- Header do Modal -->
+      <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+        <div class="flex items-center space-x-2.5">
+          <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
+            <i data-lucide="landmark" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-slate-900">Fundos Tributários Estaduais Incidentes (Safra Brasileira)</h3>
+            <p class="text-xs text-slate-500">Alíquotas oficiais de retenção por saca, base legal e regras de incidência por estado.</p>
+          </div>
+        </div>
+        <button onclick="closeTaxFundsModal()" class="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-200 transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Tabela do Modal -->
+      <div class="p-6 overflow-y-auto space-y-4">
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs text-left">
+            <thead class="bg-slate-100 text-slate-700 uppercase border-y border-slate-200 font-bold">
+              <tr>
+                <th class="px-3 py-2.5">Estado / UF</th>
+                <th class="px-3 py-2.5">Tributo</th>
+                <th class="px-3 py-2.5 text-right">Soja (R$/sc)</th>
+                <th class="px-3 py-2.5 text-right">Milho (R$/sc)</th>
+                <th class="px-3 py-2.5">Base Legal & Finalidade</th>
+                <th class="px-3 py-2.5">Regime / Enquadramento</th>
+              </tr>
+            </thead>
+            <tbody id="tax-funds-modal-tbody" class="divide-y divide-slate-100">
+              <!-- Preenchido dinamicamente via Javascript -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="p-4 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900 space-y-1">
+          <strong class="font-bold flex items-center gap-1.5"><i data-lucide="info" class="w-4 h-4 text-amber-600"></i> Observação Operacional para a Mesa:</strong>
+          <p class="text-slate-600 leading-relaxed text-[11px]">
+            O trader pode alterar o valor do fundo estadual diretamente no formulário de paridade da calculadora para refletir regimes especiais de diferimento, liminares ou incentivos tributários concedidos ao produtor ou à trading pela SEFAZ de cada estado.
+          </p>
+        </div>
+      </div>
+
+      <!-- Footer do Modal -->
+      <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
+        <button onclick="closeTaxFundsModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold rounded-lg transition">
+          Fechar
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- FOOTER -->
   <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500">
     AgriTrading MVP © 2026 | Arquitetura Serverless AWS (CloudFront, API Gateway, Lambda) + Neon Postgres
@@ -1191,7 +1327,10 @@
       document.getElementById(`tab-${tabId}`).classList.remove('hidden');
       document.getElementById(`tab-btn-${tabId}`).classList.add('active');
 
-      if (tabId === 'matrix') loadRegionalMatrix();
+      if (tabId === 'matrix') {
+        loadRegionalMatrix();
+        loadTaxFundsSummary();
+      }
       if (tabId === 'carry') calculateCarry();
       if (tabId === 'b3') {
         loadB3Quotes();
@@ -1276,6 +1415,88 @@
       closePortsModal();
     }
 
+    // CONFIGURAÇÕES E MODAL DE FUNDOS TRIBUTÁRIOS ESTADUAIS
+    const HUB_TAX_DEFAULTS = {
+      'sorriso_mt': { name: 'FETHAB (MT)', SOJA: 2.85, MILHO: 1.45, regime: 'Retenção na Fonte (MT)' },
+      'rondonopolis_mt': { name: 'FETHAB (MT)', SOJA: 2.85, MILHO: 1.45, regime: 'Retenção na Fonte (MT)' },
+      'rio_verde_go': { name: 'FUNDEINFRA (GO)', SOJA: 1.65, MILHO: 0.90, regime: 'Retenção na Fonte (GO)' },
+      'cascavel_pr': { name: 'Isento (PR)', SOJA: 0.00, MILHO: 0.00, regime: 'Isenção Lei Kandir' },
+      'passo_fundo_rs': { name: 'Isento (RS)', SOJA: 0.00, MILHO: 0.00, regime: 'Isenção Lei Kandir' },
+      'lem_ba': { name: 'PRODEAGRO (BA)', SOJA: 0.60, MILHO: 0.35, regime: 'Contribuição Setorial' },
+    };
+
+    function onHubOrCommodityChange() {
+      const hub = document.getElementById('input-hub').value;
+      const comm = document.getElementById('input-commodity').value;
+      const info = HUB_TAX_DEFAULTS[hub] || { name: 'Fundo Estadual', SOJA: 0.00, MILHO: 0.00, regime: 'Geral' };
+      const defaultTax = info[comm] !== undefined ? info[comm] : 0.00;
+
+      const taxInput = document.getElementById('input-state-tax');
+      const taxLabel = document.getElementById('label-tax-fund-name');
+      const taxRegime = document.getElementById('desc-tax-regime');
+
+      if (taxInput && (!taxInput.dataset.userEdited || taxInput.dataset.userEdited === 'false')) {
+        taxInput.value = defaultTax.toFixed(2);
+      }
+      if (taxLabel) taxLabel.innerText = info.name;
+      if (taxRegime) taxRegime.innerText = info.regime;
+
+      calculateParity();
+    }
+
+    function openTaxFundsModal() {
+      document.getElementById('tax-funds-modal').classList.remove('hidden');
+      loadTaxFundsSummary();
+    }
+
+    function closeTaxFundsModal() {
+      document.getElementById('tax-funds-modal').classList.add('hidden');
+    }
+
+    let cachedTaxFunds = null;
+
+    async function loadTaxFundsSummary() {
+      try {
+        if (!cachedTaxFunds) {
+          const res = await fetch(`${API_BASE}/tax-funds/summary`);
+          cachedTaxFunds = await res.json();
+        }
+
+        const rowsHtml = cachedTaxFunds.map(tf => `
+          <tr class="hover:bg-slate-50">
+            <td class="px-4 py-3 font-bold text-slate-900">${tf.state}</td>
+            <td class="px-4 py-3">
+              <span class="px-2.5 py-0.5 rounded font-semibold text-xs ${tf.soja_brl_bag > 0 ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}">
+                ${tf.tributo}
+              </span>
+            </td>
+            <td class="px-4 py-3 text-right font-bold text-slate-900">
+              ${tf.soja_brl_bag > 0 ? 'R$ ' + tf.soja_brl_bag.toFixed(2) : '<span class="text-green-700 font-semibold">Isento (R$ 0,00)</span>'}
+            </td>
+            <td class="px-4 py-3 text-right font-bold text-slate-900">
+              ${tf.milho_brl_bag > 0 ? 'R$ ' + tf.milho_brl_bag.toFixed(2) : '<span class="text-green-700 font-semibold">Isento (R$ 0,00)</span>'}
+            </td>
+            <td class="px-4 py-3 text-slate-600 text-xs">
+              <strong class="text-slate-800">${tf.legal_basis}:</strong> ${tf.finalidade}
+            </td>
+            <td class="px-4 py-3 text-slate-500 text-xs">
+              ${tf.regime}
+            </td>
+          </tr>
+        `).join('');
+
+        const modalTbody = document.getElementById('tax-funds-modal-tbody');
+        if (modalTbody) modalTbody.innerHTML = rowsHtml;
+
+        const tableBody = document.getElementById('tax-funds-table-body');
+        if (tableBody) tableBody.innerHTML = rowsHtml;
+
+        if (window.lucide) lucide.createIcons();
+      } catch (err) {
+        console.error('Erro ao carregar tabela de fundos tributários:', err);
+      }
+    }
+
     // 1. CÁLCULO DE PARIDADE
     async function calculateParity() {
       const brokerPayer = document.getElementById('input-broker-payer') ? document.getElementById('input-broker-payer').value : 'NONE';
@@ -1283,6 +1504,8 @@
       const elevationUsd = parseFloat(document.getElementById('input-elevation')?.value || 8.00);
       const otherPortBrl = parseFloat(document.getElementById('input-other-port')?.value || 15.00);
       const demurrageUsd = parseFloat(document.getElementById('input-demurrage')?.value || 0.0);
+      const stateTaxInput = document.getElementById('input-state-tax');
+      const stateTaxBag = stateTaxInput ? parseFloat(stateTaxInput.value) : null;
 
       const payload = {
         commodity: document.getElementById('input-commodity').value,
@@ -1294,6 +1517,7 @@
         elevation_usd_ton: elevationUsd,
         other_port_costs_brl_ton: otherPortBrl,
         demurrage_usd_ton: demurrageUsd,
+        state_tax_fund_brl_bag: !isNaN(stateTaxBag) ? stateTaxBag : null,
         current_cash_price_brl_bag: parseFloat(document.getElementById('input-cash').value),
         brokerage_payer: brokerPayer,
         brokerage_fee_brl_bag: brokerPayer === 'NONE' ? 0.0 : brokerFee
@@ -1393,12 +1617,21 @@
             <td class="px-4 py-2 text-right text-slate-500 text-xs">Retenção</td>
           </tr>
           ` : '')}
+          ${taxBag > 0 ? `
           <tr>
-            <td class="px-4 py-2 text-red-600">(-) Fundo Tributário Estadual</td>
+            <td class="px-4 py-2 text-red-600">(-) Fundo Tributário Estadual (${(HUB_TAX_DEFAULTS[payload.hub_id] || {}).name || 'Fundo Estadual'})</td>
             <td class="px-4 py-2 text-right">-$${(taxBag / (0.06 * payload.usd_brl_fx)).toFixed(2)}</td>
-            <td class="px-4 py-2 text-right text-red-600">-R$ ${taxBag.toFixed(2)}</td>
+            <td class="px-4 py-2 text-right text-red-600 font-medium">-R$ ${taxBag.toFixed(2)}</td>
             <td class="px-4 py-2 text-right">${fobBrl > 0 ? ((taxBag / fobBrl) * 100).toFixed(1) : 0}%</td>
           </tr>
+          ` : `
+          <tr class="bg-green-50/40">
+            <td class="px-4 py-2 text-green-700">✓ Fundo Tributário Estadual (${(HUB_TAX_DEFAULTS[payload.hub_id] || {}).name || 'Isento'})</td>
+            <td class="px-4 py-2 text-right text-green-700">$0.00</td>
+            <td class="px-4 py-2 text-right text-green-700 font-semibold">R$ 0,00</td>
+            <td class="px-4 py-2 text-right text-green-700">0.0%</td>
+          </tr>
+          `}
           <tr class="bg-green-50 font-bold text-green-900 border-t border-green-200">
             <td class="px-4 py-2">(=) Paridade Líquida FAS Interior</td>
             <td class="px-4 py-2 text-right">$${fasUsd.toFixed(2)}</td>
@@ -2152,6 +2385,7 @@
     document.addEventListener('DOMContentLoaded', () => {
       calculateParity();
       loadMacroIndices();
+      loadTaxFundsSummary();
     });
   </script>
 </body>

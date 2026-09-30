@@ -237,6 +237,17 @@ def get_ports_summary(usd_brl_fx: Optional[float] = None):
     return summary
 
 
+@app.get("/api/tax-funds/summary")
+def get_tax_funds_summary():
+    """
+    Retorna a tabela consolidada de fundos tributários estaduais incidentes
+    (FETHAB MT, FUNDEINFRA GO, PRODEAGRO BA, Isenções PR/RS Lei Kandir).
+    """
+    from src.domain.locations import STATE_TAX_FUNDS
+    return STATE_TAX_FUNDS
+
+
+
 @app.get("/api/market-data/candlestick/{symbol}")
 def get_candlestick_data(symbol: str, days: int = 30, db: Session = Depends(get_db)):
     """

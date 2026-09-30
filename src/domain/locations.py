@@ -3,7 +3,7 @@ Definições de praças de originação, portos de escoamento e custos logístic
 """
 
 from pydantic import BaseModel
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 
 
 class Port(BaseModel):
@@ -173,3 +173,64 @@ ORIGINATION_HUBS: Dict[str, OriginationHub] = {
         typical_cash_basis_discount_brl_bag=3.00,
     ),
 }
+
+
+# Tabela Oficial de Fundos Tributários Estaduais Incidentes
+STATE_TAX_FUNDS: List[Dict[str, Any]] = [
+    {
+        "state": "Mato Grosso (MT)",
+        "uf": "MT",
+        "tributo": "FETHAB",
+        "full_name": "Fundo Estadual de Transporte e Habitação",
+        "soja_brl_bag": 2.85,
+        "milho_brl_bag": 1.45,
+        "legal_basis": "Lei Estadual nº 7.263/2000 (Art. 7º)",
+        "finalidade": "Manutenção, conservação e pavimentação de rodovias estaduais e obras estruturantes.",
+        "regime": "Retenção na fonte pelo adquirente ou recolhimento antecipado nas operações interestaduais/porto.",
+    },
+    {
+        "state": "Goiás (GO)",
+        "uf": "GO",
+        "tributo": "FUNDEINFRA",
+        "full_name": "Fundo Estadual de Infraestrutura",
+        "soja_brl_bag": 1.65,
+        "milho_brl_bag": 0.90,
+        "legal_basis": "Lei Estadual nº 21.670/2022",
+        "finalidade": "Financiamento de obras de infraestrutura viária e modernização do escoamento agrícola em GO.",
+        "regime": "Condição para manutenção de incentivos fiscais e escoamento interestadual/porto.",
+    },
+    {
+        "state": "Bahia (BA)",
+        "uf": "BA",
+        "tributo": "PRODEAGRO",
+        "full_name": "Programa de Desenvolvimento da Agropecuária",
+        "soja_brl_bag": 0.60,
+        "milho_brl_bag": 0.35,
+        "legal_basis": "Lei Estadual nº 13.208/2014",
+        "finalidade": "Fundo de desenvolvimento agropecuário, pesquisa e defesa sanitária vegetal no MATOPIBA.",
+        "regime": "Contribuição facultativa vinculada a benefícios fiscais operacionais da trading.",
+    },
+    {
+        "state": "Paraná (PR)",
+        "uf": "PR",
+        "tributo": "Isento",
+        "full_name": "Imunidade Constitucional (Lei Kandir)",
+        "soja_brl_bag": 0.00,
+        "milho_brl_bag": 0.00,
+        "legal_basis": "Lei Complementar nº 87/1996 (Lei Kandir)",
+        "finalidade": "Imunidade total de ICMS e sem exigência de fundos agropecuários no escoamento via Paranaguá (PNG).",
+        "regime": "Não incidência direta para exportação e originação paranaense.",
+    },
+    {
+        "state": "Rio Grande do Sul (RS)",
+        "uf": "RS",
+        "tributo": "Isento",
+        "full_name": "Imunidade Constitucional (Lei Kandir)",
+        "soja_brl_bag": 0.00,
+        "milho_brl_bag": 0.00,
+        "legal_basis": "Lei Complementar nº 87/1996 (Lei Kandir)",
+        "finalidade": "Imunidade de ICMS e ausência de retenções de fundos estaduais no escoamento via Rio Grande (RG).",
+        "regime": "Isenção total no escoamento para porto gaúcho.",
+    },
+]
+
