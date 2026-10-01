@@ -247,6 +247,62 @@ def get_tax_funds_summary():
     return STATE_TAX_FUNDS
 
 
+# ==============================================================================
+# ENDPOINTS DE LOGÍSTICA E FRETE RODOVIÁRIO
+# ==============================================================================
+
+@app.get("/api/freight/routes")
+def get_freight_routes(db: Session = Depends(get_db)):
+    """
+    Retorna a lista de rotas rodoviárias cadastradas com tarifas spot,
+    distâncias estimadas e corredores logísticos.
+    """
+    return market_service.get_freight_routes(db=db)
+
+
+@app.get("/api/freight/history")
+def get_freight_history(
+    origin: str = "sorriso_mt",
+    destination: str = "STS",
+    days: int = 30,
+    db: Session = Depends(get_db),
+):
+    """
+    Retorna a série temporal e indicadores estatísticos de frete rodoviário
+    para o trecho e período (30D, 60D, 90D) selecionados.
+    """
+    return market_service.get_freight_history(
+        origin_id=origin,
+        destination_id=destination,
+        days=days,
+        db=db,
+    )
+
+
+@app.get("/api/freight/arbitrage")
+def get_freight_arbitrage(
+    origin: str = "sorriso_mt",
+    commodity: str = "SOJA",
+    usd_brl_fx: Optional[float] = None,
+    db: Session = Depends(get_db),
+):
+    """
+    Analisa a arbitragem logística entre corredores (Santos vs. Arco Norte vs. Sul)
+    para uma praça de originação, computando frete rodoviário, elevação portuária e demurrage.
+    """
+    try:
+        return market_service.get_freight_arbitrage_analysis(
+            origin_id=origin,
+            commodity=commodity,
+            usd_brl_fx=usd_brl_fx,
+            db=db,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+
+
 
 @app.get("/api/market-data/candlestick/{symbol}")
 def get_candlestick_data(symbol: str, days: int = 30, db: Session = Depends(get_db)):

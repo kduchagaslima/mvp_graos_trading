@@ -389,6 +389,199 @@
           </div>
         </div>
       </div>
+
+      <!-- SEÇÃO: MONITOR DE HISTÓRICO DE FRETE & ARBITRAGEM LOGÍSTICA -->
+      <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6">
+        
+        <!-- Header da Seção & Controles de Seleção -->
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold shadow-sm">
+              <i data-lucide="truck" class="w-5 h-5 text-emerald-700"></i>
+            </div>
+            <div>
+              <div class="flex items-center space-x-2">
+                <h2 class="text-base font-bold text-slate-900">Monitor de Histórico de Frete & Arbitragem Logística</h2>
+                <span class="text-[10px] bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-full font-bold uppercase tracking-wide">
+                  Série Histórica & Arbitragem
+                </span>
+              </div>
+              <p class="text-xs text-slate-500 mt-0.5">
+                Acompanhe o comportamento temporal dos fretes rodoviários (R$/ton e R$/sc) e analise a economia entre os corredores de escoamento (Santos vs. Arco Norte vs. Sul).
+              </p>
+            </div>
+          </div>
+
+          <!-- Seletores de Rota e Período -->
+          <div class="flex flex-wrap items-center gap-2">
+            <!-- Origem -->
+            <div class="flex items-center space-x-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
+              <span class="text-[11px] font-semibold text-slate-500 uppercase">Origem:</span>
+              <select id="freight-origin-select" onchange="onFreightOriginChange()" class="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer">
+                <option value="sorriso_mt" selected>Sorriso - MT</option>
+                <option value="rondonopolis_mt">Rondonópolis - MT</option>
+                <option value="rio_verde_go">Rio Verde - GO</option>
+                <option value="cascavel_pr">Cascavel - PR</option>
+                <option value="passo_fundo_rs">Passo Fundo - RS</option>
+                <option value="lem_ba">Luís Eduardo Magalhães - BA</option>
+              </select>
+            </div>
+
+            <!-- Destino -->
+            <div class="flex items-center space-x-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
+              <span class="text-[11px] font-semibold text-slate-500 uppercase">Porto:</span>
+              <select id="freight-dest-select" onchange="onFreightDestChange()" class="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer">
+                <option value="STS" selected>Santos (STS)</option>
+                <option value="PNG">Paranaguá (PNG)</option>
+                <option value="BCR">Barcarena (BCR)</option>
+              </select>
+            </div>
+
+            <!-- Período (30D, 60D, 90D) -->
+            <div class="inline-flex bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs">
+              <button onclick="setFreightDays(30)" id="btn-freight-days-30" class="freight-days-btn px-2.5 py-1 font-semibold rounded bg-white text-slate-900 shadow-sm transition">
+                30D
+              </button>
+              <button onclick="setFreightDays(60)" id="btn-freight-days-60" class="freight-days-btn px-2.5 py-1 font-medium text-slate-600 hover:text-slate-900 transition">
+                60D
+              </button>
+              <button onclick="setFreightDays(90)" id="btn-freight-days-90" class="freight-days-btn px-2.5 py-1 font-medium text-slate-600 hover:text-slate-900 transition">
+                90D
+              </button>
+            </div>
+
+            <button onclick="refreshFreightData()" title="Atualizar dados de frete" class="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg border border-slate-200 transition">
+              <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- 4 Cards de Métricas de Frete -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <div class="flex items-center justify-between text-slate-500 text-xs font-medium">
+              <span>Frete Spot Atual</span>
+              <i data-lucide="map-pin" class="w-4 h-4 text-emerald-600"></i>
+            </div>
+            <div class="text-xl font-bold text-slate-900 mt-1" id="kpi-freight-current">R$ 420,00 <span class="text-xs font-normal text-slate-500">/ton</span></div>
+            <div class="text-xs font-semibold text-emerald-700 mt-0.5" id="kpi-freight-current-bag">R$ 25,20 / saca</div>
+          </div>
+
+          <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <div class="flex items-center justify-between text-slate-500 text-xs font-medium">
+              <span>Variação no Período</span>
+              <i data-lucide="trending-up" class="w-4 h-4 text-slate-400"></i>
+            </div>
+            <div class="text-xl font-bold text-slate-900 mt-1" id="kpi-freight-change">+R$ 0,00 <span class="text-xs font-normal text-slate-500">/ton</span></div>
+            <div class="text-xs font-semibold text-slate-600 mt-0.5" id="kpi-freight-change-sub">0.00% | R$ 0,00/sc</div>
+          </div>
+
+          <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <div class="flex items-center justify-between text-slate-500 text-xs font-medium">
+              <span>Faixa (Mín / Média / Máx)</span>
+              <i data-lucide="bar-chart-2" class="w-4 h-4 text-slate-400"></i>
+            </div>
+            <div class="text-lg font-bold text-slate-900 mt-1" id="kpi-freight-range">R$ 410 - R$ 430</div>
+            <div class="text-xs text-slate-500 mt-0.5" id="kpi-freight-avg">Média: R$ 420,00/ton</div>
+          </div>
+
+          <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-200">
+            <div class="flex items-center justify-between text-emerald-800 text-xs font-medium">
+              <span>Economia de Arbitragem</span>
+              <span class="text-[10px] bg-emerald-200 text-emerald-900 px-1.5 py-0.5 rounded font-bold uppercase" id="kpi-arbitrage-corridor">Arco Norte</span>
+            </div>
+            <div class="text-xl font-bold text-emerald-800 mt-1" id="kpi-freight-savings">+R$ 67,58 <span class="text-xs font-normal text-emerald-700">/ton</span></div>
+            <div class="text-xs font-bold text-emerald-700 mt-0.5" id="kpi-freight-savings-bag">+R$ 4,05 / saca vs. Santos</div>
+          </div>
+        </div>
+
+        <!-- Gráfico de Tendência Histórica do Frete -->
+        <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-3">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h3 class="text-sm font-bold text-slate-900 flex items-center space-x-2">
+                <span>Evolução da Tarifa de Frete</span>
+                <span class="text-xs font-normal text-slate-500" id="freight-chart-route-name">(Sorriso - MT ➔ Porto de Santos - STS)</span>
+              </h3>
+              <p class="text-[11px] text-slate-500">Curva temporal diária em R$/tonelada com equivalência direta em R$/saca.</p>
+            </div>
+            <div class="flex items-center space-x-4 text-xs font-medium">
+              <div class="flex items-center space-x-1.5">
+                <span class="w-3 h-3 rounded bg-emerald-600 inline-block"></span>
+                <span class="text-slate-700">R$/tonelada</span>
+              </div>
+              <div class="flex items-center space-x-1.5">
+                <span class="w-3 h-3 rounded bg-amber-500 inline-block"></span>
+                <span class="text-slate-700">R$/saca (60kg)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Container do Gráfico Chart.js -->
+          <div class="relative w-full h-[280px]">
+            <canvas id="freightChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Tabela de Comparativo e Arbitragem entre Corredores -->
+        <div class="space-y-3">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h3 class="text-sm font-bold text-slate-900 flex items-center space-x-2">
+                <span>Comparativo de Custo Logístico Total & Arbitragem de Corredores</span>
+                <span class="text-xs font-normal text-slate-500" id="arbitrage-origin-name">(Origem: Sorriso - MT)</span>
+              </h3>
+              <p class="text-[11px] text-slate-500">
+                Soma de frete rodoviário, elevação portuária (THC), despesas acessórias e provisão de demurrage para cada corredor viável.
+              </p>
+            </div>
+            <span class="text-[11px] font-medium text-slate-500 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200">
+              Taxa de Câmbio: <strong id="arbitrage-fx-label" class="text-slate-800">R$ 5,4850</strong>
+            </span>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs text-left">
+              <thead class="uppercase bg-slate-100 text-slate-700 border-y border-slate-200 font-bold">
+                <tr>
+                  <th class="px-3.5 py-3">Corredor / Porto</th>
+                  <th class="px-3 py-3 text-center">Distância</th>
+                  <th class="px-3.5 py-3 text-right">Frete Rodoviário</th>
+                  <th class="px-3.5 py-3 text-right">Elevação THC</th>
+                  <th class="px-3.5 py-3 text-right">Outros / Demurrage</th>
+                  <th class="px-3.5 py-3 text-right font-bold text-slate-900">Logística Total</th>
+                  <th class="px-3.5 py-3 text-right font-bold">Spread vs. Santos</th>
+                  <th class="px-3.5 py-3 text-center">Recomendação</th>
+                </tr>
+              </thead>
+              <tbody id="freight-arbitrage-tbody" class="divide-y divide-slate-100">
+                <!-- Preenchido via Javascript -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Notas e Diretrizes de Inteligência Logística -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 text-xs">
+          <div class="p-4 bg-emerald-50/70 rounded-xl border border-emerald-200 space-y-1">
+            <strong class="text-emerald-950 font-bold flex items-center space-x-1.5">
+              <span>🚢 Vantagem Estratégica do Arco Norte (Barcarena & Itaqui):</span>
+            </strong>
+            <p class="text-slate-700 text-[11px] leading-relaxed">
+              Para o Norte do Mato Grosso (BR-163) e MATOPIBA, o transbordo hidroviário via Barcarena (PA) ou Itaqui (MA) encurta distâncias rodoviárias em mais de 700 km e reduz a espera de navios (demurrage médio de 10 dias vs. 28 dias em Santos). Essa economia logística pode superar R$ 60/ton (>R$ 3,60/saca), alavancando significativamente a margem do trading.
+            </p>
+          </div>
+          <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+            <strong class="text-slate-900 font-bold flex items-center space-x-1.5">
+              <span>⚖️ Gestão de Risco de Frete & Descasamento (Basis Risk):</span>
+            </strong>
+            <p class="text-slate-600 text-[11px] leading-relaxed">
+              O frete rodoviário não possui hedge cambial ou futuro padronizado na B3. Uma oscilação de R$ 20/ton no frete de colheita consome até R$ 1,20/saca da margem da operação. Recomenda-se travar antecipadamente contratos de frete dedicado ou frete FOB com transportadoras parceiras na contratação da originação.
+            </p>
+          </div>
+        </div>
+
+      </div>
     </section>
 
     <!-- ============================================================== -->
@@ -1330,6 +1523,9 @@
       if (tabId === 'matrix') {
         loadRegionalMatrix();
         loadTaxFundsSummary();
+        loadFreightRoutes();
+        loadFreightHistory();
+        loadFreightArbitrage();
       }
       if (tabId === 'carry') calculateCarry();
       if (tabId === 'b3') {
@@ -2381,11 +2577,350 @@
       }
     }
 
+    // 7. MONITOR DE HISTÓRICO DE FRETE E ARBITRAGEM LOGÍSTICA
+    let freightChartInstance = null;
+    let currentFreightOrigin = 'sorriso_mt';
+    let currentFreightDest = 'STS';
+    let currentFreightDays = 30;
+    let freightRoutesCache = [];
+
+    const PORT_NAMES = {
+      'STS': 'Santos (STS)',
+      'PNG': 'Paranaguá (PNG)',
+      'BCR': 'Barcarena (BCR)',
+      'ITQ': 'Itaqui (ITQ)',
+      'RG': 'Rio Grande (RG)',
+    };
+
+    async function loadFreightRoutes() {
+      try {
+        const res = await fetch(`${API_BASE}/freight/routes`);
+        const routes = await res.json();
+        if (Array.isArray(routes) && routes.length > 0) {
+          freightRoutesCache = routes;
+          populateFreightDestinations();
+        }
+      } catch (err) {
+        console.error('Erro ao carregar rotas de frete:', err);
+      }
+    }
+
+    function populateFreightDestinations() {
+      const destSelect = document.getElementById('freight-dest-select');
+      if (!destSelect) return;
+
+      const validRoutes = freightRoutesCache.filter(r => r.origin_id === currentFreightOrigin);
+      if (validRoutes.length === 0) return;
+
+      const currentSelected = destSelect.value;
+      let hasCurrent = false;
+
+      destSelect.innerHTML = validRoutes.map(r => {
+        const isSel = (r.destination_id === currentFreightDest);
+        if (isSel) hasCurrent = true;
+        const portName = PORT_NAMES[r.destination_id] || `${r.destination_id}`;
+        return `<option value="${r.destination_id}" ${isSel ? 'selected' : ''}>${portName}</option>`;
+      }).join('');
+
+      if (!hasCurrent) {
+        currentFreightDest = validRoutes[0].destination_id;
+        destSelect.value = currentFreightDest;
+      }
+    }
+
+    function onFreightOriginChange() {
+      const originSelect = document.getElementById('freight-origin-select');
+      if (!originSelect) return;
+      currentFreightOrigin = originSelect.value;
+
+      populateFreightDestinations();
+      loadFreightHistory();
+      loadFreightArbitrage();
+    }
+
+    function onFreightDestChange() {
+      const destSelect = document.getElementById('freight-dest-select');
+      if (!destSelect) return;
+      currentFreightDest = destSelect.value;
+      loadFreightHistory();
+    }
+
+    function setFreightDays(days) {
+      currentFreightDays = days;
+      document.querySelectorAll('.freight-days-btn').forEach(btn => {
+        btn.className = 'freight-days-btn px-2.5 py-1 font-medium text-slate-600 hover:text-slate-900 transition';
+      });
+      const activeBtn = document.getElementById(`btn-freight-days-${days}`);
+      if (activeBtn) {
+        activeBtn.className = 'freight-days-btn px-2.5 py-1 font-semibold rounded bg-white text-slate-900 shadow-sm transition';
+      }
+      loadFreightHistory();
+    }
+
+    function refreshFreightData() {
+      loadFreightHistory();
+      loadFreightArbitrage();
+    }
+
+    async function loadFreightHistory() {
+      try {
+        const res = await fetch(`${API_BASE}/freight/history?origin=${currentFreightOrigin}&destination=${currentFreightDest}&days=${currentFreightDays}`);
+        const data = await res.json();
+        if (!data || !data.series) return;
+
+        // Atualizar KPIs
+        const currentTonEl = document.getElementById('kpi-freight-current');
+        if (currentTonEl) currentTonEl.innerHTML = `R$ ${data.current_rate_ton.toFixed(2)} <span class="text-xs font-normal text-slate-500">/ton</span>`;
+        
+        const currentBagEl = document.getElementById('kpi-freight-current-bag');
+        if (currentBagEl) currentBagEl.innerText = `R$ ${data.current_rate_bag.toFixed(2)} / saca`;
+
+        const changeEl = document.getElementById('kpi-freight-change');
+        if (changeEl) {
+          const sign = data.change_ton >= 0 ? '+' : '';
+          changeEl.innerHTML = `${sign}R$ ${data.change_ton.toFixed(2)} <span class="text-xs font-normal text-slate-500">/ton</span>`;
+          changeEl.className = `text-xl font-bold mt-1 ${data.change_ton > 0 ? 'text-red-600' : (data.change_ton < 0 ? 'text-emerald-700' : 'text-slate-900')}`;
+        }
+
+        const changeSubEl = document.getElementById('kpi-freight-change-sub');
+        if (changeSubEl) {
+          const sign = data.change_pct >= 0 ? '+' : '';
+          const bagSign = data.change_bag >= 0 ? '+' : '';
+          changeSubEl.innerText = `${sign}${data.change_pct.toFixed(2)}% | ${bagSign}R$ ${data.change_bag.toFixed(2)}/sc`;
+        }
+
+        const rangeEl = document.getElementById('kpi-freight-range');
+        if (rangeEl) rangeEl.innerText = `R$ ${data.min_rate_ton.toFixed(2)} - R$ ${data.max_rate_ton.toFixed(2)}`;
+
+        const avgEl = document.getElementById('kpi-freight-avg');
+        if (avgEl) avgEl.innerText = `Média: R$ ${data.avg_rate_ton.toFixed(2)}/ton`;
+
+        const routeNameEl = document.getElementById('freight-chart-route-name');
+        if (routeNameEl) routeNameEl.innerText = `(${data.origin_name} ➔ ${data.destination_name})`;
+
+        // Renderizar Gráfico Chart.js
+        renderFreightChart(data.series);
+
+        if (window.lucide) lucide.createIcons();
+
+      } catch (err) {
+        console.error('Erro ao carregar histórico de frete:', err);
+      }
+    }
+
+    function renderFreightChart(series) {
+      const canvas = document.getElementById('freightChart');
+      if (!canvas || typeof Chart === 'undefined') return;
+
+      if (freightChartInstance) {
+        freightChartInstance.destroy();
+      }
+
+      const labels = series.map(pt => pt.date.substring(5)); // 'MM-DD'
+      const dataTon = series.map(pt => pt.price_ton);
+      const dataBag = series.map(pt => pt.price_bag);
+
+      const ctx = canvas.getContext('2d');
+      freightChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Frete (R$/ton)',
+              data: dataTon,
+              borderColor: '#059669', // Emerald 600
+              backgroundColor: 'rgba(5, 150, 105, 0.08)',
+              borderWidth: 2.5,
+              pointRadius: series.length > 40 ? 0 : 3,
+              pointHoverRadius: 5,
+              pointBackgroundColor: '#059669',
+              fill: true,
+              tension: 0.25,
+              yAxisID: 'y',
+            },
+            {
+              label: 'Frete (R$/saca)',
+              data: dataBag,
+              borderColor: '#f59e0b', // Amber 500
+              borderWidth: 1.5,
+              borderDash: [4, 4],
+              pointRadius: 0,
+              pointHoverRadius: 4,
+              pointBackgroundColor: '#f59e0b',
+              fill: false,
+              tension: 0.25,
+              yAxisID: 'y1',
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            mode: 'index',
+            intersect: false,
+          },
+          plugins: {
+            legend: {
+              display: false,
+            },
+            tooltip: {
+              backgroundColor: '#0f172a',
+              titleColor: '#f8fafc',
+              bodyColor: '#e2e8f0',
+              padding: 10,
+              cornerRadius: 8,
+              callbacks: {
+                title: function(items) {
+                  const idx = items[0].dataIndex;
+                  return `Data: ${series[idx].date} (${series[idx].source})`;
+                },
+                label: function(item) {
+                  if (item.datasetIndex === 0) {
+                    return ` R$/tonelada: R$ ${item.parsed.y.toFixed(2)}`;
+                  } else {
+                    return ` R$/saca (60kg): R$ ${item.parsed.y.toFixed(2)}`;
+                  }
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: {
+                color: '#f1f5f9',
+              },
+              ticks: {
+                color: '#64748b',
+                font: { size: 10, family: 'Inter' },
+                maxRotation: 0,
+                autoSkip: true,
+                maxTicksLimit: 12,
+              }
+            },
+            y: {
+              type: 'linear',
+              position: 'left',
+              grid: {
+                color: '#f1f5f9',
+              },
+              ticks: {
+                color: '#059669',
+                font: { size: 10, weight: 'bold', family: 'Inter' },
+                callback: function(val) { return `R$ ${val.toFixed(0)}`; }
+              }
+            },
+            y1: {
+              type: 'linear',
+              position: 'right',
+              grid: {
+                drawOnChartArea: false,
+              },
+              ticks: {
+                color: '#d97706',
+                font: { size: 10, weight: 'bold', family: 'Inter' },
+                callback: function(val) { return `R$ ${val.toFixed(1)}`; }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    async function loadFreightArbitrage() {
+      try {
+        const res = await fetch(`${API_BASE}/freight/arbitrage?origin=${currentFreightOrigin}`);
+        const data = await res.json();
+        if (!data || !data.ports_comparison) return;
+
+        const origNameEl = document.getElementById('arbitrage-origin-name');
+        if (origNameEl) origNameEl.innerText = `(Origem: ${data.origin_name})`;
+
+        const fxLabelEl = document.getElementById('arbitrage-fx-label');
+        if (fxLabelEl) fxLabelEl.innerText = `R$ ${data.usd_brl_fx.toFixed(4)}`;
+
+        const corridorKpi = document.getElementById('kpi-arbitrage-corridor');
+        if (corridorKpi) corridorKpi.innerText = data.best_corridor;
+
+        const savingsKpi = document.getElementById('kpi-freight-savings');
+        if (savingsKpi) savingsKpi.innerHTML = `+R$ ${data.max_savings_brl_ton.toFixed(2)} <span class="text-xs font-normal text-emerald-700">/ton</span>`;
+
+        const savingsBagKpi = document.getElementById('kpi-freight-savings-bag');
+        if (savingsBagKpi) savingsBagKpi.innerText = `+R$ ${data.max_savings_brl_bag.toFixed(2)} / saca vs. Santos`;
+
+        const tbody = document.getElementById('freight-arbitrage-tbody');
+        if (!tbody) return;
+
+        tbody.innerHTML = data.ports_comparison.map(p => {
+          const isBest = p.is_recommended;
+          const spreadTon = p.spread_vs_santos_brl_ton;
+          const spreadBag = p.spread_vs_santos_brl_bag;
+          
+          let spreadBadge = '';
+          if (p.status === 'BENCHMARK') {
+            spreadBadge = '<span class="px-2 py-0.5 rounded font-semibold text-[11px] bg-slate-100 text-slate-700 border border-slate-200">Benchmark Santos</span>';
+          } else if (p.status === 'FAVORABLE') {
+            spreadBadge = `<span class="px-2 py-0.5 rounded font-bold text-[11px] bg-emerald-100 text-emerald-800 border border-emerald-200">Economia: R$ ${Math.abs(spreadTon).toFixed(2)}/t (-R$ ${Math.abs(spreadBag).toFixed(2)}/sc)</span>`;
+          } else {
+            spreadBadge = `<span class="px-2 py-0.5 rounded font-medium text-[11px] bg-red-100 text-red-800 border border-red-200">+R$ ${spreadTon.toFixed(2)}/t (+R$ ${spreadBag.toFixed(2)}/sc)</span>`;
+          }
+
+          let recBadge = '';
+          if (isBest) {
+            recBadge = '<span class="px-2.5 py-1 rounded-full font-bold text-xs bg-emerald-600 text-white shadow-sm flex items-center justify-center space-x-1"><i data-lucide="check-circle" class="w-3.5 h-3.5"></i><span>Melhor Rota</span></span>';
+          } else if (p.waiting_days > 20) {
+            recBadge = `<span class="px-2.5 py-1 rounded-full font-medium text-xs bg-amber-50 text-amber-800 border border-amber-200">Fila Alta (${p.waiting_days}d)</span>`;
+          } else {
+            recBadge = '<span class="px-2.5 py-1 rounded-full font-medium text-xs bg-slate-100 text-slate-600">Alternativa</span>';
+          }
+
+          return `
+            <tr class="hover:bg-slate-50 ${isBest ? 'bg-emerald-50/40 font-medium' : ''}">
+              <td class="px-3.5 py-3 font-bold text-slate-900 flex items-center space-x-2">
+                <span>${p.port_name}</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-slate-100 text-slate-700">${p.corridor}</span>
+              </td>
+              <td class="px-3 py-3 text-center text-slate-600">${p.distance_km} km</td>
+              <td class="px-3.5 py-3 text-right">
+                <span class="font-bold text-slate-800">R$ ${p.road_freight_brl_ton.toFixed(2)}</span>
+                <span class="block text-[10px] text-slate-500">R$ ${p.road_freight_brl_bag.toFixed(2)}/sc</span>
+              </td>
+              <td class="px-3.5 py-3 text-right text-slate-700">
+                <span>R$ ${p.elevation_cost_brl_ton.toFixed(2)}</span>
+                <span class="block text-[10px] text-slate-400">$${p.elevation_cost_usd_ton.toFixed(2)}/t</span>
+              </td>
+              <td class="px-3.5 py-3 text-right text-slate-700">
+                <span>R$ ${(p.other_port_costs_brl_ton + p.demurrage_risk_brl_ton).toFixed(2)}</span>
+                <span class="block text-[10px] text-slate-400">Demurrage: $${p.demurrage_risk_usd_ton.toFixed(2)}</span>
+              </td>
+              <td class="px-3.5 py-3 text-right font-bold text-slate-900">
+                <span class="text-sm">R$ ${p.total_logistics_brl_ton.toFixed(2)}</span>
+                <span class="block text-[10px] text-emerald-800 font-semibold">R$ ${p.total_logistics_brl_bag.toFixed(2)}/sc</span>
+              </td>
+              <td class="px-3.5 py-3 text-right">
+                ${spreadBadge}
+              </td>
+              <td class="px-3.5 py-3 text-center">
+                ${recBadge}
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        if (window.lucide) lucide.createIcons();
+
+      } catch (err) {
+        console.error('Erro ao carregar arbitragem de frete:', err);
+      }
+    }
+
     // Inicialização ao carregar a página
     document.addEventListener('DOMContentLoaded', () => {
       calculateParity();
       loadMacroIndices();
       loadTaxFundsSummary();
+      loadFreightRoutes();
     });
   </script>
 </body>
