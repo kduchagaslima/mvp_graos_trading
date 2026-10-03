@@ -4,7 +4,7 @@ Responsável por coletar cotações financeiras, físicas e logísticas e gravá
 de forma transacional, idempotente e indexada no banco de dados.
 """
 
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from typing import Dict, Any, List, Optional
 import json
 import logging
@@ -13,10 +13,24 @@ from sqlalchemy.orm import Session
 
 from src.db.connection import SessionLocal, init_db
 from src.db.repository import MarketDataRepository
+from src.db.models import DataKind
 from src.domain.locations import ORIGINATION_HUBS, PORTS
 from src.services.market_data import DEFAULT_MARKET_SEEDS
 
 logger = logging.getLogger(__name__)
+
+
+def _parse_bcb_datetime(dt_str: Optional[str]) -> Optional[datetime]:
+    if not dt_str:
+        return None
+    try:
+        clean = dt_str.replace(" ", "T")
+        parsed = datetime.fromisoformat(clean)
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed
+    except Exception:
+        return None
 
 
 class MarketDataExtractor:
@@ -33,6 +47,7 @@ class MarketDataExtractor:
         """
         quotes: List[Dict[str, Any]] = []
         cur_date = target_date or date.today()
+        now_utc = datetime.now(timezone.utc)
         
         # Tenta buscar no dia atual ou nos últimos 5 dias (caso hoje seja fim de semana/feriado)
         for offset in range(5):
@@ -51,9 +66,11 @@ class MarketDataExtractor:
                         latest = data[0]
                         sell_rate = float(latest["cotacaoVenda"])
                         buy_rate = float(latest["cotacaoCompra"])
+                        observed_at = _parse_bcb_datetime(latest.get("dataHoraCotacao")) or now_utc
                         quotes.append({
                             "quote_date": query_date,
-                            "timestamp": datetime.utcnow(),
+                            "timestamp": now_utc,
+                            "observed_at": observed_at,
                             "category": "FX",
                             "commodity": None,
                             "symbol": "USD_BRL_PTAX_VENDA",
@@ -61,12 +78,17 @@ class MarketDataExtractor:
                             "location_id": "BRASIL_BCB",
                             "price": sell_rate,
                             "unit": "BRL",
+                            "currency": "BRL",
                             "source": "BCB_PTAX_OLINDA",
+                            "source_vendor": "BANCO_CENTRAL_DO_BRASIL",
+                            "source_reference": "BCB_PTAX_OLINDA",
+                            "data_kind": DataKind.OBSERVED.value,
                             "metadata_json": json.dumps(latest),
                         })
                         quotes.append({
                             "quote_date": query_date,
-                            "timestamp": datetime.utcnow(),
+                            "timestamp": now_utc,
+                            "observed_at": observed_at,
                             "category": "FX",
                             "commodity": None,
                             "symbol": "USD_BRL_PTAX_COMPRA",
@@ -74,7 +96,11 @@ class MarketDataExtractor:
                             "location_id": "BRASIL_BCB",
                             "price": buy_rate,
                             "unit": "BRL",
+                            "currency": "BRL",
                             "source": "BCB_PTAX_OLINDA",
+                            "source_vendor": "BANCO_CENTRAL_DO_BRASIL",
+                            "source_reference": "BCB_PTAX_OLINDA",
+                            "data_kind": DataKind.OBSERVED.value,
                             "metadata_json": json.dumps(latest),
                         })
                         logger.info(f"PTAX oficial obtida com sucesso para {query_date}: Venda={sell_rate}")
@@ -82,13 +108,14 @@ class MarketDataExtractor:
             except Exception as e:
                 logger.warning(f"Erro ao consultar API PTAX para {query_date}: {e}")
 
-        # Se falhou em obter via internet, usa o valor de referência das seeds
+        # Se falhou em obter via internet, usa o valor de referência das seeds (DEMO)
         if not quotes:
             fallback_date = cur_date
             fallback_fx = float(DEFAULT_MARKET_SEEDS["fx_usd_brl"])
             quotes.append({
                 "quote_date": fallback_date,
-                "timestamp": datetime.utcnow(),
+                "timestamp": now_utc,
+                "observed_at": now_utc,
                 "category": "FX",
                 "commodity": None,
                 "symbol": "USD_BRL_PTAX_VENDA",
@@ -96,7 +123,11 @@ class MarketDataExtractor:
                 "location_id": "BRASIL_BCB",
                 "price": fallback_fx,
                 "unit": "BRL",
+                "currency": "BRL",
                 "source": "SEED_FALLBACK",
+                "source_vendor": "SEED_BENCHMARK",
+                "source_reference": "DEFAULT_MARKET_SEEDS",
+                "data_kind": DataKind.DEMO.value,
                 "metadata_json": json.dumps({"note": "Fallback offline"}),
             })
             
@@ -110,6 +141,7 @@ class MarketDataExtractor:
         quotes: List[Dict[str, Any]] = []
         q_date = target_date or date.today()
 
+        now_utc = datetime.now(timezone.utc)
         tickers = {
             "SOJA": {"symbol": "ZS=F", "unit": "cents/bu"},
             "MILHO": {"symbol": "ZC=F", "unit": "cents/bu"},
@@ -118,6 +150,9 @@ class MarketDataExtractor:
         for commodity, meta in tickers.items():
             price_extracted = None
             source_name = "SEED_BENCHMARK"
+            source_vendor = "SEED_BENCHMARK"
+            source_ref = "DEFAULT_MARKET_SEEDS"
+            data_kind = DataKind.DEMO.value
 
             # Tenta consultar via yfinance se disponível
             try:
@@ -127,6 +162,9 @@ class MarketDataExtractor:
                 if fast_info and hasattr(fast_info, "last_price") and fast_info.last_price:
                     price_extracted = float(fast_info.last_price)
                     source_name = "CME_YFINANCE"
+                    source_vendor = "CME_GROUP"
+                    source_ref = meta["symbol"]
+                    data_kind = DataKind.OBSERVED.value
             except Exception:
                 pass
 
@@ -136,7 +174,8 @@ class MarketDataExtractor:
 
             quotes.append({
                 "quote_date": q_date,
-                "timestamp": datetime.utcnow(),
+                "timestamp": now_utc,
+                "observed_at": now_utc,
                 "category": "FUTURES",
                 "commodity": commodity,
                 "symbol": meta["symbol"],
@@ -144,7 +183,11 @@ class MarketDataExtractor:
                 "location_id": "CME_CHICAGO",
                 "price": price_extracted,
                 "unit": meta["unit"],
+                "currency": "USD",
                 "source": source_name,
+                "source_vendor": source_vendor,
+                "source_reference": source_ref,
+                "data_kind": data_kind,
                 "metadata_json": json.dumps({"commodity": commodity}),
             })
 
@@ -157,12 +200,14 @@ class MarketDataExtractor:
         """
         quotes: List[Dict[str, Any]] = []
         q_date = target_date or date.today()
+        now_utc = datetime.now(timezone.utc)
 
         for port_id, commodities_dict in DEFAULT_MARKET_SEEDS["port_premiums_cents"].items():
             for commodity, premium_val in commodities_dict.items():
                 quotes.append({
                     "quote_date": q_date,
-                    "timestamp": datetime.utcnow(),
+                    "timestamp": now_utc,
+                    "observed_at": now_utc,
                     "category": "PORT_PREMIUM",
                     "commodity": commodity,
                     "symbol": f"PREM_{port_id}_{commodity}",
@@ -170,7 +215,11 @@ class MarketDataExtractor:
                     "location_id": port_id,
                     "price": float(premium_val),
                     "unit": "cents/bu",
+                    "currency": "USD",
                     "source": "PORT_DESK_INDICATION",
+                    "source_vendor": "PORT_TERMINALS_DESK",
+                    "source_reference": "PORT_DESK_INDICATION",
+                    "data_kind": DataKind.ESTIMATED.value,
                     "metadata_json": json.dumps({"port_id": port_id, "commodity": commodity}),
                 })
 
@@ -183,12 +232,14 @@ class MarketDataExtractor:
         """
         quotes: List[Dict[str, Any]] = []
         q_date = target_date or date.today()
+        now_utc = datetime.now(timezone.utc)
 
         for hub_id, comm_prices in DEFAULT_MARKET_SEEDS["cash_prices_brl_bag"].items():
             for commodity, price_val in comm_prices.items():
                 quotes.append({
                     "quote_date": q_date,
-                    "timestamp": datetime.utcnow(),
+                    "timestamp": now_utc,
+                    "observed_at": now_utc,
                     "category": "PHYSICAL_CASH",
                     "commodity": commodity,
                     "symbol": f"CASH_{hub_id.upper()}_{commodity}",
@@ -196,7 +247,11 @@ class MarketDataExtractor:
                     "location_id": hub_id,
                     "price": float(price_val),
                     "unit": "R$/saca",
+                    "currency": "BRL",
                     "source": "CEPEA_REGIONAL_DESK",
+                    "source_vendor": "CEPEA_ESALQ",
+                    "source_reference": "CEPEA_REGIONAL_DESK",
+                    "data_kind": DataKind.ESTIMATED.value,
                     "metadata_json": json.dumps({"hub_id": hub_id, "commodity": commodity}),
                 })
 
@@ -209,12 +264,14 @@ class MarketDataExtractor:
         """
         quotes: List[Dict[str, Any]] = []
         q_date = target_date or date.today()
+        now_utc = datetime.now(timezone.utc)
 
         for hub_id, hub in ORIGINATION_HUBS.items():
             for port_id, freight_val in hub.freight_to_port_brl_ton.items():
                 quotes.append({
                     "quote_date": q_date,
-                    "timestamp": datetime.utcnow(),
+                    "timestamp": now_utc,
+                    "observed_at": now_utc,
                     "category": "FREIGHT",
                     "commodity": None,
                     "symbol": f"FREIGHT_{hub_id.upper()}_{port_id}",
@@ -222,7 +279,11 @@ class MarketDataExtractor:
                     "location_id": f"{hub_id}->{port_id}",
                     "price": float(freight_val),
                     "unit": "R$/ton",
+                    "currency": "BRL",
                     "source": "ESALQ_LOG_BENCHMARK",
+                    "source_vendor": "ESALQ_LOG",
+                    "source_reference": "ESALQ_LOG_BENCHMARK",
+                    "data_kind": DataKind.ESTIMATED.value,
                     "metadata_json": json.dumps({"origin": hub_id, "destination": port_id}),
                 })
 

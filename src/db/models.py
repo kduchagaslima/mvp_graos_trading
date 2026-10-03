@@ -1,42 +1,87 @@
 """
 Modelagem Relacional de Dados de Mercado e Trading de Grãos.
-Estruturado para alta performance em consultas analíticas e séries temporais.
+Estruturado para alta performance em consultas analíticas e séries temporais,
+com suporte a rastreabilidade em dois eixos (data_kind e freshness) e precisão Decimal.
 """
 
-from datetime import datetime, date
+from datetime import datetime, date, timezone
+from enum import Enum
+from decimal import Decimal
 from sqlalchemy import (
     Column,
     Integer,
     String,
     Float,
+    Numeric,
     Date,
     DateTime,
     Text,
     Index,
     UniqueConstraint,
+    TypeDecorator,
 )
 from src.db.connection import Base
+
+
+class UTCDateTime(TypeDecorator):
+    """Garante que datetimes retornados do banco sejam sempre timezone-aware em UTC."""
+    impl = DateTime(timezone=True)
+    cache_ok = True
+
+    def process_result_value(self, value, dialect):
+        if value is not None and isinstance(value, datetime) and value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+        return value
+
+
+class DataKind(str, Enum):
+    """Eixo 1 da Auditoria: Origem e Providência do Dado."""
+    OBSERVED = "OBSERVED"       # Coletado diretamente de fonte oficial verificada
+    MANUAL = "MANUAL"           # Inserido manualmente pelo operador
+    ESTIMATED = "ESTIMATED"     # Calculado ou projetado matematicamente
+    DEMO = "DEMO"               # Cotação de seed/demonstração
+    UNVERIFIED = "UNVERIFIED"   # Dado legado cuja procedência não pode ser auditada
+
+
+class FreshnessStatus(str, Enum):
+    """Eixo 2 da Auditoria: Atualidade e Tolerância Temporal."""
+    CURRENT = "CURRENT"  # Atual dentro da tolerância de calendário
+    STALE = "STALE"      # Defasado além da tolerância esperada
+    UNKNOWN = "UNKNOWN"  # Sem data de observação para cálculo
 
 
 class MarketQuote(Base):
     """
     Tabela central de cotações de mercado temporalmente indexada.
-    Consolida FX, CBOT, Prêmios nos Portos, Preços Físicos no Interior e Fretes.
+    Consolida FX, CBOT, Prêmios nos Portos, Preços Físicos no Interior e Fretes,
+    com eixos explícitos de providência (data_kind), frescor (freshness) e precisão numérica.
     """
     __tablename__ = "market_quotes"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     quote_date = Column(Date, nullable=False, default=date.today)
-    timestamp = Column(DateTime, nullable=False, default=datetime.utcnow)
-    category = Column(String(32), nullable=False)  # FX, FUTURES, PORT_PREMIUM, PHYSICAL_CASH, FREIGHT
+    timestamp = Column(UTCDateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    category = Column(String(32), nullable=False)  # FX, FUTURES, PORT_PREMIUM, PHYSICAL_CASH, FREIGHT, B3_FUTURES, MACRO_INDEX
     commodity = Column(String(16), nullable=True)  # SOJA, MILHO, etc.
     symbol = Column(String(64), nullable=False)    # USD_BRL_PTAX, ZS=F, PREM_STS_SOJA, etc.
     contract_code = Column(String(32), nullable=True, default="SPOT")  # SPOT, MAR25, MAY25, JUL25
     location_id = Column(String(32), nullable=True, default="GLOBAL")  # sorriso_mt, STS, PNG, etc.
     price = Column(Float, nullable=False)
+    price_numeric = Column(Numeric(14, 4), nullable=True)
     unit = Column(String(32), nullable=False)      # BRL, cents/bu, USD/ton, R$/saca, R$/ton
-    source = Column(String(64), nullable=False)    # BCB_PTAX, YAHOO_FINANCE, CEPEA_ESALQ, MANUAL
+    currency = Column(String(8), nullable=False, default="BRL")
+    source = Column(String(64), nullable=False)    # BCB_PTAX, YAHOO_FINANCE, CEPEA_ESALQ, MANUAL, SEED_FALLBACK
+    source_vendor = Column(String(64), nullable=True)
+    source_reference = Column(String(128), nullable=True)
+    contract_expiry = Column(Date, nullable=True)
+    payload_hash = Column(String(64), nullable=True)
     metadata_json = Column(Text, nullable=True)    # Detalhes adicionais em formato JSON
+
+    # Eixos de Rastreabilidade e Auditoria (Ticket F02)
+    data_kind = Column(String(16), nullable=False, default=DataKind.OBSERVED.value)
+    freshness = Column(String(16), nullable=False, default=FreshnessStatus.CURRENT.value)
+    observed_at = Column(UTCDateTime, nullable=True)
+    ingested_at = Column(UTCDateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
 
     __table_args__ = (
         # Garante idempotência: apenas 1 cotação por combinação de chave natural no mesmo dia
@@ -52,21 +97,31 @@ class MarketQuote(Base):
         Index("idx_quotes_latest", "category", "symbol", "quote_date"),
         Index("idx_quotes_commodity_date", "commodity", "category", "quote_date"),
         Index("idx_quotes_lookup", "symbol", "contract_code", "quote_date"),
+        Index("idx_quotes_observed_at", "symbol", "observed_at"),
     )
 
     def to_dict(self):
+        obs_iso = self.observed_at.isoformat() if self.observed_at else (self.timestamp.isoformat() if self.timestamp else None)
         return {
             "id": self.id,
             "quote_date": self.quote_date.isoformat() if self.quote_date else None,
             "timestamp": self.timestamp.isoformat() if self.timestamp else None,
+            "observed_at": obs_iso,
+            "ingested_at": self.ingested_at.isoformat() if self.ingested_at else None,
             "category": self.category,
             "commodity": self.commodity,
             "symbol": self.symbol,
             "contract_code": self.contract_code,
             "location_id": self.location_id,
             "price": self.price,
+            "price_numeric": float(self.price_numeric) if self.price_numeric is not None else self.price,
             "unit": self.unit,
+            "currency": self.currency,
             "source": self.source,
+            "source_vendor": self.source_vendor,
+            "source_reference": self.source_reference,
+            "data_kind": self.data_kind,
+            "freshness": self.freshness,
         }
 
 
@@ -78,7 +133,7 @@ class ParitySnapshot(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     calculation_date = Column(Date, nullable=False, default=date.today)
-    timestamp = Column(DateTime, nullable=False, default=datetime.utcnow)
+    timestamp = Column(UTCDateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     commodity = Column(String(16), nullable=False)
     hub_id = Column(String(32), nullable=False)
     port_id = Column(String(16), nullable=False)
@@ -122,8 +177,8 @@ class ExtractionLog(Base):
     __tablename__ = "extraction_logs"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    started_at = Column(DateTime, nullable=False, default=datetime.utcnow)
-    finished_at = Column(DateTime, nullable=True)
+    started_at = Column(UTCDateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    finished_at = Column(UTCDateTime, nullable=True)
     status = Column(String(16), nullable=False)  # RUNNING, SUCCESS, PARTIAL, FAILED
     records_extracted = Column(Integer, default=0)
     records_upserted = Column(Integer, default=0)

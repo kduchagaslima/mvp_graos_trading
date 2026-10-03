@@ -1,13 +1,16 @@
 """
-Camada de Acesso a Dados (Repository / DAO) com queries otimizadas para consumo de Market Data.
+Camada de Acesso a Dados (Repository / DAO) com queries otimizadas para consumo de Market Data,
+suporte aos dois eixos de qualidade (data_kind e freshness) e precisão Decimal.
 """
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import List, Dict, Any, Optional
+from decimal import Decimal
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, and_
 
-from src.db.models import MarketQuote, ParitySnapshot, ExtractionLog
+from src.db.models import MarketQuote, ParitySnapshot, ExtractionLog, DataKind, FreshnessStatus
+from src.services.freshness import evaluate_freshness
 
 
 class MarketDataRepository:
@@ -19,13 +22,38 @@ class MarketDataRepository:
     def upsert_quote(cls, db: Session, quote_dict: Dict[str, Any]) -> MarketQuote:
         """
         Insere ou atualiza uma cotação com base na chave natural.
-        Garante idempotência estrita sem duplicação de dados temporais.
+        Garante idempotência estrita sem duplicação e preserva observed_at em reingestões.
         """
         q_date = quote_dict.get("quote_date") or date.today()
         category = quote_dict["category"]
         symbol = quote_dict["symbol"]
         contract_code = quote_dict.get("contract_code") or "SPOT"
         location_id = quote_dict.get("location_id") or "GLOBAL"
+
+        now_utc = datetime.now(timezone.utc)
+        price_val = float(quote_dict["price"])
+        price_dec = Decimal(str(quote_dict["price"]))
+
+        # Classificação do Eixo 1: Origem / Proveniência (data_kind)
+        src = quote_dict.get("source", "MANUAL")
+        if "data_kind" in quote_dict and quote_dict["data_kind"]:
+            kind = quote_dict["data_kind"]
+        elif src in ("SEED_FALLBACK", "SEED_BENCHMARK", "SEED"):
+            kind = DataKind.DEMO.value
+        elif src in ("MANUAL", "UI_OVERRIDE"):
+            kind = DataKind.MANUAL.value
+        elif src in ("ESTIMATED", "PROJECTION"):
+            kind = DataKind.ESTIMATED.value
+        elif "LEGACY" in src or src == "UNVERIFIED":
+            kind = DataKind.UNVERIFIED.value
+        else:
+            kind = DataKind.OBSERVED.value
+
+        # Normaliza observed_at de entrada se fornecido
+        input_observed = quote_dict.get("observed_at")
+        if input_observed is not None and isinstance(input_observed, datetime):
+            if input_observed.tzinfo is None:
+                input_observed = input_observed.replace(tzinfo=timezone.utc)
 
         existing = (
             db.query(MarketQuote)
@@ -42,26 +70,65 @@ class MarketDataRepository:
         )
 
         if existing:
-            existing.price = float(quote_dict["price"])
-            existing.timestamp = quote_dict.get("timestamp") or datetime.utcnow()
-            existing.source = quote_dict.get("source", existing.source)
+            existing.price = price_val
+            existing.price_numeric = price_dec
+            existing.timestamp = quote_dict.get("timestamp") or existing.timestamp or now_utc
+            existing.ingested_at = now_utc
+            existing.source = src
             existing.unit = quote_dict.get("unit", existing.unit)
+            existing.currency = quote_dict.get("currency", existing.currency or "BRL")
+            existing.data_kind = kind
+
+            # Invariante F02: Reingestão não altera observed_at existente a menos que explicitamente fornecido novo
+            if input_observed is not None:
+                existing.observed_at = input_observed
+            elif existing.observed_at is None:
+                existing.observed_at = existing.timestamp or now_utc
+
+            # Avaliação do Eixo 2: Atualidade (freshness)
+            existing.freshness = evaluate_freshness(category, symbol, existing.observed_at, now_utc).value
+
+            if "source_vendor" in quote_dict:
+                existing.source_vendor = quote_dict["source_vendor"]
+            if "source_reference" in quote_dict:
+                existing.source_reference = quote_dict["source_reference"]
+            if "contract_expiry" in quote_dict:
+                existing.contract_expiry = quote_dict["contract_expiry"]
+            if "payload_hash" in quote_dict:
+                existing.payload_hash = quote_dict["payload_hash"]
             if "metadata_json" in quote_dict:
                 existing.metadata_json = quote_dict["metadata_json"]
+
             db.add(existing)
             return existing
         else:
+            obs_at = input_observed or quote_dict.get("timestamp") or now_utc
+            if isinstance(obs_at, datetime) and obs_at.tzinfo is None:
+                obs_at = obs_at.replace(tzinfo=timezone.utc)
+
+            fresh = evaluate_freshness(category, symbol, obs_at, now_utc).value
+
             new_record = MarketQuote(
                 quote_date=q_date,
-                timestamp=quote_dict.get("timestamp") or datetime.utcnow(),
+                timestamp=quote_dict.get("timestamp") or now_utc,
+                observed_at=obs_at,
+                ingested_at=now_utc,
                 category=category,
                 commodity=quote_dict.get("commodity"),
                 symbol=symbol,
                 contract_code=contract_code,
                 location_id=location_id,
-                price=float(quote_dict["price"]),
+                price=price_val,
+                price_numeric=price_dec,
                 unit=quote_dict.get("unit", "BRL"),
-                source=quote_dict.get("source", "MANUAL"),
+                currency=quote_dict.get("currency", "BRL"),
+                source=src,
+                source_vendor=quote_dict.get("source_vendor"),
+                source_reference=quote_dict.get("source_reference"),
+                contract_expiry=quote_dict.get("contract_expiry"),
+                payload_hash=quote_dict.get("payload_hash"),
+                data_kind=kind,
+                freshness=fresh,
                 metadata_json=quote_dict.get("metadata_json"),
             )
             db.add(new_record)
@@ -87,6 +154,7 @@ class MarketDataRepository:
     ) -> Optional[MarketQuote]:
         """
         Recupera a cotação mais recente de um ativo utilizando os índices compostos otimizados.
+        Ordena prioritariamente por data da cotação, momento da observação e timestamp.
         """
         query = db.query(MarketQuote).filter(MarketQuote.symbol == symbol)
         if category:
@@ -94,7 +162,14 @@ class MarketDataRepository:
         if location_id:
             query = query.filter(MarketQuote.location_id == location_id)
 
-        return query.order_by(desc(MarketQuote.quote_date), desc(MarketQuote.timestamp)).first()
+        return (
+            query.order_by(
+                desc(MarketQuote.quote_date),
+                desc(MarketQuote.observed_at),
+                desc(MarketQuote.timestamp),
+            )
+            .first()
+        )
 
     @classmethod
     def get_quotes_history(
@@ -108,14 +183,21 @@ class MarketDataRepository:
         query = db.query(MarketQuote).filter(MarketQuote.symbol == symbol)
         if start_date:
             query = query.filter(MarketQuote.quote_date >= start_date)
-        return query.order_by(desc(MarketQuote.quote_date), desc(MarketQuote.timestamp)).limit(limit).all()
+        return (
+            query.order_by(
+                desc(MarketQuote.quote_date),
+                desc(MarketQuote.observed_at),
+                desc(MarketQuote.timestamp),
+            )
+            .limit(limit)
+            .all()
+        )
 
     @classmethod
     def get_all_latest_quotes(cls, db: Session) -> List[MarketQuote]:
         """
         Retorna o último snapshot de mercado agrupado por símbolo e praça.
         """
-        # Subquery para pegar o ID máximo por chave natural
         from sqlalchemy import func
         subq = (
             db.query(
@@ -136,8 +218,9 @@ class MarketDataRepository:
 
     @classmethod
     def log_extraction_start(cls, db: Session, sources: str) -> ExtractionLog:
+        now_utc = datetime.now(timezone.utc)
         log_entry = ExtractionLog(
-            started_at=datetime.utcnow(),
+            started_at=now_utc,
             status="RUNNING",
             sources_contacted=sources,
         )
@@ -159,7 +242,7 @@ class MarketDataRepository:
     ) -> None:
         log_entry = db.query(ExtractionLog).filter(ExtractionLog.id == log_id).first()
         if log_entry:
-            log_entry.finished_at = datetime.utcnow()
+            log_entry.finished_at = datetime.now(timezone.utc)
             log_entry.status = status
             log_entry.records_extracted = records_extracted
             log_entry.records_upserted = records_upserted

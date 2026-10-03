@@ -3,7 +3,7 @@ Módulo de Extração de Derivativos Agrícolas da B3 (Brasil, Bolsa, Balcão) e
 Coleta contratos futuros de Milho (CCM), Soja (SJC) e indicadores de liquidação física/financeira.
 """
 
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from typing import Dict, Any, List, Optional
 import json
 import logging
@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from src.db.connection import SessionLocal, init_db
 from src.db.repository import MarketDataRepository
+from src.db.models import DataKind
 
 logger = logging.getLogger(__name__)
 
@@ -47,12 +48,14 @@ class B3DataExtractor:
         """
         quotes: List[Dict[str, Any]] = []
         q_date = target_date or date.today()
+        now_utc = datetime.now(timezone.utc)
 
         # 1. Contratos Futuros de Milho B3 (CCM)
         for item in DEFAULT_B3_SEEDS["milho_ccm"]:
             quotes.append({
                 "quote_date": q_date,
-                "timestamp": datetime.utcnow(),
+                "timestamp": now_utc,
+                "observed_at": now_utc,
                 "category": "B3_FUTURES",
                 "commodity": "MILHO",
                 "symbol": f"B3_{item['contract']}",
@@ -60,7 +63,11 @@ class B3DataExtractor:
                 "location_id": "B3_SAO_PAULO",
                 "price": float(item["price_brl_bag"]),
                 "unit": item["unit"],
+                "currency": "BRL",
                 "source": "B3_BMF_SETTLEMENT",
+                "source_vendor": "B3_BMF",
+                "source_reference": item["contract"],
+                "data_kind": DataKind.DEMO.value,
                 "metadata_json": json.dumps({
                     "month": item["month_name"],
                     "asset": "Milho Futuro CCM",
@@ -73,7 +80,8 @@ class B3DataExtractor:
         for item in DEFAULT_B3_SEEDS["soja_sjc"]:
             quotes.append({
                 "quote_date": q_date,
-                "timestamp": datetime.utcnow(),
+                "timestamp": now_utc,
+                "observed_at": now_utc,
                 "category": "B3_FUTURES",
                 "commodity": "SOJA",
                 "symbol": f"B3_{item['contract']}",
@@ -81,7 +89,11 @@ class B3DataExtractor:
                 "location_id": "B3_PARANAGUA",
                 "price": float(item["price_usd_bag"]),
                 "unit": item["unit"],
+                "currency": "USD",
                 "source": "B3_BMF_SETTLEMENT",
+                "source_vendor": "B3_BMF",
+                "source_reference": item["contract"],
+                "data_kind": DataKind.DEMO.value,
                 "metadata_json": json.dumps({
                     "month": item["month_name"],
                     "asset": "Soja Futuro SJC",
@@ -95,7 +107,8 @@ class B3DataExtractor:
             comm = "MILHO" if "MILHO" in item["symbol"] else "SOJA"
             quotes.append({
                 "quote_date": q_date,
-                "timestamp": datetime.utcnow(),
+                "timestamp": now_utc,
+                "observed_at": now_utc,
                 "category": "CEPEA_INDEX",
                 "commodity": comm,
                 "symbol": item["symbol"],
@@ -103,7 +116,11 @@ class B3DataExtractor:
                 "location_id": "CAMPINAS_OU_PNG",
                 "price": float(item["price"]),
                 "unit": item["unit"],
+                "currency": "BRL",
                 "source": "CEPEA_ESALQ_B3",
+                "source_vendor": "CEPEA_ESALQ",
+                "source_reference": item["symbol"],
+                "data_kind": DataKind.DEMO.value,
                 "metadata_json": json.dumps({
                     "description": item["name"],
                     "frequency": "DAILY_CLOSE",

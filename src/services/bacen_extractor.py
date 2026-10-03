@@ -3,7 +3,7 @@ Módulo de Extração de Índices Macroeconômicos Oficiais do Banco Central do 
 Coleta e persiste taxas de juros (CDI, Selic Meta) e índices de inflação (IPCA, IGP-M).
 """
 
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from typing import Dict, Any, List, Optional
 import json
 import logging
@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from src.db.connection import SessionLocal
 from src.db.repository import MarketDataRepository
-from src.db.models import ExtractionLog
+from src.db.models import DataKind
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +51,14 @@ BACEN_SGS_SERIES = {
 }
 
 
+def _parse_sgs_date(date_str: str) -> Optional[datetime]:
+    try:
+        dt = datetime.strptime(date_str, "%d/%m/%Y")
+        return dt.replace(tzinfo=timezone.utc)
+    except Exception:
+        return None
+
+
 class BacenMacroExtractor:
     """
     Extrator de dados macroeconômicos do Banco Central do Brasil via API REST pública do SGS.
@@ -84,18 +92,35 @@ class BacenMacroExtractor:
         Extrai todos os índices macroeconômicos configurados (com fallback resiliente).
         """
         results: Dict[str, Any] = {}
+        now_utc = datetime.now(timezone.utc)
+
         for key, conf in BACEN_SGS_SERIES.items():
             raw = cls.fetch_serie_value(conf["serie"])
             if raw and "valor" in raw:
                 try:
                     val = float(raw["valor"])
                     ref_date = raw.get("data", date.today().strftime("%d/%m/%Y"))
+                    observed_at = _parse_sgs_date(ref_date) or now_utc
+                    data_kind = DataKind.OBSERVED.value
+                    source = "BCB_SGS"
+                    source_vendor = "BANCO_CENTRAL_DO_BRASIL"
+                    source_ref = f"BACEN_SGS_{conf['serie']}"
                 except (ValueError, TypeError):
                     val = conf["fallback"]
                     ref_date = date.today().strftime("%d/%m/%Y")
+                    observed_at = now_utc
+                    data_kind = DataKind.DEMO.value
+                    source = "SEED_FALLBACK"
+                    source_vendor = "SEED_BENCHMARK"
+                    source_ref = f"FALLBACK_SGS_{conf['serie']}"
             else:
                 val = conf["fallback"]
                 ref_date = date.today().strftime("%d/%m/%Y")
+                observed_at = now_utc
+                data_kind = DataKind.DEMO.value
+                source = "SEED_FALLBACK"
+                source_vendor = "SEED_BENCHMARK"
+                source_ref = f"FALLBACK_SGS_{conf['serie']}"
 
             results[key] = {
                 "symbol": key,
@@ -103,7 +128,11 @@ class BacenMacroExtractor:
                 "value": val,
                 "unit": conf["unit"],
                 "ref_date": ref_date,
-                "source": "BCB_SGS",
+                "observed_at": observed_at,
+                "source": source,
+                "source_vendor": source_vendor,
+                "source_reference": source_ref,
+                "data_kind": data_kind,
             }
         return results
 
@@ -114,27 +143,21 @@ class BacenMacroExtractor:
         """
         Persiste os índices extraídos na tabela market_quotes de forma transacional e idempotente.
         """
-        log_entry = ExtractionLog(
-            source=f"BACEN_MACRO_{session_type}",
-            status="RUNNING",
-            sources_contacted="api.bcb.gov.br (SGS)",
-            records_extracted=len(indicators),
-            records_upserted=0,
-            session_type=session_type,
-            started_at=datetime.utcnow(),
-        )
-        db.add(log_entry)
-        db.flush()
+        sources_str = f"api.bcb.gov.br (SGS) - BACEN_MACRO_{session_type}"
+        log_entry = MarketDataRepository.log_extraction_start(db, sources_str)
 
         upserted_count = 0
         persisted_items = []
         today = date.today()
+        now_utc = datetime.now(timezone.utc)
 
         try:
             for key, item in indicators.items():
+                obs_dt = item.get("observed_at") or now_utc
                 quote_dict = {
                     "quote_date": today,
-                    "timestamp": datetime.utcnow(),
+                    "timestamp": now_utc,
+                    "observed_at": obs_dt,
                     "category": "MACRO_INDEX",
                     "commodity": None,
                     "symbol": item["symbol"],
@@ -142,40 +165,54 @@ class BacenMacroExtractor:
                     "location_id": "BRASIL",
                     "price": float(item["value"]),
                     "unit": item["unit"],
+                    "currency": "BRL",
                     "source": item["source"],
+                    "source_vendor": item.get("source_vendor", "BANCO_CENTRAL_DO_BRASIL"),
+                    "source_reference": item.get("source_reference"),
+                    "data_kind": item.get("data_kind", DataKind.OBSERVED.value),
                     "metadata_json": json.dumps(
                         {"name": item["name"], "ref_date": item["ref_date"]}
                     ),
                 }
 
-                q = MarketDataRepository.upsert_market_quote(db=db, quote_data=quote_dict)
+                q = MarketDataRepository.upsert_quote(db=db, quote_dict=quote_dict)
                 persisted_items.append(q.to_dict())
                 upserted_count += 1
 
             db.commit()
 
-            log_entry.status = "SUCCESS"
-            log_entry.records_upserted = upserted_count
-            log_entry.finished_at = datetime.utcnow()
-            db.commit()
-
-            return {
+            summary = {
                 "status": "success",
                 "total_indicators": len(indicators),
                 "total_persisted": upserted_count,
-                "timestamp": datetime.utcnow().isoformat(),
-                "indicators": indicators,
+                "timestamp": now_utc.isoformat(),
+                "indicators": {
+                    k: {sub_k: v for sub_k, v in val.items() if sub_k != "observed_at"}
+                    for k, val in indicators.items()
+                },
             }
+
+            MarketDataRepository.log_extraction_end(
+                db=db,
+                log_id=log_entry.id,
+                status="SUCCESS",
+                records_extracted=len(indicators),
+                records_upserted=upserted_count,
+                details_json=json.dumps(summary),
+            )
+
+            return summary
 
         except Exception as e:
             db.rollback()
-            log_entry.status = "FAILED"
-            log_entry.error_message = str(e)
-            log_entry.finished_at = datetime.utcnow()
-            try:
-                db.commit()
-            except Exception:
-                pass
+            MarketDataRepository.log_extraction_end(
+                db=db,
+                log_id=log_entry.id,
+                status="FAILED",
+                records_extracted=len(indicators),
+                records_upserted=0,
+                error_message=str(e),
+            )
             raise e
 
 
