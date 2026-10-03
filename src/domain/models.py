@@ -2,6 +2,7 @@
 Modelos de dados (Pydantic) para entradas, saídas e relatórios analíticos do MVP de Trading.
 """
 
+from datetime import date
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict
 from src.domain.commodities import CommodityType
@@ -86,9 +87,12 @@ class CarryCalculationInput(BaseModel):
     spot_price_brl_bag: float = Field(..., gt=0, description="Preço spot na praça em R$/saca")
     forward_price_brl_bag: float = Field(..., gt=0, description="Preço forward na praça em R$/saca")
     months_to_forward: float = Field(default=4.0, gt=0, description="Meses até a entrega futura")
+    spot_date: Optional[date] = Field(default=None, description="Data base da cotação spot (opcional)")
+    forward_date: Optional[date] = Field(default=None, description="Data de liquidação forward (opcional)")
     
     storage_cost_brl_bag_month: float = Field(default=0.65, ge=0, description="Armazenagem física (R$/saca/mês)")
-    financial_cost_pct_month: float = Field(default=0.85, ge=0, description="Custo de capital / CDI (% ao mês)")
+    financial_cost_pct_month: float = Field(default=0.85, ge=0, description="Custo de capital / CDI (% ao mês nominal)")
+    financial_cost_annual_pct: Optional[float] = Field(default=None, ge=0, description="Taxa CDI anual (% a.a.) para conversão efetiva: (1+i)^(1/12)-1")
     technical_loss_pct: float = Field(default=0.20, ge=0, description="Perda técnica no período (%)")
 
 
@@ -97,6 +101,7 @@ class CarryCalculationResult(BaseModel):
     forward_price_brl_bag: float
     gross_spread_brl_bag: float
     months: float
+    effective_monthly_rate_pct: float
     
     total_storage_cost_brl_bag: float
     total_financial_cost_brl_bag: float
@@ -107,6 +112,7 @@ class CarryCalculationResult(BaseModel):
     net_return_pct: float
     annualized_return_pct: float
     recommendation: str
+    recommendation_code: str  # POSITIVE_CARRY, NEGATIVE_CARRY, NEUTRAL
     detailed_rationale: str
 
 

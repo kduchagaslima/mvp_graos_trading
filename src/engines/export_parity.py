@@ -62,70 +62,69 @@ class ExportParityEngine:
         fob_usd_ton = fob_cents_bu * specs.cents_per_bu_to_usd_per_ton
         
         # 2. Conversão cambial para Real (R$/ton e R$/saca de 60kg)
-        fob_brl_ton = fob_usd_ton * inp.usd_brl_fx
+        # 2. Conversão cambial para Real (R$/ton e R$/saca de 60kg)
+        fob_brl_ton = round(fob_usd_ton * inp.usd_brl_fx, 2)
         # 1 tonelada = 16.666667 sacas de 60kg (ou saca = ton * 0.06)
         ton_to_bag_factor = 0.06
-        fob_brl_bag = fob_brl_ton * ton_to_bag_factor
+        fob_brl_bag = round(fob_brl_ton * ton_to_bag_factor, 2)
 
         # 3. Deduções portuárias
-        elevation_brl_bag = (elevation_usd_ton * inp.usd_brl_fx) * ton_to_bag_factor
-        other_port_costs_brl_bag = other_port_costs_ton * ton_to_bag_factor
-        demurrage_usd_ton = inp.demurrage_usd_ton or 0.0
-        demurrage_brl_bag = (demurrage_usd_ton * inp.usd_brl_fx) * ton_to_bag_factor
+        elevation_brl_bag = round((elevation_usd_ton * inp.usd_brl_fx) * ton_to_bag_factor, 2)
+        other_port_costs_brl_bag = round(other_port_costs_ton * ton_to_bag_factor, 2)
+        demurrage_usd_ton = round(inp.demurrage_usd_ton or 0.0, 2)
+        demurrage_brl_bag = round((demurrage_usd_ton * inp.usd_brl_fx) * ton_to_bag_factor, 2)
         
         # Preço FAS (Free Alongside Ship) entregue no porto
-        fas_brl_bag = fob_brl_bag - elevation_brl_bag - other_port_costs_brl_bag - demurrage_brl_bag
+        fas_brl_bag = round(fob_brl_bag - elevation_brl_bag - other_port_costs_brl_bag - demurrage_brl_bag, 2)
         
         # 4. Frete Rodoviário interior-porto
-        freight_brl_bag = freight_ton * ton_to_bag_factor
+        freight_brl_bag = round(freight_ton * ton_to_bag_factor, 2)
         
         # 5. Margem da Trading (USD/ton convertida para R$/saca)
-        trading_margin_brl_bag = (inp.brokerage_margin_usd_ton * inp.usd_brl_fx) * ton_to_bag_factor
+        trading_margin_brl_bag = round((inp.brokerage_margin_usd_ton * inp.usd_brl_fx) * ton_to_bag_factor, 2)
         
         # 5.1 Comissão do Corretor de Grãos
-        # Se a corretagem for assumida pela trading (TRADING), ela deduz da paridade máxima ofertada
-        brokerage_fee_bag = inp.brokerage_fee_brl_bag if inp.brokerage_payer == "TRADING" else 0.0
+        brokerage_fee_bag = round(inp.brokerage_fee_brl_bag if inp.brokerage_payer == "TRADING" else 0.0, 2)
 
         # 6. Base preliminar antes de impostos sobre originação
-        price_before_taxes = fas_brl_bag - freight_brl_bag - trading_margin_brl_bag - brokerage_fee_bag
+        price_before_taxes = round(fas_brl_bag - freight_brl_bag - trading_margin_brl_bag - brokerage_fee_bag, 2)
         
         # 7. Dedução de Fundo Estadual (FETHAB / FUNDEINFRA / etc)
-        # O FETHAB é em R$/saca fixa
-        price_after_state_tax = price_before_taxes - state_tax_bag
+        state_tax_bag = round(state_tax_bag, 2)
+        price_after_state_tax = round(price_before_taxes - state_tax_bag, 2)
         
         # 8. Quebra técnica (shrinkage loss)
-        shrinkage_brl_bag = price_after_state_tax * (inp.shrinkage_loss_pct / 100.0)
+        shrinkage_brl_bag = round(price_after_state_tax * (inp.shrinkage_loss_pct / 100.0), 2)
         
-        # 9. Funrural (produtor pessoa física) incidente sobre o valor bruto negociado
-        # Paridade líquida = (Preço - Fundo - Quebra) / (1 + Funrural_pct)
+        # 9. Funrural incidente sobre valor negociado e paridade líquida FAS reconciliada
         funrural_factor = inp.funrural_pct / 100.0
-        net_parity_brl_bag = (price_after_state_tax - shrinkage_brl_bag) / (1.0 + funrural_factor)
-        funrural_brl_bag = net_parity_brl_bag * funrural_factor
+        net_parity_brl_bag = round((price_after_state_tax - shrinkage_brl_bag) / (1.0 + funrural_factor), 2)
+        funrural_brl_bag = round(price_after_state_tax - shrinkage_brl_bag - net_parity_brl_bag, 2)
         
         # Preço por tonelada no balcão
-        net_parity_brl_ton = net_parity_brl_bag / ton_to_bag_factor
+        net_parity_brl_ton = round(net_parity_brl_bag / ton_to_bag_factor, 2)
 
         # Comparativo com Balcão Físico Praticado
         originator_spread = None
         originator_margin_pct = None
         if inp.current_cash_price_brl_bag is not None and inp.current_cash_price_brl_bag > 0:
-            originator_spread = net_parity_brl_bag - inp.current_cash_price_brl_bag
-            originator_margin_pct = (originator_spread / inp.current_cash_price_brl_bag) * 100.0
+            originator_spread = round(net_parity_brl_bag - inp.current_cash_price_brl_bag, 2)
+            originator_margin_pct = round((originator_spread / inp.current_cash_price_brl_bag) * 100.0, 2)
 
         cost_breakdown = CostBreakdownBag(
-            fob_gross_brl_bag=round(fob_brl_bag, 2),
-            elevation_brl_bag=round(elevation_brl_bag, 2),
-            other_port_costs_brl_bag=round(other_port_costs_brl_bag, 2),
-            demurrage_brl_bag=round(demurrage_brl_bag, 2),
-            demurrage_usd_ton=round(demurrage_usd_ton, 2),
-            fas_brl_bag=round(fas_brl_bag, 2),
-            freight_brl_bag=round(freight_brl_bag, 2),
+            fob_gross_brl_bag=fob_brl_bag,
+            elevation_brl_bag=elevation_brl_bag,
+            other_port_costs_brl_bag=other_port_costs_brl_bag,
+            demurrage_brl_bag=demurrage_brl_bag,
+            demurrage_usd_ton=demurrage_usd_ton,
+            fas_brl_bag=fas_brl_bag,
+            freight_brl_bag=freight_brl_bag,
             brokerage_fee_brl_bag=round(inp.brokerage_fee_brl_bag, 2),
-            state_fund_brl_bag=round(state_tax_bag, 2),
-            funrural_brl_bag=round(funrural_brl_bag, 2),
-            shrinkage_brl_bag=round(shrinkage_brl_bag, 2),
-            trading_margin_brl_bag=round(trading_margin_brl_bag, 2),
-            net_parity_brl_bag=round(net_parity_brl_bag, 2),
+            state_fund_brl_bag=state_tax_bag,
+            funrural_brl_bag=funrural_brl_bag,
+            shrinkage_brl_bag=shrinkage_brl_bag,
+            trading_margin_brl_bag=trading_margin_brl_bag,
+            net_parity_brl_bag=net_parity_brl_bag,
         )
 
         return ParityCalculationResult(

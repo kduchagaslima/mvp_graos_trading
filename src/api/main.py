@@ -351,14 +351,31 @@ def calculate_batch_parity(
     port_premium_cents: Optional[float] = None,
     usd_brl_fx: Optional[float] = None,
     demurrage_usd_ton: Optional[float] = 0.0,
+    funrural_pct: Optional[float] = None,
+    shrinkage_loss_pct: Optional[float] = None,
+    brokerage_margin_usd_ton: Optional[float] = None,
+    brokerage_payer: Optional[str] = "NONE",
+    brokerage_fee_brl_bag: Optional[float] = 0.0,
 ):
     """
     Calcula a paridade de exportação simultaneamente para todas as praças de originação,
-    permitindo comparar a atratividade regional de compra.
+    permitindo comparar a atratividade regional de compra com parâmetros consistentes (Ticket F06).
     """
     cbot = cbot_price_cents or market_service.get_cbot_price(commodity.value)
     premium = port_premium_cents or market_service.get_port_premium(port_id, commodity.value)
     fx = usd_brl_fx or market_service.get_fx_usd_brl()
+
+    kwargs = {}
+    if funrural_pct is not None:
+        kwargs["funrural_pct"] = funrural_pct
+    if shrinkage_loss_pct is not None:
+        kwargs["shrinkage_loss_pct"] = shrinkage_loss_pct
+    if brokerage_margin_usd_ton is not None:
+        kwargs["brokerage_margin_usd_ton"] = brokerage_margin_usd_ton
+    if brokerage_payer is not None:
+        kwargs["brokerage_payer"] = brokerage_payer
+    if brokerage_fee_brl_bag is not None:
+        kwargs["brokerage_fee_brl_bag"] = brokerage_fee_brl_bag
 
     results = []
     for hub_id, hub in ORIGINATION_HUBS.items():
@@ -372,6 +389,7 @@ def calculate_batch_parity(
             port_id=port_id,
             demurrage_usd_ton=demurrage_usd_ton or 0.0,
             current_cash_price_brl_bag=cash_price,
+            **kwargs,
         )
         res = ExportParityEngine.calculate(inp)
         results.append(res)
