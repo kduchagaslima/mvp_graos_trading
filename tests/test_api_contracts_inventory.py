@@ -43,7 +43,7 @@ EXPECTED_ACCESS_TIERS = {
         ("POST", "/api/carry/calculate"),
         ("POST", "/api/stress/simulate"),
     ],
-    # 4. OPERADOR DA PLATAFORMA (Rotas administrativas que devem ser protegidas por require_platform_operator em F12)
+    # 4. OPERADOR DA PLATAFORMA (Rotas administrativas protegidas por require_platform_operator em F12)
     "OPERATOR_ADMIN": [
         ("POST", "/api/market-data/extract"),
         ("POST", "/api/market-data/fx/refresh"),
@@ -51,14 +51,20 @@ EXPECTED_ACCESS_TIERS = {
         ("POST", "/api/macro/extract"),
         ("GET", "/api/market-data/logs"),
         ("GET", "/api/scheduler/status"),
+        ("GET", "/api/admin/sources/health"),
     ],
-    # 5. CLIENTE PRIVADO / TENANT (Identidade, organizações e perfis privados de custo - F09, F10)
+    # 5. CLIENTE PRIVADO / TENANT (Identidade, organizações, convites, membros e perfis privados - F09, F10, F11)
     "CLIENT_PRIVATE": [
         ("GET", "/api/me"),
         ("GET", "/api/organizations/{org_id}/cost-profiles"),
         ("POST", "/api/organizations/{org_id}/cost-profiles"),
         ("GET", "/api/organizations/{org_id}/cost-profiles/{profile_id}"),
         ("PUT", "/api/organizations/{org_id}/cost-profiles/{profile_id}"),
+        ("GET", "/api/organizations/{org_id}/members"),
+        ("DELETE", "/api/organizations/{org_id}/members/{user_id}"),
+        ("POST", "/api/organizations/{org_id}/invitations"),
+        ("GET", "/api/organizations/{org_id}/invitations"),
+        ("POST", "/api/invitations/{token}/accept"),
     ],
 }
 
@@ -91,7 +97,7 @@ def test_api_routes_inventory_completeness():
     for tier, routes in EXPECTED_ACCESS_TIERS.items():
         expected_all.extend(routes)
 
-    assert len(expected_all) == 29, f"Esperado exatamente 29 endpoints, encontrados {len(expected_all)}"
+    assert len(expected_all) == 35, f"Esperado exatamente 35 endpoints, encontrados {len(expected_all)}"
 
     for expected_method, expected_path in expected_all:
         assert (expected_method, expected_path) in registered_routes, (
@@ -115,7 +121,7 @@ def test_git_sha_and_environment_audit_traceability():
     print(f"\n[AUDIT TRACEABILITY] Commit SHA: {sha}")
     print(f"[AUDIT TRACEABILITY] OS/Platform: {platform.system()} {platform.release()}")
     print(f"[AUDIT TRACEABILITY] Python Version: {sys.version.split()[0]}")
-    print(f"[AUDIT TRACEABILITY] Total Endpoints Mapeados: 29")
+    print(f"[AUDIT TRACEABILITY] Total Endpoints Mapeados: 35")
 
 
 def test_public_endpoints_smoke():

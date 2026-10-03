@@ -151,3 +151,8 @@ class CostProfileUpdateInput(BaseModel):
     default_funrural_pct: Optional[float] = Field(default=None, ge=0.0, le=10.0)
     default_shrinkage_loss_pct: Optional[float] = Field(default=None, ge=0.0, le=5.0)
     is_active: Optional[bool] = None
+
+
+class InvitationCreateInput(BaseModel):
+    email: str = Field(..., description="E-mail corporativo do usuário convidado")
+    role: str = Field(default="ANALYST", description="Papel atribuído ao usuário: OWNER, ANALYST ou READER")

@@ -10,7 +10,8 @@ from sqlalchemy.pool import StaticPool
 from fastapi.testclient import TestClient
 
 from src.db.connection import Base, get_db
-from src.db.models import MarketQuote, ExtractionLog
+from src.db.models import MarketQuote, ExtractionLog, User
+from src.api.auth import require_platform_operator
 from src.services.b3_extractor import B3DataExtractor, extract_and_persist_b3_data
 from src.scheduler.runner import (
     SCHEDULED_JOBS_METADATA,
@@ -57,6 +58,9 @@ def client(engine):
             db.close()
 
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[require_platform_operator] = lambda: User(
+        id=1, email="admin@platform.local", is_platform_operator=True
+    )
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()

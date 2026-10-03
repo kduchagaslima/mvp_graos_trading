@@ -335,3 +335,40 @@ class CostProfile(Base):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
+
+
+class Invitation(Base):
+    """
+    Convite de acesso emitido para onboarding seguro de membros em uma organização (Ticket F11).
+    Possui token criptográfico de uso único e validade de 48 horas.
+    """
+    __tablename__ = "invitations"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    organization_id = Column(Integer, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
+    email = Column(String(128), nullable=False)
+    role = Column(String(32), nullable=False, default=MembershipRole.ANALYST.value)
+    token = Column(String(64), unique=True, nullable=False, index=True)
+    invited_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    expires_at = Column(UTCDateTime, nullable=False)
+    is_accepted = Column(Boolean, nullable=False, default=False)
+    accepted_at = Column(UTCDateTime, nullable=True)
+    created_at = Column(UTCDateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+
+    organization = relationship("Organization")
+    invited_by = relationship("User")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "organization_id": self.organization_id,
+            "organization_name": self.organization.name if self.organization else None,
+            "email": self.email,
+            "role": self.role,
+            "token": self.token,
+            "invited_by_user_id": self.invited_by_user_id,
+            "expires_at": self.expires_at.isoformat() if self.expires_at else None,
+            "is_accepted": self.is_accepted,
+            "accepted_at": self.accepted_at.isoformat() if self.accepted_at else None,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }

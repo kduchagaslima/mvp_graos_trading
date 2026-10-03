@@ -5,7 +5,7 @@ extração e persistência de dados de mercado no banco relacional.
 """
 
 from contextlib import asynccontextmanager
-from datetime import date
+from datetime import date, datetime, timezone, timedelta
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Dict, Any, Optional
@@ -23,6 +23,7 @@ from src.db.models import (
     Membership,
     MembershipRole,
     CostProfile,
+    Invitation,
 )
 from src.domain.commodities import CommodityType, COMMODITY_SPECS
 from src.domain.locations import ORIGINATION_HUBS, PORTS
@@ -35,6 +36,7 @@ from src.domain.models import (
     ScenarioSimulationResult,
     CostProfileCreateInput,
     CostProfileUpdateInput,
+    InvitationCreateInput,
 )
 from src.engines.export_parity import ExportParityEngine
 from src.engines.carry_cost import CarryCostEngine
@@ -114,10 +116,14 @@ def get_market_snapshot(db: Session = Depends(get_db)):
 
 
 @app.post("/api/market-data/extract")
-def trigger_market_data_extraction(db: Session = Depends(get_db)):
+def trigger_market_data_extraction(
+    operator: User = Depends(require_platform_operator),
+    db: Session = Depends(get_db),
+):
     """
     Executa a extração completa de Market Data (PTAX, CBOT, Prêmios, Físico e Frete)
     e persiste os dados de forma transacional e idempotente no banco de dados.
+    Acesso restrito a operadores da plataforma (Ticket F12).
     """
     try:
         summary = extract_and_persist_market_data(db=db)
@@ -141,23 +147,38 @@ def get_quote_history(symbol: str, limit: int = 50, db: Session = Depends(get_db
 
 
 @app.get("/api/market-data/logs")
-def get_extraction_logs(limit: int = 10, db: Session = Depends(get_db)):
-    """Retorna os logs recentes de auditoria de extração de dados."""
+def get_extraction_logs(
+    limit: int = 10,
+    operator: User = Depends(require_platform_operator),
+    db: Session = Depends(get_db),
+):
+    """
+    Retorna os logs recentes de auditoria de extração de dados.
+    Acesso restrito a operadores da plataforma (Ticket F12).
+    """
     logs = db.query(ExtractionLog).order_by(ExtractionLog.id.desc()).limit(limit).all()
     return [l.to_dict() for l in logs]
 
 
 @app.post("/api/market-data/fx/refresh")
-def refresh_live_fx():
+def refresh_live_fx(operator: User = Depends(require_platform_operator)):
+    """
+    Atualiza taxa spot ao vivo. Acesso restrito a operadores da plataforma (Ticket F12).
+    """
     rate = market_service.fetch_live_usd_brl()
     return {"status": "success", "usd_brl_fx": rate}
 
 
 @app.post("/api/b3/extract")
-def trigger_b3_extraction(session_type: str = "MANUAL", db: Session = Depends(get_db)):
+def trigger_b3_extraction(
+    session_type: str = "MANUAL",
+    operator: User = Depends(require_platform_operator),
+    db: Session = Depends(get_db),
+):
     """
     Executa a extração dos futuros agrícolas da B3 (CCM Milho e SJC Soja)
     e indicadores CEPEA/ESALQ, persistindo de forma transacional no banco.
+    Acesso restrito a operadores da plataforma (Ticket F12).
     """
     try:
         summary = extract_and_persist_b3_data(db=db, session_type=session_type)
@@ -179,8 +200,11 @@ def get_latest_b3_quotes(db: Session = Depends(get_db)):
 
 
 @app.get("/api/scheduler/status")
-def get_scheduler_info():
-    """Retorna o status atual do agendador e metadados das rotinas configuradas."""
+def get_scheduler_info(operator: User = Depends(require_platform_operator)):
+    """
+    Retorna o status atual do agendador e metadados das rotinas configuradas.
+    Acesso restrito a operadores da plataforma (Ticket F12).
+    """
     return get_scheduler_status()
 
 
@@ -231,8 +255,15 @@ def get_macro_indices(db: Session = Depends(get_db)):
 
 
 @app.post("/api/macro/extract")
-def trigger_macro_extraction(session_type: str = "MANUAL", db: Session = Depends(get_db)):
-    """Dispara a extração e persistência dos índices oficiais do BACEN SGS."""
+def trigger_macro_extraction(
+    session_type: str = "MANUAL",
+    operator: User = Depends(require_platform_operator),
+    db: Session = Depends(get_db),
+):
+    """
+    Dispara a extração e persistência dos índices oficiais do BACEN SGS.
+    Acesso restrito a operadores da plataforma (Ticket F12).
+    """
     try:
         summary = extract_and_persist_macro_data(db=db, session_type=session_type)
         return summary
@@ -554,4 +585,245 @@ def update_organization_cost_profile(
     db.commit()
     db.refresh(profile)
     return profile.to_dict()
+
+
+# ==============================================================================
+# Gestão de Membros e Convites Organizacionais (Ticket F11)
+# ==============================================================================
+
+@app.get("/api/organizations/{org_id}/members")
+def list_organization_members(
+    org_id: int,
+    membership: Membership = Depends(require_role(MembershipRole.READER)),
+    db: Session = Depends(get_db),
+):
+    """
+    Lista todos os membros ativos da organização com seus papéis RBAC (Ticket F11).
+    Acesso permitido a READER, ANALYST e OWNER.
+    """
+    members = (
+        db.query(Membership)
+        .filter(Membership.organization_id == org_id, Membership.is_active == True)
+        .all()
+    )
+    result = []
+    for m in members:
+        u = m.user
+        result.append({
+            "membership_id": m.id,
+            "user_id": u.id,
+            "email": u.email,
+            "name": u.name,
+            "role": m.role,
+            "joined_at": m.created_at.isoformat() if m.created_at else None,
+        })
+    return result
+
+
+@app.delete("/api/organizations/{org_id}/members/{user_id}")
+def remove_organization_member(
+    org_id: int,
+    user_id: int,
+    membership: Membership = Depends(require_role(MembershipRole.OWNER)),
+    db: Session = Depends(get_db),
+):
+    """
+    Remove ou desativa um membro da organização (Ticket F11).
+    Apenas OWNER pode remover membros. Impede remover o único OWNER da organização.
+    """
+    target_membership = (
+        db.query(Membership)
+        .filter(
+            Membership.organization_id == org_id,
+            Membership.user_id == user_id,
+            Membership.is_active == True,
+        )
+        .first()
+    )
+    if not target_membership:
+        raise HTTPException(status_code=404, detail="Member not found in this organization")
+
+    if target_membership.role == MembershipRole.OWNER.value:
+        active_owners = (
+            db.query(Membership)
+            .filter(
+                Membership.organization_id == org_id,
+                Membership.role == MembershipRole.OWNER.value,
+                Membership.is_active == True,
+            )
+            .count()
+        )
+        if active_owners <= 1:
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot remove the sole OWNER of the organization"
+            )
+
+    target_membership.is_active = False
+    db.commit()
+    return {"status": "success", "message": f"User {user_id} removed from organization {org_id}"}
+
+
+@app.post("/api/organizations/{org_id}/invitations")
+def create_invitation(
+    org_id: int,
+    payload: InvitationCreateInput,
+    membership: Membership = Depends(require_role(MembershipRole.OWNER)),
+    db: Session = Depends(get_db),
+):
+    """
+    Gera um convite criptográfico de uso único com validade de 48 horas (Ticket F11).
+    Apenas OWNER pode emitir convites.
+    """
+    import secrets
+    token = secrets.token_urlsafe(32)
+    expires_at = datetime.now(timezone.utc) + timedelta(hours=48)
+
+    role_val = payload.role.upper()
+    if role_val not in [r.value for r in MembershipRole]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid role '{payload.role}'. Must be one of {[r.value for r in MembershipRole]}"
+        )
+
+    invitation = Invitation(
+        organization_id=org_id,
+        email=payload.email,
+        role=role_val,
+        token=token,
+        invited_by_user_id=membership.user_id,
+        expires_at=expires_at,
+        is_accepted=False,
+    )
+    db.add(invitation)
+    db.commit()
+    db.refresh(invitation)
+    return invitation.to_dict()
+
+
+@app.get("/api/organizations/{org_id}/invitations")
+def list_pending_invitations(
+    org_id: int,
+    membership: Membership = Depends(require_role(MembershipRole.OWNER)),
+    db: Session = Depends(get_db),
+):
+    """
+    Lista convites pendentes e não expirados da organização (Ticket F11).
+    Apenas OWNER pode visualizar convites.
+    """
+    now = datetime.now(timezone.utc)
+    invitations = (
+        db.query(Invitation)
+        .filter(
+            Invitation.organization_id == org_id,
+            Invitation.is_accepted == False,
+            Invitation.expires_at > now,
+        )
+        .all()
+    )
+    return [inv.to_dict() for inv in invitations]
+
+
+@app.post("/api/invitations/{token}/accept")
+def accept_invitation(
+    token: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Aceita um convite ativo e vincula o usuário autenticado à organização (Ticket F11).
+    """
+    invitation = db.query(Invitation).filter(Invitation.token == token).first()
+    if not invitation:
+        raise HTTPException(status_code=404, detail="Invitation not found")
+
+    if invitation.is_accepted:
+        raise HTTPException(status_code=400, detail="Invitation has already been accepted")
+
+    now = datetime.now(timezone.utc)
+    exp = invitation.expires_at
+    if exp.tzinfo is None:
+        exp = exp.replace(tzinfo=timezone.utc)
+
+    if exp < now:
+        raise HTTPException(status_code=400, detail="Invitation has expired (48-hour limit exceeded)")
+
+    existing = (
+        db.query(Membership)
+        .filter(
+            Membership.user_id == current_user.id,
+            Membership.organization_id == invitation.organization_id,
+        )
+        .first()
+    )
+    if existing:
+        existing.role = invitation.role
+        existing.is_active = True
+    else:
+        new_membership = Membership(
+            user_id=current_user.id,
+            organization_id=invitation.organization_id,
+            role=invitation.role,
+            is_active=True,
+        )
+        db.add(new_membership)
+
+    invitation.is_accepted = True
+    invitation.accepted_at = now
+    db.commit()
+
+    org_name = invitation.organization.name if invitation.organization else "Organization"
+    return {
+        "status": "success",
+        "message": f"Successfully joined {org_name} as {invitation.role}",
+        "organization_id": invitation.organization_id,
+        "role": invitation.role,
+    }
+
+
+# ==============================================================================
+# Telemetria e Saúde de Fontes de Dados (Ticket F12)
+# ==============================================================================
+
+@app.get("/api/admin/sources/health")
+def get_sources_health(
+    operator: User = Depends(require_platform_operator),
+    db: Session = Depends(get_db),
+):
+    """
+    Retorna o status operacional, integridade e telemetria de cada fonte de dados (Ticket F12).
+    Acesso restrito ao operador da plataforma.
+    """
+    sources_to_check = ["CBOT", "BACEN_PTAX", "B3", "BACEN_MACRO", "CEPEA"]
+    health_report = {}
+
+    for src in sources_to_check:
+        latest_quote = (
+            db.query(MarketQuote)
+            .filter(MarketQuote.source.like(f"%{src}%"))
+            .order_by(MarketQuote.observed_at.desc(), MarketQuote.id.desc())
+            .first()
+        )
+        latest_log = (
+            db.query(ExtractionLog)
+            .filter(ExtractionLog.sources_contacted.like(f"%{src}%"))
+            .order_by(ExtractionLog.id.desc())
+            .first()
+        )
+        health_report[src] = {
+            "source": src,
+            "status": "OPERATIONAL" if (latest_quote or (latest_log and latest_log.status == "SUCCESS")) else "UNVERIFIED",
+            "last_observed_at": latest_quote.observed_at.isoformat() if latest_quote and latest_quote.observed_at else None,
+            "last_ingested_at": latest_quote.ingested_at.isoformat() if latest_quote and latest_quote.ingested_at else None,
+            "last_log_status": latest_log.status if latest_log else None,
+            "last_log_finished_at": latest_log.finished_at.isoformat() if latest_log and latest_log.finished_at else None,
+            "data_kind": latest_quote.data_kind if latest_quote else "UNKNOWN",
+            "freshness": latest_quote.freshness if latest_quote else "UNKNOWN",
+        }
+
+    return {
+        "status": "HEALTHY",
+        "checked_at": datetime.now(timezone.utc).isoformat(),
+        "sources": health_report,
+    }
 
