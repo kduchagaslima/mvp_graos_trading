@@ -4,13 +4,14 @@ Integra com o banco de dados relacional para consultas de baixa latência e hist
 com fallback automático para garantir funcionamento offline contínuo.
 """
 
-from typing import Dict, Any, Optional
 from typing import Dict, Any, Optional, List
 from datetime import datetime, timezone, date, timedelta
+import math
 import requests
 import logging
 
 from src.db.connection import SessionLocal
+from src.db.models import DataKind, FreshnessStatus, MarketQuote
 from src.db.repository import MarketDataRepository
 from src.domain.locations import ORIGINATION_HUBS, PORTS
 
@@ -86,27 +87,75 @@ class MarketDataService:
         self._cache: Dict[str, Any] = deepcopy_seeds()
         self._last_updated: datetime = datetime.now()
 
-    def get_snapshot(self) -> Dict[str, Any]:
+    def get_snapshot(self, db: Optional[Any] = None) -> Dict[str, Any]:
         """Retorna todas as cotações atuais consolidadas do banco de dados ou cache."""
+        close_session = False
+        session = db
+        if session is None:
+            try:
+                session = SessionLocal()
+                close_session = True
+            except Exception:
+                session = None
+
         try:
-            with SessionLocal() as db:
-                db_quotes = MarketDataRepository.get_all_latest_quotes(db)
+            if session is not None:
+                db_quotes = MarketDataRepository.get_all_latest_quotes(session)
                 if db_quotes:
                     quotes_list = [q.to_dict() for q in db_quotes]
+
+                    # Reconciliação F03: Constrói a estrutura 'data' estritamente a partir das cotações do banco
+                    structured_data = deepcopy_seeds()
+                    for q in db_quotes:
+                        if q.category == "FX" and q.symbol == "USD_BRL_PTAX_VENDA":
+                            structured_data["fx_usd_brl"] = q.price
+                        elif q.category == "FUTURES":
+                            comm = q.commodity or ("SOJA" if "ZS" in q.symbol or "SOJA" in q.symbol else "MILHO")
+                            if comm in structured_data["cbot_prices"]:
+                                structured_data["cbot_prices"][comm]["last_price_cents"] = q.price
+                        elif q.category == "PORT_PREMIUM":
+                            port = q.location_id
+                            comm = q.commodity or ("SOJA" if "SOJA" in q.symbol else "MILHO")
+                            if port in structured_data["port_premiums_cents"]:
+                                structured_data["port_premiums_cents"][port][comm] = q.price
+                        elif q.category == "PHYSICAL_CASH":
+                            hub = q.location_id
+                            comm = q.commodity or ("SOJA" if "SOJA" in q.symbol else "MILHO")
+                            if hub in structured_data["cash_prices_brl_bag"]:
+                                structured_data["cash_prices_brl_bag"][hub][comm] = q.price
+
+                    # Sincroniza cache interno com dados reais
+                    self._cache = structured_data
+                    self._last_updated = datetime.now(timezone.utc)
+
+                    overall_freshness = FreshnessStatus.CURRENT.value
+                    if any(q.freshness == FreshnessStatus.STALE.value for q in db_quotes):
+                        overall_freshness = FreshnessStatus.STALE.value
+
                     return {
                         "source": "DATABASE",
-                        "timestamp": datetime.now().isoformat(),
+                        "timestamp": self._last_updated.isoformat(),
                         "total_quotes": len(quotes_list),
                         "quotes": quotes_list,
-                        "data": self._cache,
+                        "data": structured_data,
+                        "freshness": overall_freshness,
+                        "reconciled": True,
                     }
         except Exception as e:
             logger.warning(f"Erro ao consultar snapshot no banco de dados: {e}")
+        finally:
+            if close_session and session is not None:
+                session.close()
 
         return {
             "source": "CACHE_SEEDS",
             "timestamp": self._last_updated.isoformat(),
+            "total_quotes": 0,
+            "quotes": [],
             "data": self._cache,
+            "data_kind": DataKind.DEMO.value,
+            "freshness": FreshnessStatus.UNKNOWN.value,
+            "reconciled": True,
         }
 
     def fetch_live_usd_brl(self) -> float:
@@ -120,7 +169,7 @@ class MarketDataService:
             if quotes:
                 rate = float(quotes[0]["price"])
                 self._cache["fx_usd_brl"] = rate
-                self._last_updated = datetime.now()
+                self._last_updated = datetime.now(timezone.utc)
                 return rate
         except Exception as e:
             logger.warning(f"Não foi possível obter PTAX online: {e}. Mantendo valor atual.")
@@ -132,14 +181,16 @@ class MarketDataService:
             with SessionLocal() as db:
                 quote = MarketDataRepository.get_latest_quote(db, "USD_BRL_PTAX_VENDA", category="FX")
                 if quote:
-                    return float(quote.price)
+                    rate = float(quote.price)
+                    self._cache["fx_usd_brl"] = rate
+                    return rate
         except Exception:
             pass
         return float(self._cache["fx_usd_brl"])
 
     def set_fx_usd_brl(self, value: float) -> None:
         self._cache["fx_usd_brl"] = round(value, 4)
-        self._last_updated = datetime.now()
+        self._last_updated = datetime.now(timezone.utc)
 
     def get_cbot_price(self, commodity: str) -> float:
         com_key = commodity.upper()
@@ -148,7 +199,9 @@ class MarketDataService:
             with SessionLocal() as db:
                 quote = MarketDataRepository.get_latest_quote(db, symbol, category="FUTURES")
                 if quote:
-                    return float(quote.price)
+                    val = float(quote.price)
+                    self._cache["cbot_prices"][com_key]["last_price_cents"] = val
+                    return val
         except Exception:
             pass
         return float(self._cache["cbot_prices"][com_key]["last_price_cents"])
@@ -156,7 +209,7 @@ class MarketDataService:
     def set_cbot_price(self, commodity: str, price_cents: float) -> None:
         com_key = commodity.upper()
         self._cache["cbot_prices"][com_key]["last_price_cents"] = round(price_cents, 2)
-        self._last_updated = datetime.now()
+        self._last_updated = datetime.now(timezone.utc)
 
     def get_port_premium(self, port_id: str, commodity: str) -> float:
         sym = f"PREM_{port_id.upper()}_{commodity.upper()}"
@@ -164,7 +217,11 @@ class MarketDataService:
             with SessionLocal() as db:
                 quote = MarketDataRepository.get_latest_quote(db, sym, category="PORT_PREMIUM")
                 if quote:
-                    return float(quote.price)
+                    val = float(quote.price)
+                    if port_id not in self._cache["port_premiums_cents"]:
+                        self._cache["port_premiums_cents"][port_id] = {}
+                    self._cache["port_premiums_cents"][port_id][commodity.upper()] = val
+                    return val
         except Exception:
             pass
         return float(self._cache["port_premiums_cents"].get(port_id, {}).get(commodity.upper(), 80.0))
@@ -173,7 +230,7 @@ class MarketDataService:
         if port_id not in self._cache["port_premiums_cents"]:
             self._cache["port_premiums_cents"][port_id] = {}
         self._cache["port_premiums_cents"][port_id][commodity.upper()] = round(premium_cents, 2)
-        self._last_updated = datetime.now()
+        self._last_updated = datetime.now(timezone.utc)
 
     def get_cash_price(self, hub_id: str, commodity: str) -> Optional[float]:
         sym = f"CASH_{hub_id.upper()}_{commodity.upper()}"
@@ -181,7 +238,11 @@ class MarketDataService:
             with SessionLocal() as db:
                 quote = MarketDataRepository.get_latest_quote(db, sym, category="PHYSICAL_CASH")
                 if quote:
-                    return float(quote.price)
+                    val = float(quote.price)
+                    if hub_id not in self._cache["cash_prices_brl_bag"]:
+                        self._cache["cash_prices_brl_bag"][hub_id] = {}
+                    self._cache["cash_prices_brl_bag"][hub_id][commodity.upper()] = val
+                    return val
         except Exception:
             pass
         return self._cache["cash_prices_brl_bag"].get(hub_id, {}).get(commodity.upper())
@@ -192,17 +253,16 @@ class MarketDataService:
     def get_candlestick_series(self, symbol: str, days: int = 30, db: Optional[Any] = None) -> list:
         """
         Retorna série temporal de velas (OHLC - Open, High, Low, Close) para gráficos de cotações.
-        Garante ancoragem precisa com a última cotação real do mercado.
+        Prioriza cotações históricas reais do banco de dados (Ticket F04).
+        Caso o histórico seja insuficiente, gera série determinística de referência (marcada como DEMO),
+        eliminando geradores de números aleatórios sem rastreabilidade.
         """
-        import random
-        from datetime import timedelta
-
         configs = {
-            "CBOT_SOJA": {"base": self.get_cbot_price("SOJA"), "vol": 12.0, "decimals": 2},
-            "CBOT_MILHO": {"base": self.get_cbot_price("MILHO"), "vol": 5.0, "decimals": 2},
-            "USD_BRL": {"base": self.get_fx_usd_brl(), "vol": 0.035, "decimals": 4},
-            "B3_MILHO": {"base": 63.80, "vol": 0.65, "decimals": 2},
-            "PARIDADE_FAS": {"base": 133.50, "vol": 1.10, "decimals": 2},
+            "CBOT_SOJA": {"base": self.get_cbot_price("SOJA"), "vol": 12.0, "decimals": 2, "db_symbol": "ZS=F"},
+            "CBOT_MILHO": {"base": self.get_cbot_price("MILHO"), "vol": 5.0, "decimals": 2, "db_symbol": "ZC=F"},
+            "USD_BRL": {"base": self.get_fx_usd_brl(), "vol": 0.035, "decimals": 4, "db_symbol": "USD_BRL_PTAX_VENDA"},
+            "B3_MILHO": {"base": 63.80, "vol": 0.65, "decimals": 2, "db_symbol": "B3_CCMK27"},
+            "PARIDADE_FAS": {"base": 133.50, "vol": 1.10, "decimals": 2, "db_symbol": "CEPEA_SOJA_PARANAGUA"},
         }
 
         sym = symbol.upper()
@@ -210,8 +270,66 @@ class MarketDataService:
         last_price = cfg["base"]
         vol = cfg["vol"]
         decimals = cfg["decimals"]
+        db_sym = cfg.get("db_symbol", sym)
 
-        # Datas úteis retroativas
+        # 1. Tentar consultar histórico real no banco de dados
+        close_session = False
+        session = db
+        if session is None:
+            try:
+                session = SessionLocal()
+                close_session = True
+            except Exception:
+                session = None
+
+        real_history = []
+        if session is not None:
+            try:
+                real_history = (
+                    session.query(MarketQuote)
+                    .filter(MarketQuote.symbol == db_sym)
+                    .order_by(MarketQuote.quote_date.asc(), MarketQuote.observed_at.asc())
+                    .all()
+                )
+            except Exception as e:
+                logger.warning(f"Erro ao buscar histórico real de {db_sym}: {e}")
+            finally:
+                if close_session and session is not None:
+                    session.close()
+
+        # Se houver histórico observado com pelo menos 'days' registros diários:
+        if len(real_history) >= days:
+            by_date = {}
+            for q in real_history:
+                dt_key = q.quote_date.strftime("%Y-%m-%d")
+                if dt_key not in by_date:
+                    by_date[dt_key] = []
+                by_date[dt_key].append(q)
+
+            dates_sorted = sorted(by_date.keys())[-days:]
+            candles = []
+            prev_close = None
+            for dt_str in dates_sorted:
+                day_quotes = by_date[dt_str]
+                prices = [q.price for q in day_quotes]
+                open_p = prev_close if prev_close is not None else prices[0]
+                close_p = prices[-1]
+                high_p = max(max(prices), open_p, close_p)
+                low_p = min(min(prices), open_p, close_p)
+                candles.append({
+                    "time": dt_str,
+                    "open": round(open_p, decimals),
+                    "high": round(high_p, decimals),
+                    "low": round(low_p, decimals),
+                    "close": round(close_p, decimals),
+                    "volume": 10000,
+                    "data_kind": day_quotes[-1].data_kind,
+                    "is_synthetic": False,
+                })
+                prev_close = close_p
+            return candles
+
+        # 2. Histórico real insuficiente: gerar série determinística calibrada (DEMO)
         today = date.today()
         dates = []
         d = today
@@ -221,36 +339,39 @@ class MarketDataService:
             d -= timedelta(days=1)
         dates.reverse()
 
-        # Gerar série com determinismo diário estável
-        random_seed = int(datetime.now(timezone.utc).strftime("%Y%m%d")) + sum(ord(c) for c in sym)
-        rng = random.Random(random_seed)
-
         candles = []
-        curr = last_price - (rng.uniform(-0.5, 0.5) * vol * 2.0)
+        n = len(dates)
+        if n == 0:
+            return candles
+
+        prices = [0.0] * n
+        prices[-1] = last_price
+        for i in range(n - 2, -1, -1):
+            step = math.sin((i + 1) * 0.7) * (vol * 0.4)
+            prices[i] = prices[i + 1] - step
+
+        initial_open = prices[0] - math.sin(0.7) * (vol * 0.4)
+        curr_open = initial_open
 
         for i, d_item in enumerate(dates):
-            is_last = (i == len(dates) - 1)
-            if is_last:
-                close_p = last_price
-                open_p = curr
-            else:
-                change = rng.uniform(-vol, vol * 1.05)
-                open_p = curr
-                close_p = open_p + change
-
-            high_p = max(open_p, close_p) + rng.uniform(0.15 * vol, 0.75 * vol)
-            low_p = min(open_p, close_p) - rng.uniform(0.15 * vol, 0.75 * vol)
-            volume = rng.randint(2500, 18000)
+            open_p = round(curr_open, decimals)
+            close_p = round(prices[i], decimals) if i < n - 1 else round(last_price, decimals)
+            spread = abs(math.cos((i + 1) * 0.85)) * (vol * 0.35) + (vol * 0.05)
+            high_p = round(max(open_p, close_p) + spread, decimals)
+            low_p = round(max(0.01, min(open_p, close_p) - spread), decimals)
+            volume = 5000 + int(abs(math.sin(i)) * 3000)
 
             candles.append({
                 "time": d_item.strftime("%Y-%m-%d"),
-                "open": round(open_p, decimals),
-                "high": round(high_p, decimals),
-                "low": round(low_p, decimals),
-                "close": round(close_p, decimals),
+                "open": open_p,
+                "high": high_p,
+                "low": low_p,
+                "close": close_p,
                 "volume": volume,
+                "data_kind": DataKind.DEMO.value,
+                "is_synthetic": True,
             })
-            curr = close_p
+            curr_open = close_p
 
         return candles
 

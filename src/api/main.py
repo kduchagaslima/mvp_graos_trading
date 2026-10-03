@@ -5,6 +5,7 @@ extração e persistência de dados de mercado no banco relacional.
 """
 
 from contextlib import asynccontextmanager
+from datetime import date
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Dict, Any, Optional
@@ -12,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from src.db.connection import init_db, get_db
 from src.db.repository import MarketDataRepository
-from src.db.models import ExtractionLog, MarketQuote
+from src.db.models import ExtractionLog, MarketQuote, DataKind, FreshnessStatus
 from src.domain.commodities import CommodityType, COMMODITY_SPECS
 from src.domain.locations import ORIGINATION_HUBS, PORTS
 from src.domain.models import (
@@ -90,8 +91,8 @@ def get_locations():
 # ==============================================================================
 
 @app.get("/api/market-data/snapshot")
-def get_market_snapshot():
-    return market_service.get_snapshot()
+def get_market_snapshot(db: Session = Depends(get_db)):
+    return market_service.get_snapshot(db=db)
 
 
 @app.post("/api/market-data/extract")
@@ -167,7 +168,10 @@ def get_scheduler_info():
 
 @app.get("/api/macro/indices")
 def get_macro_indices(db: Session = Depends(get_db)):
-    """Retorna os índices macroeconômicos mais recentes (CDI, Selic, IPCA, IGPM)."""
+    """
+    Retorna os índices macroeconômicos mais recentes (CDI, Selic, IPCA, IGPM).
+    Operação estritamente de leitura (Ticket F05) sem efeitos colaterais ou mutações no banco.
+    """
     quotes = (
         db.query(MarketQuote)
         .filter(MarketQuote.category == "MACRO_INDEX")
@@ -175,11 +179,21 @@ def get_macro_indices(db: Session = Depends(get_db)):
         .all()
     )
     if not quotes:
-        try:
-            summary = extract_and_persist_macro_data(db=db, session_type="FIRST_RUN")
-            return summary.get("indicators", {})
-        except Exception:
-            return BacenMacroExtractor.extract_macro_indicators()
+        from src.services.bacen_extractor import BACEN_SGS_SERIES
+        today_str = date.today().strftime("%d/%m/%Y")
+        return {
+            key: {
+                "symbol": key,
+                "name": conf["name"],
+                "value": conf["fallback"],
+                "unit": conf["unit"],
+                "ref_date": today_str,
+                "source": "SEED_FALLBACK",
+                "data_kind": DataKind.DEMO.value,
+                "freshness": FreshnessStatus.UNKNOWN.value,
+            }
+            for key, conf in BACEN_SGS_SERIES.items()
+        }
 
     result = {}
     for q in quotes:
@@ -192,6 +206,8 @@ def get_macro_indices(db: Session = Depends(get_db)):
                 "unit": q.unit,
                 "ref_date": meta.get("ref_date", q.quote_date.strftime("%d/%m/%Y")),
                 "source": q.source,
+                "data_kind": q.data_kind,
+                "freshness": q.freshness,
             }
     return result
 
