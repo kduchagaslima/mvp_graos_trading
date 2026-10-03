@@ -37,3 +37,33 @@ output "eventbridge_schedules" {
     macro_market_data     = aws_scheduler_schedule.macro_market_data.name
   }
 }
+
+output "cognito_user_pool_id" {
+  description = "ID do Cognito User Pool provisionado"
+  value       = aws_cognito_user_pool.pool.id
+}
+
+output "cognito_user_pool_arn" {
+  description = "ARN do Cognito User Pool"
+  value       = aws_cognito_user_pool.pool.arn
+}
+
+output "cognito_user_pool_client_id" {
+  description = "ID do App Client publico (sem secret, com PKCE)"
+  value       = aws_cognito_user_pool_client.public_client.id
+}
+
+output "cognito_user_pool_domain" {
+  description = "URL do dominio do Cognito Managed Login"
+  value       = "https://${aws_cognito_user_pool_domain.domain.domain}.auth.${var.aws_region}.amazoncognito.com"
+}
+
+output "cognito_issuer_url" {
+  description = "URL do emissor OIDC (Issuer)"
+  value       = "https://cognito-idp.${var.aws_region}.amazonaws.com/${aws_cognito_user_pool.pool.id}"
+}
+
+output "cognito_jwks_url" {
+  description = "URL do conjunto de chaves publicas JWKS para validacao dos tokens RS256"
+  value       = "https://cognito-idp.${var.aws_region}.amazonaws.com/${aws_cognito_user_pool.pool.id}/.well-known/jwks.json"
+}

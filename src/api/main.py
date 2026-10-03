@@ -13,7 +13,17 @@ from sqlalchemy.orm import Session
 
 from src.db.connection import init_db, get_db
 from src.db.repository import MarketDataRepository
-from src.db.models import ExtractionLog, MarketQuote, DataKind, FreshnessStatus
+from src.db.models import (
+    ExtractionLog,
+    MarketQuote,
+    DataKind,
+    FreshnessStatus,
+    User,
+    Organization,
+    Membership,
+    MembershipRole,
+    CostProfile,
+)
 from src.domain.commodities import CommodityType, COMMODITY_SPECS
 from src.domain.locations import ORIGINATION_HUBS, PORTS
 from src.domain.models import (
@@ -23,6 +33,8 @@ from src.domain.models import (
     CarryCalculationResult,
     ScenarioSimulationInput,
     ScenarioSimulationResult,
+    CostProfileCreateInput,
+    CostProfileUpdateInput,
 )
 from src.engines.export_parity import ExportParityEngine
 from src.engines.carry_cost import CarryCostEngine
@@ -32,6 +44,12 @@ from src.services.extractor import extract_and_persist_market_data
 from src.services.b3_extractor import extract_and_persist_b3_data
 from src.services.bacen_extractor import extract_and_persist_macro_data, BacenMacroExtractor
 from src.scheduler.runner import get_scheduler_status
+from src.api.auth import (
+    get_current_user,
+    get_current_membership,
+    require_role,
+    require_platform_operator,
+)
 import json
 
 
@@ -413,4 +431,127 @@ def simulate_stress_scenario(payload: ScenarioSimulationInput):
         return result
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+# ==============================================================================
+# Endpoints de Identidade, Organizações e Custos Privados (Tickets F09, F10)
+# ==============================================================================
+
+@app.get("/api/me")
+def get_my_profile(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Retorna o perfil do usuário autenticado e suas filiações ativas a organizações (Ticket F09).
+    """
+    memberships = (
+        db.query(Membership)
+        .filter(Membership.user_id == current_user.id, Membership.is_active == True)
+        .all()
+    )
+    return {
+        "id": current_user.id,
+        "cognito_sub": current_user.cognito_sub,
+        "email": current_user.email,
+        "name": current_user.name,
+        "is_active": current_user.is_active,
+        "is_platform_operator": current_user.is_platform_operator,
+        "created_at": current_user.created_at.isoformat() if current_user.created_at else None,
+        "memberships": [m.to_dict() for m in memberships],
+    }
+
+
+@app.get("/api/organizations/{org_id}/cost-profiles")
+def list_organization_cost_profiles(
+    org_id: int,
+    membership: Membership = Depends(require_role(MembershipRole.READER)),
+    db: Session = Depends(get_db),
+):
+    """
+    Lista todos os perfis privados de custo da organização do usuário (Ticket F10).
+    Acesso restrito a membros ativos com papel READER, ANALYST ou OWNER na organização.
+    """
+    profiles = (
+        db.query(CostProfile)
+        .filter(CostProfile.organization_id == org_id, CostProfile.is_active == True)
+        .all()
+    )
+    return [p.to_dict() for p in profiles]
+
+
+@app.post("/api/organizations/{org_id}/cost-profiles")
+def create_organization_cost_profile(
+    org_id: int,
+    payload: CostProfileCreateInput,
+    membership: Membership = Depends(require_role(MembershipRole.ANALYST)),
+    db: Session = Depends(get_db),
+):
+    """
+    Cria um perfil privado de custos e margens para a organização (Ticket F10).
+    Acesso restrito a membros com papel ANALYST ou OWNER.
+    """
+    profile = CostProfile(
+        organization_id=org_id,
+        name=payload.name,
+        brokerage_margin_usd_ton=payload.brokerage_margin_usd_ton,
+        brokerage_fee_brl_bag=payload.brokerage_fee_brl_bag,
+        brokerage_payer=payload.brokerage_payer,
+        default_funrural_pct=payload.default_funrural_pct,
+        default_shrinkage_loss_pct=payload.default_shrinkage_loss_pct,
+        is_active=True,
+    )
+    db.add(profile)
+    db.commit()
+    db.refresh(profile)
+    return profile.to_dict()
+
+
+@app.get("/api/organizations/{org_id}/cost-profiles/{profile_id}")
+def get_organization_cost_profile(
+    org_id: int,
+    profile_id: int,
+    membership: Membership = Depends(require_role(MembershipRole.READER)),
+    db: Session = Depends(get_db),
+):
+    """
+    Retorna os detalhes de um perfil de custo privado da organização (Ticket F10).
+    """
+    profile = (
+        db.query(CostProfile)
+        .filter(CostProfile.id == profile_id, CostProfile.organization_id == org_id)
+        .first()
+    )
+    if not profile:
+        raise HTTPException(status_code=404, detail="Cost profile not found in this organization")
+    return profile.to_dict()
+
+
+@app.put("/api/organizations/{org_id}/cost-profiles/{profile_id}")
+def update_organization_cost_profile(
+    org_id: int,
+    profile_id: int,
+    payload: CostProfileUpdateInput,
+    membership: Membership = Depends(require_role(MembershipRole.ANALYST)),
+    db: Session = Depends(get_db),
+):
+    """
+    Atualiza parâmetros de um perfil privado de custos da organização (Ticket F10).
+    """
+    profile = (
+        db.query(CostProfile)
+        .filter(CostProfile.id == profile_id, CostProfile.organization_id == org_id)
+        .first()
+    )
+    if not profile:
+        raise HTTPException(status_code=404, detail="Cost profile not found in this organization")
+
+    update_data = payload.model_dump(exclude_unset=True)
+    for field, val in update_data.items():
+        if val is not None:
+            setattr(profile, field, val)
+
+    db.commit()
+    db.refresh(profile)
+    return profile.to_dict()
 

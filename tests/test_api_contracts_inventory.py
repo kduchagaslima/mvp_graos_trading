@@ -52,6 +52,14 @@ EXPECTED_ACCESS_TIERS = {
         ("GET", "/api/market-data/logs"),
         ("GET", "/api/scheduler/status"),
     ],
+    # 5. CLIENTE PRIVADO / TENANT (Identidade, organizações e perfis privados de custo - F09, F10)
+    "CLIENT_PRIVATE": [
+        ("GET", "/api/me"),
+        ("GET", "/api/organizations/{org_id}/cost-profiles"),
+        ("POST", "/api/organizations/{org_id}/cost-profiles"),
+        ("GET", "/api/organizations/{org_id}/cost-profiles/{profile_id}"),
+        ("PUT", "/api/organizations/{org_id}/cost-profiles/{profile_id}"),
+    ],
 }
 
 
@@ -83,7 +91,7 @@ def test_api_routes_inventory_completeness():
     for tier, routes in EXPECTED_ACCESS_TIERS.items():
         expected_all.extend(routes)
 
-    assert len(expected_all) == 24, f"Esperado exatamente 24 endpoints, encontrados {len(expected_all)}"
+    assert len(expected_all) == 29, f"Esperado exatamente 29 endpoints, encontrados {len(expected_all)}"
 
     for expected_method, expected_path in expected_all:
         assert (expected_method, expected_path) in registered_routes, (
@@ -107,7 +115,7 @@ def test_git_sha_and_environment_audit_traceability():
     print(f"\n[AUDIT TRACEABILITY] Commit SHA: {sha}")
     print(f"[AUDIT TRACEABILITY] OS/Platform: {platform.system()} {platform.release()}")
     print(f"[AUDIT TRACEABILITY] Python Version: {sys.version.split()[0]}")
-    print(f"[AUDIT TRACEABILITY] Total Endpoints Mapeados: 24")
+    print(f"[AUDIT TRACEABILITY] Total Endpoints Mapeados: 29")
 
 
 def test_public_endpoints_smoke():

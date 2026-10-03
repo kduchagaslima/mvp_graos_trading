@@ -33,3 +33,29 @@ variable "acm_certificate_arn" {
   description = "ARN do certificado ACM em us-east-1 (obrigatório se custom_domain_name for preenchido)"
   default     = ""
 }
+
+variable "cognito_domain_prefix" {
+  type        = string
+  description = "Prefixo único para o domínio do Cognito Managed Login"
+  default     = ""
+}
+
+variable "cognito_callback_urls" {
+  type        = list(string)
+  description = "URLs permitidas de callback para redirecionamento após autenticação"
+  default     = [
+    "http://localhost:8000/callback",
+    "http://localhost:3000/callback",
+    "https://localhost/callback"
+  ]
+}
+
+variable "cognito_logout_urls" {
+  type        = list(string)
+  description = "URLs permitidas para redirecionamento após logout"
+  default     = [
+    "http://localhost:8000/login",
+    "http://localhost:3000/login",
+    "https://localhost/login"
+  ]
+}

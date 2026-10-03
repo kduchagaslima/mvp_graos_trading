@@ -132,3 +132,22 @@ class ScenarioSimulationResult(BaseModel):
     base_margin_brl_bag: Optional[float] = None
     simulated_margin_brl_bag: Optional[float] = None
     applied_shifts: Dict[str, float]
+
+
+class CostProfileCreateInput(BaseModel):
+    name: str = Field(default="Padrão", description="Nome descritivo do perfil de custos")
+    brokerage_margin_usd_ton: float = Field(default=2.0, ge=0.0, description="Margem desejada da trading em USD/ton")
+    brokerage_fee_brl_bag: float = Field(default=0.0, ge=0.0, description="Comissão do corretor em R$/saca")
+    brokerage_payer: str = Field(default="NONE", description="Responsável pela corretagem ('NONE', 'TRADING', 'SELLER')")
+    default_funrural_pct: float = Field(default=1.5, ge=0.0, le=10.0, description="Alíquota padrão do Funrural (%)")
+    default_shrinkage_loss_pct: float = Field(default=0.3, ge=0.0, le=5.0, description="Percentual de quebra técnica (%)")
+
+
+class CostProfileUpdateInput(BaseModel):
+    name: Optional[str] = None
+    brokerage_margin_usd_ton: Optional[float] = Field(default=None, ge=0.0)
+    brokerage_fee_brl_bag: Optional[float] = Field(default=None, ge=0.0)
+    brokerage_payer: Optional[str] = None
+    default_funrural_pct: Optional[float] = Field(default=None, ge=0.0, le=10.0)
+    default_shrinkage_loss_pct: Optional[float] = Field(default=None, ge=0.0, le=5.0)
+    is_active: Optional[bool] = None

@@ -19,7 +19,10 @@ from sqlalchemy import (
     Index,
     UniqueConstraint,
     TypeDecorator,
+    Boolean,
+    ForeignKey,
 )
+from sqlalchemy.orm import relationship
 from src.db.connection import Base
 
 
@@ -196,4 +199,139 @@ class ExtractionLog(Base):
             "records_upserted": self.records_upserted,
             "sources_contacted": self.sources_contacted,
             "error_message": self.error_message,
+        }
+
+
+# ==============================================================================
+# Modelos de Identidade, Organizações, RBAC e Custos Privados (Tickets F09, F10)
+# ==============================================================================
+
+class MembershipRole(str, Enum):
+    """Papéis permitidos dentro de uma organização."""
+    OWNER = "OWNER"
+    ANALYST = "ANALYST"
+    READER = "READER"
+
+
+class User(Base):
+    """
+    Identidade do usuário autenticado vinculada ao sub do Amazon Cognito.
+    """
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    cognito_sub = Column(String(64), unique=True, nullable=False, index=True)
+    email = Column(String(128), unique=True, nullable=False, index=True)
+    name = Column(String(128), nullable=True)
+    is_active = Column(Boolean, nullable=False, default=True)
+    is_platform_operator = Column(Boolean, nullable=False, default=False)
+    created_at = Column(UTCDateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(UTCDateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+
+    memberships = relationship("Membership", back_populates="user", cascade="all, delete-orphan")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "cognito_sub": self.cognito_sub,
+            "email": self.email,
+            "name": self.name,
+            "is_active": self.is_active,
+            "is_platform_operator": self.is_platform_operator,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class Organization(Base):
+    """
+    Empresa / Tenant da plataforma (segregação de dados e custos privados).
+    """
+    __tablename__ = "organizations"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(128), nullable=False)
+    slug = Column(String(64), unique=True, nullable=False, index=True)
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(UTCDateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+
+    memberships = relationship("Membership", back_populates="organization", cascade="all, delete-orphan")
+    cost_profiles = relationship("CostProfile", back_populates="organization", cascade="all, delete-orphan")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "slug": self.slug,
+            "is_active": self.is_active,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class Membership(Base):
+    """
+    Vínculo de um usuário a uma organização com papel (RBAC: OWNER, ANALYST, READER).
+    """
+    __tablename__ = "memberships"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    organization_id = Column(Integer, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
+    role = Column(String(32), nullable=False, default=MembershipRole.ANALYST.value)
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(UTCDateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+
+    user = relationship("User", back_populates="memberships")
+    organization = relationship("Organization", back_populates="memberships")
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "organization_id", name="uq_membership_user_org"),
+    )
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "organization_id": self.organization_id,
+            "organization_name": self.organization.name if self.organization else None,
+            "organization_slug": self.organization.slug if self.organization else None,
+            "role": self.role,
+            "is_active": self.is_active,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class CostProfile(Base):
+    """
+    Perfil privado de custos e margens de originação específico de cada empresa (Tenant).
+    Garante que parâmetros privados de corretagem e margens não vazem entre empresas.
+    """
+    __tablename__ = "cost_profiles"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    organization_id = Column(Integer, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(64), nullable=False, default="Padrão")
+    brokerage_margin_usd_ton = Column(Float, nullable=False, default=2.0)
+    brokerage_fee_brl_bag = Column(Float, nullable=False, default=0.0)
+    brokerage_payer = Column(String(16), nullable=False, default="NONE")  # NONE, TRADING, SELLER
+    default_funrural_pct = Column(Float, nullable=False, default=1.5)
+    default_shrinkage_loss_pct = Column(Float, nullable=False, default=0.3)
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(UTCDateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(UTCDateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+
+    organization = relationship("Organization", back_populates="cost_profiles")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "organization_id": self.organization_id,
+            "name": self.name,
+            "brokerage_margin_usd_ton": self.brokerage_margin_usd_ton,
+            "brokerage_fee_brl_bag": self.brokerage_fee_brl_bag,
+            "brokerage_payer": self.brokerage_payer,
+            "default_funrural_pct": self.default_funrural_pct,
+            "default_shrinkage_loss_pct": self.default_shrinkage_loss_pct,
+            "is_active": self.is_active,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

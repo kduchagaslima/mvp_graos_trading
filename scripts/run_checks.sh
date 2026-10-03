@@ -43,6 +43,8 @@ if command -v /home/celima/.local/bin/uv &> /dev/null; then
         --with sqlalchemy \
         --with fastapi \
         --with httpx \
+        --with pyjwt \
+        --with cryptography \
         pytest -o cache_dir=/tmp/.pytest_cache -v tests/
 else
     pytest -o cache_dir=/tmp/.pytest_cache -v tests/

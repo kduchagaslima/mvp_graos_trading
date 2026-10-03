@@ -30,3 +30,7 @@ pytz>=2024.1
 # Testes & Qualidade
 pytest>=8.2.0
 pytest-cov>=5.0.0
+
+# Autenticação & Criptografia (Amazon Cognito / JWKS / OIDC)
+pyjwt[crypto]>=2.8.0
+cryptography>=42.0.0
