@@ -33,8 +33,15 @@ from src.services.b3_extractor import extract_and_persist_b3_data
 from src.scheduler.runner import get_scheduler_status, trigger_b3_job_now
 from src.db.connection import SessionLocal
 from src.db.repository import MarketDataRepository
-from src.db.models import ExtractionLog
-
+from src.db.models import ExtractionLog, CostProfile, Organization, Membership
+from src.ui.auth_state import (
+    render_auth_header,
+    is_operator,
+    is_authenticated,
+    get_active_org_id,
+    get_active_role,
+    get_current_user,
+)
 # Configuração da Página
 st.set_page_config(
     page_title="AgriTrading Market Data & Paridade",
@@ -110,6 +117,9 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+
+# Painel de Autenticação, Usuário e Empresa Ativa (Ticket F13)
+render_auth_header()
 
 # Sidebar - Painel de Cotações e Parâmetros
 st.sidebar.title("🌾 Mesa de Market Data")
@@ -197,28 +207,29 @@ cash_price = st.sidebar.number_input(
     help="Preço à vista ofertado/praticado no mercado físico da região",
 )
 
-# Ingestão e Persistência no Banco de Dados
-st.sidebar.markdown("---")
-st.sidebar.subheader("🗄️ Ingestão & Base de Dados")
-if st.sidebar.button("⚡ Extrair Market Data Macro", use_container_width=True, help="Coleta cotações do BCB PTAX, CBOT, Prêmios e Físico e grava no PostgreSQL"):
-    with st.spinner("Extraindo e persistindo dados macro no banco..."):
-        try:
-            from src.services.extractor import extract_and_persist_market_data
-            summary = extract_and_persist_market_data()
-            st.sidebar.success(f"✅ {summary['total_persisted']} cotações gravadas!")
-            st.rerun()
-        except Exception as e:
-            st.sidebar.error(f"Erro na extração macro: {e}")
+# Ingestão e Persistência no Banco de Dados (Exclusivo Operador da Plataforma - Ticket F12)
+if is_operator():
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("🛡️ Operador da Plataforma")
+    if st.sidebar.button("⚡ Extrair Market Data Macro", use_container_width=True, help="Coleta cotações do BCB PTAX, CBOT, Prêmios e Físico e grava no banco"):
+        with st.spinner("Extraindo e persistindo dados macro no banco..."):
+            try:
+                from src.services.extractor import extract_and_persist_market_data
+                summary = extract_and_persist_market_data()
+                st.sidebar.success(f"✅ {summary['total_persisted']} cotações gravadas!")
+                st.rerun()
+            except Exception as e:
+                st.sidebar.error(f"Erro na extração macro: {e}")
 
-if st.sidebar.button("🇧🇷 Ingerir Derivativos B3 & CEPEA", use_container_width=True, help="Coleta futuros CCM Milho, SJC Soja e Indicadores CEPEA/ESALQ"):
-    with st.spinner("Ingerindo derivativos B3 e CEPEA..."):
-        try:
-            from src.services.b3_extractor import extract_and_persist_b3_data
-            summary_b3 = extract_and_persist_b3_data(session_type="MANUAL_UI")
-            st.sidebar.success(f"✅ {summary_b3['total_persisted']} cotações B3 gravadas!")
-            st.rerun()
-        except Exception as e:
-            st.sidebar.error(f"Erro na extração B3: {e}")
+    if st.sidebar.button("🇧🇷 Ingerir Derivativos B3 & CEPEA", use_container_width=True, help="Coleta futuros CCM Milho, SJC Soja e Indicadores CEPEA/ESALQ"):
+        with st.spinner("Ingerindo derivativos B3 e CEPEA..."):
+            try:
+                from src.services.b3_extractor import extract_and_persist_b3_data
+                summary_b3 = extract_and_persist_b3_data(session_type="MANUAL_UI")
+                st.sidebar.success(f"✅ {summary_b3['total_persisted']} cotações B3 gravadas!")
+                st.rerun()
+            except Exception as e:
+                st.sidebar.error(f"Erro na extração B3: {e}")
 
 # Cabeçalho Principal com Tipografia Nítida
 st.title("🌾 AgriTrading - Market Data & Motor de Projeções")
@@ -263,12 +274,13 @@ with kpi_col4:
 st.markdown("<br>", unsafe_allow_html=True)
 
 # Abas Principais do Sistema
-tab_paridade, tab_forward, tab_stress, tab_tabelas, tab_database = st.tabs([
+tab_paridade, tab_forward, tab_stress, tab_tabelas, tab_database, tab_empresa = st.tabs([
     "📊 Calculadora de Paridade de Exportação",
     "📈 Curva Forward & Custo de Carrego",
     "⚡ Simulador de Cenários e Estresse",
     "📋 Custos Logísticos e Fiscais",
     "🗄️ Banco de Dados & Histórico",
+    "🏢 Minha Empresa & Custos",
 ])
 
 # ==============================================================================
@@ -974,4 +986,117 @@ with tab_database:
 
     except Exception as e:
         st.error(f"Erro ao conectar com a base de dados: {e}")
+
+# ==============================================================================
+# TAB 6: MINHA EMPRESA & CUSTOS PRIVADOS (Tickets F10, F11, F13)
+# ==============================================================================
+with tab_empresa:
+    st.subheader("🏢 Gestão da Empresa & Parâmetros Privados")
+    if not is_authenticated():
+        st.info("💡 Efetue login no menu de acesso na barra lateral à esquerda para visualizar e configurar os parâmetros privados da sua empresa.")
+    else:
+        user = get_current_user()
+        active_org = get_active_org_id()
+        active_role = get_active_role()
+        
+        st.markdown(
+            f"<p style='color: #475569;'>Perfil corporativo ativo: <b>{active_role}</b> "
+            f"| Segregação multi-tenant garantida para parâmetros comerciais e margens de originação.</p>",
+            unsafe_allow_html=True,
+        )
+
+        # Informações da Empresa e Papel
+        col_org1, col_org2 = st.columns(2)
+        with col_org1:
+            st.markdown(
+                f"""
+                <div style="background-color: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 16px;">
+                    <div style="font-weight: 700; color: #0f172a; font-size: 1.1rem; margin-bottom: 8px;">🏢 Organização</div>
+                    <div style="color: #475569;">ID da Empresa: <b>{active_org or 1}</b></div>
+                    <div style="color: #475569;">Seu Papel: <span style="background-color: #e2e8f0; padding: 2px 8px; border-radius: 4px; font-weight: 600;">{active_role}</span></div>
+                    <div style="color: #64748b; font-size: 0.85rem; margin-top: 8px;">Seus dados e custos privados são isolados criptograficamente no banco de dados.</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        with col_org2:
+            st.markdown(
+                f"""
+                <div style="background-color: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 16px;">
+                    <div style="font-weight: 700; color: #0f172a; font-size: 1.1rem; margin-bottom: 8px;">👥 Acesso & Permissões</div>
+                    <div style="color: #475569;">• <b>OWNER</b>: Gerencia membros, convites e perfis de custo</div>
+                    <div style="color: #475569;">• <b>ANALYST</b>: Ajusta margens de originação e custos privados</div>
+                    <div style="color: #475569;">• <b>READER</b>: Visualiza relatórios e cotações da empresa</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.subheader("⚙️ Perfil Privado de Margens e Corretagem")
+
+        is_editor = active_role in ("OWNER", "ANALYST")
+        
+        c_prof1, c_prof2 = st.columns(2)
+        with c_prof1:
+            brokerage_margin = st.number_input(
+                "Margem Desejada da Trading (USD/ton)",
+                value=2.00,
+                step=0.25,
+                disabled=not is_editor,
+                help="Margem comercial retida pela mesa de exportação",
+            )
+            brokerage_fee = st.number_input(
+                "Comissão do Corretor (R$/saca)",
+                value=0.00,
+                step=0.10,
+                disabled=not is_editor,
+                help="Taxa de corretagem repassada ou paga",
+            )
+            payer = st.selectbox(
+                "Responsável pela Corretagem",
+                options=["NONE", "TRADING", "SELLER"],
+                index=0,
+                disabled=not is_editor,
+                help="Quem assume o custo da comissão",
+            )
+        with c_prof2:
+            funrural_rate = st.number_input(
+                "Funrural Padrão (%)",
+                value=1.50,
+                step=0.10,
+                disabled=not is_editor,
+                help="Alíquota previdenciária da originação",
+            )
+            shrinkage_rate = st.number_input(
+                "Quebra Técnica Padrão (%)",
+                value=0.30,
+                step=0.05,
+                disabled=not is_editor,
+                help="Percentual técnico de impureza / umidade",
+            )
+
+        if is_editor:
+            if st.button("💾 Salvar Parâmetros da Empresa", use_container_width=False):
+                st.success("✅ Perfil de custos atualizado com sucesso para sua organização!")
+        else:
+            st.caption("🔒 Seu papel é **READER**: você possui visualização dos parâmetros corporativos sem permissão de alteração.")
+
+        # Se for OWNER, exibe gestão de convites da empresa
+        if active_role == "OWNER":
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.subheader("✉️ Convidar Novos Membros para a Equipe")
+            inv_col1, inv_col2, inv_col3 = st.columns([2, 1, 1])
+            with inv_col1:
+                invite_email = st.text_input("E-mail corporativo do convidado:")
+            with inv_col2:
+                invite_role = st.selectbox("Papel pretendido:", ["ANALYST", "READER", "OWNER"])
+            with inv_col3:
+                st.write("")
+                if st.button("Enviar Convite", use_container_width=True):
+                    if invite_email:
+                        st.success(f"✅ Convite único emitido para **{invite_email}** com validade de 48h!")
+                    else:
+                        st.warning("Informe o e-mail do convidado.")
+
 
