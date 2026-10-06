@@ -15,7 +15,7 @@ echo "📦 Empacotando Lambda Serverless para AgriTrading"
 echo "=========================================================="
 
 if [ -d "$PACKAGE_DIR" ] && command -v docker &> /dev/null; then
-    docker run --rm -v "$BUILD_DIR:/build" python:3.11-slim rm -rf /build/package /build/lambda_function.zip 2>/dev/null || true
+    docker run --rm -v "$BUILD_DIR:/build" public.ecr.aws/sam/build-python3.11:latest rm -rf /build/package /build/lambda_function.zip 2>/dev/null || true
 fi
 rm -rf "$PACKAGE_DIR" "$OUTPUT_ZIP"
 mkdir -p "$PACKAGE_DIR"
@@ -25,11 +25,11 @@ cp -r "$REPO_ROOT/src" "$PACKAGE_DIR/src"
 
 echo "2. Instalando dependências de produção para Python 3.11..."
 if command -v docker &> /dev/null; then
-    echo "Usando Docker para garantir binários 100% compatíveis com AWS Lambda..."
+    echo "Usando Docker (AWS SAM build-python3.11 / Amazon Linux 2) para compatibilidade nativa de libc/glibc..."
     docker run --rm \
         -v "$REPO_ROOT/requirements-lambda.txt:/requirements.txt:ro" \
         -v "$PACKAGE_DIR:/package" \
-        python:3.11-slim \
+        public.ecr.aws/sam/build-python3.11:latest \
         bash -c "pip install --no-cache-dir --upgrade -t /package -r /requirements.txt && chown -R $(id -u):$(id -g) /package"
 elif command -v pip3 &> /dev/null; then
     pip3 install -t "$PACKAGE_DIR" -r "$REPO_ROOT/requirements-lambda.txt"

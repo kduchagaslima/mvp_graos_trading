@@ -4,6 +4,7 @@ Expõe endpoints REST para cálculo de paridade, custo de carrego, simulação d
 extração e persistência de dados de mercado no banco relacional.
 """
 
+import os
 from contextlib import asynccontextmanager
 from datetime import date, datetime, timezone, timedelta
 from fastapi import FastAPI, HTTPException, Depends
@@ -69,14 +70,38 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS Middleware
+# ==============================================================================
+# Endurecimento de Políticas de Rede (CORS) e Cache (Ticket F15 - Atividade 4)
+# ==============================================================================
+
+raw_allowed = os.getenv(
+    "ALLOWED_ORIGINS",
+    "https://d1qfxp2g7u6ypc.cloudfront.net,http://localhost:8501,http://localhost:3000,http://127.0.0.1:8501",
+)
+allowed_origins = [o.strip() for o in raw_allowed.split(",") if o.strip()]
+allow_creds = "*" not in allowed_origins
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_origins=allowed_origins if allowed_origins else ["*"],
+    allow_credentials=allow_creds,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
 )
+
+@app.middleware("http")
+async def add_security_and_cache_headers(request, call_next):
+    """
+    Garante que respostas da API nunca sejam armazenadas em caches públicos/compartilhados
+    e adiciona cabeçalhos defensivos de proteção contra clickjacking e MIME-sniffing.
+    """
+    response = await call_next(request)
+    if request.url.path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, private"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+    return response
 
 
 @app.get("/health")

@@ -38,10 +38,15 @@ resource "aws_lambda_function" "api" {
 
   environment {
     variables = {
-      DATABASE_URL = var.database_url
-      STAGE        = var.environment
-      PYTHONPATH   = "/var/task"
-      TZ           = "America/Sao_Paulo"
+      DATABASE_URL          = var.database_url
+      STAGE                 = var.environment
+      PYTHONPATH            = "/var/task"
+      TZ                    = "America/Sao_Paulo"
+      COGNITO_USER_POOL_ID  = aws_cognito_user_pool.pool.id
+      COGNITO_APP_CLIENT_ID = aws_cognito_user_pool_client.public_client.id
+      COGNITO_JWKS_URL      = "https://cognito-idp.${var.aws_region}.amazonaws.com/${aws_cognito_user_pool.pool.id}/.well-known/jwks.json"
+      COGNITO_ISSUER        = "https://cognito-idp.${var.aws_region}.amazonaws.com/${aws_cognito_user_pool.pool.id}"
+      ALLOWED_ORIGINS       = "https://${aws_cloudfront_distribution.cdn.domain_name},http://localhost:8501,http://localhost:3000"
     }
   }
 
