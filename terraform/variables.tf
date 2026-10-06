@@ -44,6 +44,8 @@ variable "cognito_callback_urls" {
   type        = list(string)
   description = "URLs permitidas de callback para redirecionamento após autenticação"
   default     = [
+    "https://d1qfxp2g7u6ypc.cloudfront.net",
+    "https://d1qfxp2g7u6ypc.cloudfront.net/",
     "http://localhost:8000/callback",
     "http://localhost:3000/callback",
     "https://localhost/callback"
@@ -54,6 +56,8 @@ variable "cognito_logout_urls" {
   type        = list(string)
   description = "URLs permitidas para redirecionamento após logout"
   default     = [
+    "https://d1qfxp2g7u6ypc.cloudfront.net",
+    "https://d1qfxp2g7u6ypc.cloudfront.net/",
     "http://localhost:8000/login",
     "http://localhost:3000/login",
     "https://localhost/login"

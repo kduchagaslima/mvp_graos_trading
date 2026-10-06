@@ -41,23 +41,43 @@
         </div>
       </div>
 
-      <!-- LIVE TOP TICKER -->
-      <div class="hidden md:flex items-center space-x-6 text-sm">
-        <div class="flex items-center space-x-2 bg-slate-100 px-3 py-1.5 rounded-md border border-slate-200">
-          <span class="text-slate-500 font-medium text-xs">PTAX (USD/BRL):</span>
-          <span id="ticker-fx" class="font-bold text-slate-800">R$ 5,4850</span>
+      <!-- RIGHT SIDE: TICKER & AUTH -->
+      <div class="flex items-center space-x-4">
+        <!-- LIVE TOP TICKER -->
+        <div class="hidden xl:flex items-center space-x-4 text-sm">
+          <div class="flex items-center space-x-2 bg-slate-100 px-3 py-1.5 rounded-md border border-slate-200">
+            <span class="text-slate-500 font-medium text-xs">PTAX (USD/BRL):</span>
+            <span id="ticker-fx" class="font-bold text-slate-800">R$ 5,4850</span>
+          </div>
+          <div class="flex items-center space-x-2 bg-slate-100 px-3 py-1.5 rounded-md border border-slate-200">
+            <span class="text-slate-500 font-medium text-xs">SOJA CBOT:</span>
+            <span id="ticker-soja" class="font-bold text-slate-800">1.180,00 ¢/bu</span>
+          </div>
+          <div class="flex items-center space-x-2 bg-slate-100 px-3 py-1.5 rounded-md border border-slate-200">
+            <span class="text-slate-500 font-medium text-xs">MILHO CBOT:</span>
+            <span id="ticker-milho" class="font-bold text-slate-800">445,00 ¢/bu</span>
+          </div>
+          <div class="flex items-center space-x-1.5 text-xs text-green-700 bg-green-50 px-2.5 py-1 rounded-full border border-green-200 font-medium">
+            <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+            <span>AWS Serverless + Neon</span>
+          </div>
         </div>
-        <div class="flex items-center space-x-2 bg-slate-100 px-3 py-1.5 rounded-md border border-slate-200">
-          <span class="text-slate-500 font-medium text-xs">SOJA CBOT:</span>
-          <span id="ticker-soja" class="font-bold text-slate-800">1.180,00 ¢/bu</span>
-        </div>
-        <div class="flex items-center space-x-2 bg-slate-100 px-3 py-1.5 rounded-md border border-slate-200">
-          <span class="text-slate-500 font-medium text-xs">MILHO CBOT:</span>
-          <span id="ticker-milho" class="font-bold text-slate-800">445,00 ¢/bu</span>
-        </div>
-        <div class="flex items-center space-x-1.5 text-xs text-green-700 bg-green-50 px-2.5 py-1 rounded-full border border-green-200 font-medium">
-          <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-          <span>AWS Serverless + Neon</span>
+
+        <!-- AUTH HEADER CONTAINER -->
+        <div id="auth-header-container" class="flex items-center space-x-2 pl-3 border-l border-slate-200">
+          <button id="btn-login" onclick="startCognitoLogin()" class="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-md shadow-sm transition">
+            <i data-lucide="log-in" class="w-3.5 h-3.5"></i>
+            <span>Entrar</span>
+          </button>
+          <div id="user-badge" class="hidden items-center space-x-2.5 bg-emerald-50 border border-emerald-200 rounded-md px-3 py-1">
+            <div class="flex flex-col text-right">
+              <span id="user-email-display" class="text-xs font-bold text-slate-900 leading-tight">...</span>
+              <span id="user-org-display" class="text-[10px] text-emerald-700 font-medium">Carregando...</span>
+            </div>
+            <button onclick="logoutCognito()" title="Sair da conta" class="p-1 text-slate-400 hover:text-red-600 hover:bg-emerald-100/60 rounded transition">
+              <i data-lucide="log-out" class="w-4 h-4"></i>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -1512,6 +1532,220 @@
       ? 'http://localhost:8000/api'
       : '/api';
 
+    // ==============================================================================
+    // CONFIGURAÇÃO E FLUXO OAUTH 2.0 PKCE (AMAZON COGNITO) - TICKET F13
+    // ==============================================================================
+    const COGNITO_CONFIG = {
+      domain: 'https://agri-trading-prod-d2szr6.auth.us-east-1.amazoncognito.com',
+      clientId: '5ukp4c1krdu2ve24ho3fjelie6',
+      redirectUri: window.location.origin.includes('localhost')
+        ? (window.location.origin.includes('8000') ? 'http://localhost:8000/callback' : 'http://localhost:3000/callback')
+        : 'https://d1qfxp2g7u6ypc.cloudfront.net',
+      logoutUri: window.location.origin.includes('localhost')
+        ? (window.location.origin.includes('8000') ? 'http://localhost:8000/login' : 'http://localhost:3000/login')
+        : 'https://d1qfxp2g7u6ypc.cloudfront.net',
+      scopes: 'openid email profile'
+    };
+
+    function bufferToBase64Url(buffer) {
+      const bytes = new Uint8Array(buffer);
+      let binary = '';
+      for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      return btoa(binary)
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+    }
+
+    function generateRandomString(length = 64) {
+      const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+      const randomValues = new Uint8Array(length);
+      window.crypto.getRandomValues(randomValues);
+      let result = '';
+      for (let i = 0; i < length; i++) {
+        result += charset[randomValues[i] % charset.length];
+      }
+      return result;
+    }
+
+    async function generateCodeChallenge(verifier) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(verifier);
+      const digest = await window.crypto.subtle.digest('SHA-256', data);
+      return bufferToBase64Url(digest);
+    }
+
+    async function startCognitoLogin() {
+      try {
+        const verifier = generateRandomString(64);
+        const challenge = await generateCodeChallenge(verifier);
+        const state = generateRandomString(32);
+
+        sessionStorage.setItem('agri_pkce_verifier', verifier);
+        sessionStorage.setItem('agri_pkce_state', state);
+
+        const params = new URLSearchParams({
+          client_id: COGNITO_CONFIG.clientId,
+          response_type: 'code',
+          scope: COGNITO_CONFIG.scopes,
+          redirect_uri: COGNITO_CONFIG.redirectUri,
+          state: state,
+          code_challenge: challenge,
+          code_challenge_method: 'S256'
+        });
+
+        window.location.href = `${COGNITO_CONFIG.domain}/login?${params.toString()}`;
+      } catch (err) {
+        console.error('Erro ao iniciar fluxo de login:', err);
+        alert('Falha ao redirecionar para o portal de login: ' + err.message);
+      }
+    }
+
+    function logoutCognito() {
+      sessionStorage.removeItem('agri_access_token');
+      sessionStorage.removeItem('agri_id_token');
+      sessionStorage.removeItem('agri_user_profile');
+      sessionStorage.removeItem('agri_pkce_verifier');
+      sessionStorage.removeItem('agri_pkce_state');
+
+      const params = new URLSearchParams({
+        client_id: COGNITO_CONFIG.clientId,
+        logout_uri: COGNITO_CONFIG.logoutUri
+      });
+
+      window.location.href = `${COGNITO_CONFIG.domain}/logout?${params.toString()}`;
+    }
+
+    async function handleAuthCallback() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      const state = urlParams.get('state');
+
+      if (!code) return false;
+
+      const savedState = sessionStorage.getItem('agri_pkce_state');
+      const verifier = sessionStorage.getItem('agri_pkce_verifier');
+
+      // Limpar parâmetros da barra de URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+
+      if (state && savedState && state !== savedState) {
+        console.error('State inválido no retorno OAuth!');
+        return false;
+      }
+
+      if (!verifier) {
+        console.warn('PKCE verifier não encontrado.');
+        return false;
+      }
+
+      try {
+        const tokenRes = await fetch(`${COGNITO_CONFIG.domain}/oauth2/token`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          body: new URLSearchParams({
+            grant_type: 'authorization_code',
+            client_id: COGNITO_CONFIG.clientId,
+            code: code,
+            redirect_uri: COGNITO_CONFIG.redirectUri,
+            code_verifier: verifier
+          })
+        });
+
+        if (!tokenRes.ok) {
+          const err = await tokenRes.text();
+          console.error('Falha ao trocar código de autorização por tokens:', err);
+          return false;
+        }
+
+        const data = await tokenRes.json();
+        if (data.access_token) {
+          sessionStorage.setItem('agri_access_token', data.access_token);
+          if (data.id_token) sessionStorage.setItem('agri_id_token', data.id_token);
+          sessionStorage.removeItem('agri_pkce_verifier');
+          sessionStorage.removeItem('agri_pkce_state');
+          return true;
+        }
+      } catch (err) {
+        console.error('Erro de rede na troca do token:', err);
+      }
+      return false;
+    }
+
+    async function refreshUserProfile() {
+      const token = sessionStorage.getItem('agri_access_token');
+      const idToken = sessionStorage.getItem('agri_id_token');
+      const btnLogin = document.getElementById('btn-login');
+      const userBadge = document.getElementById('user-badge');
+      const emailDisplay = document.getElementById('user-email-display');
+      const orgDisplay = document.getElementById('user-org-display');
+
+      if (!token) {
+        if (btnLogin) btnLogin.classList.remove('hidden');
+        if (userBadge) {
+          userBadge.classList.add('hidden');
+          userBadge.classList.remove('flex');
+        }
+        return null;
+      }
+
+      // Decodificar dados básicos do ID token se disponível para exibição rápida
+      let fallbackEmail = 'Usuário Autenticado';
+      if (idToken) {
+        try {
+          const payloadBase64 = idToken.split('.')[1];
+          const payloadJson = JSON.parse(atob(payloadBase64.replace(/-/g, '+').replace(/_/g, '/')));
+          fallbackEmail = payloadJson.email || payloadJson.name || fallbackEmail;
+        } catch (e) {
+          console.warn('Não foi possível decodificar ID token:', e);
+        }
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/me`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (res.ok) {
+          const user = await res.json();
+          sessionStorage.setItem('agri_user_profile', JSON.stringify(user));
+          if (btnLogin) btnLogin.classList.add('hidden');
+          if (userBadge) {
+            userBadge.classList.remove('hidden');
+            userBadge.classList.add('flex');
+          }
+          if (emailDisplay) emailDisplay.innerText = user.email || fallbackEmail;
+          if (orgDisplay) {
+            const org = user.memberships && user.memberships[0];
+            const orgName = org ? org.organization_name : 'Organização Padrão';
+            const role = org ? org.role : 'leitor';
+            orgDisplay.innerText = `${orgName} • ${role.toUpperCase()}`;
+          }
+          if (window.lucide) lucide.createIcons();
+          return user;
+        } else if (res.status === 401) {
+          // Token expirado
+          sessionStorage.removeItem('agri_access_token');
+          sessionStorage.removeItem('agri_id_token');
+          sessionStorage.removeItem('agri_user_profile');
+          if (btnLogin) btnLogin.classList.remove('hidden');
+          if (userBadge) {
+            userBadge.classList.add('hidden');
+            userBadge.classList.remove('flex');
+          }
+        }
+      } catch (err) {
+        console.error('Erro ao consultar /api/me:', err);
+      }
+      return null;
+    }
+
     // Gerenciamento de Abas
     function switchTab(tabId) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
@@ -2917,6 +3151,9 @@
 
     // Inicialização ao carregar a página
     document.addEventListener('DOMContentLoaded', () => {
+      handleAuthCallback().then(() => {
+        refreshUserProfile();
+      });
       calculateParity();
       loadMacroIndices();
       loadTaxFundsSummary();
