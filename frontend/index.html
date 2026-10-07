@@ -2826,26 +2826,30 @@
           if (window.lucide) lucide.createIcons();
         }
 
-        const resLogs = await fetch(`${API_BASE}/market-data/logs?limit=5`);
-        const logs = await resLogs.json();
-        
+        const resLogs = await fetch(`${API_BASE}/market-data/logs?limit=5`, { headers });
         const lBody = document.getElementById('logs-table-body');
-        if (lBody && Array.isArray(logs)) {
-          lBody.innerHTML = logs.map(l => `
-            <tr class="hover:bg-slate-50">
-              <td class="px-3 py-2 font-semibold">#${l.id}</td>
-              <td class="px-3 py-2 text-slate-500">${l.started_at ? l.started_at.replace('T', ' ').substring(0, 19) : '-'}</td>
-              <td class="px-3 py-2 text-slate-500">${l.finished_at ? l.finished_at.replace('T', ' ').substring(0, 19) : '-'}</td>
-              <td class="px-3 py-2">
-                <span class="px-1.5 py-0.5 rounded font-bold ${l.status === 'SUCCESS' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
-                  ${l.status}
-                </span>
-              </td>
-              <td class="px-3 py-2 text-right font-medium">${l.records_extracted}</td>
-              <td class="px-3 py-2 text-right font-bold text-slate-900">${l.records_upserted}</td>
-              <td class="px-3 py-2 text-slate-600 truncate max-w-xs">${l.sources_contacted}</td>
-            </tr>
-          `).join('');
+
+        if (resLogs.ok) {
+          const logs = await resLogs.json();
+          if (lBody && Array.isArray(logs)) {
+            lBody.innerHTML = logs.map(l => `
+              <tr class="hover:bg-slate-50">
+                <td class="px-3 py-2 font-semibold">#${l.id}</td>
+                <td class="px-3 py-2 text-slate-500">${l.started_at ? l.started_at.replace('T', ' ').substring(0, 19) : '-'}</td>
+                <td class="px-3 py-2 text-slate-500">${l.finished_at ? l.finished_at.replace('T', ' ').substring(0, 19) : '-'}</td>
+                <td class="px-3 py-2">
+                  <span class="px-1.5 py-0.5 rounded font-bold ${l.status === 'SUCCESS' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                    ${l.status}
+                  </span>
+                </td>
+                <td class="px-3 py-2 text-right font-medium">${l.records_extracted}</td>
+                <td class="px-3 py-2 text-right font-bold text-slate-900">${l.records_upserted}</td>
+                <td class="px-3 py-2 text-slate-600 truncate max-w-xs">${l.sources_contacted}</td>
+              </tr>
+            `).join('');
+          }
+        } else if (lBody) {
+          lBody.innerHTML = `<tr><td colspan="7" class="px-3 py-4 text-center text-xs text-amber-700 bg-amber-50">Logs de ingestão visíveis exclusivamente para Operadores da Plataforma autenticados.</td></tr>`;
         }
 
       } catch (err) {
