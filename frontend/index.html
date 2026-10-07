@@ -2753,14 +2753,32 @@
 
     async function triggerB3Extract() {
       const btn = document.getElementById('btn-extract-b3');
+      const token = sessionStorage.getItem('agri_access_token');
+
+      if (!token) {
+        alert('⚠️ Acesso restrito: Faça login com seu perfil de Operador da Plataforma para disparar a ingestão.');
+        return;
+      }
+
       btn.disabled = true;
       btn.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i><span>Coletando...</span>`;
       lucide.createIcons();
 
       try {
-        const res = await fetch(`${API_BASE}/b3/extract?session_type=UI_TRIGGER`, { method: 'POST' });
+        const res = await fetch(`${API_BASE}/b3/extract?session_type=UI_TRIGGER`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (res.status === 403) {
+          alert('⛔ Acesso Negado: Apenas contas com a permissão "Operador da Plataforma" (is_platform_operator) podem disparar coletas.');
+          return;
+        }
+
         const data = await res.json();
-        alert(`✅ Sucesso! ${data.total_persisted} cotações da B3 e CEPEA foram persistidas no Neon Postgres.`);
+        alert(`✅ Sucesso! ${data.total_persisted || 0} cotações da B3 e CEPEA foram persistidas no Neon Postgres.`);
         loadB3Quotes();
       } catch (err) {
         alert('Erro ao disparar ingestão B3: ' + err);
@@ -2773,42 +2791,62 @@
 
     // 5. AGENDAMENTOS & LOGS
     async function loadSchedulerStatus() {
-      try {
-        const resSched = await fetch(`${API_BASE}/scheduler/status`);
-        const sched = await resSched.json();
+      const sList = document.getElementById('scheduler-jobs-list');
+      const token = sessionStorage.getItem('agri_access_token');
 
-        const sList = document.getElementById('scheduler-jobs-list');
-        sList.innerHTML = sched.jobs.map(job => `
-          <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div>
-              <span class="font-bold text-slate-900 text-sm">${job.name}</span>
-              <p class="text-xs text-slate-500 mt-0.5">${job.description}</p>
+      try {
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        const resSched = await fetch(`${API_BASE}/scheduler/status`, { headers });
+
+        if (resSched.status === 401 || resSched.status === 403) {
+          sList.innerHTML = `
+            <div class="p-4 bg-amber-50 rounded-lg border border-amber-200 text-amber-800 text-xs">
+              <div class="flex items-center space-x-2 font-bold mb-1">
+                <i data-lucide="shield-alert" class="w-4 h-4 text-amber-600"></i>
+                <span>Área Restrita aos Operadores da Plataforma</span>
+              </div>
+              <p>O monitoramento de rotas e o status dos agendamentos são restritos a contas com o privilégio global <strong>Operador da Plataforma (Platform Operator)</strong>.</p>
+              ${!token ? '<p class="mt-2 font-semibold">👉 Conecte-se clicando em <strong>Entrar</strong> no topo da tela com sua conta de Operador.</p>' : ''}
             </div>
-            <span class="text-xs font-semibold px-2.5 py-1 bg-white border border-slate-200 text-green-700 rounded-md whitespace-nowrap self-start sm:self-center">
-              ${job.frequency}
-            </span>
-          </div>
-        `).join('');
+          `;
+          if (window.lucide) lucide.createIcons();
+        } else if (resSched.ok) {
+          const sched = await resSched.json();
+          sList.innerHTML = sched.jobs.map(job => `
+            <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <span class="font-bold text-slate-900 text-sm">${job.name}</span>
+                <p class="text-xs text-slate-500 mt-0.5">${job.description}</p>
+              </div>
+              <span class="text-xs font-semibold px-2.5 py-1 bg-white border border-slate-200 text-green-700 rounded-md whitespace-nowrap self-start sm:self-center">
+                ${job.frequency}
+              </span>
+            </div>
+          `).join('');
+          if (window.lucide) lucide.createIcons();
+        }
 
         const resLogs = await fetch(`${API_BASE}/market-data/logs?limit=5`);
         const logs = await resLogs.json();
         
         const lBody = document.getElementById('logs-table-body');
-        lBody.innerHTML = logs.map(l => `
-          <tr class="hover:bg-slate-50">
-            <td class="px-3 py-2 font-semibold">#${l.id}</td>
-            <td class="px-3 py-2 text-slate-500">${l.started_at ? l.started_at.replace('T', ' ').substring(0, 19) : '-'}</td>
-            <td class="px-3 py-2 text-slate-500">${l.finished_at ? l.finished_at.replace('T', ' ').substring(0, 19) : '-'}</td>
-            <td class="px-3 py-2">
-              <span class="px-1.5 py-0.5 rounded font-bold ${l.status === 'SUCCESS' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
-                ${l.status}
-              </span>
-            </td>
-            <td class="px-3 py-2 text-right font-medium">${l.records_extracted}</td>
-            <td class="px-3 py-2 text-right font-bold text-slate-900">${l.records_upserted}</td>
-            <td class="px-3 py-2 text-slate-600 truncate max-w-xs">${l.sources_contacted}</td>
-          </tr>
-        `).join('');
+        if (lBody && Array.isArray(logs)) {
+          lBody.innerHTML = logs.map(l => `
+            <tr class="hover:bg-slate-50">
+              <td class="px-3 py-2 font-semibold">#${l.id}</td>
+              <td class="px-3 py-2 text-slate-500">${l.started_at ? l.started_at.replace('T', ' ').substring(0, 19) : '-'}</td>
+              <td class="px-3 py-2 text-slate-500">${l.finished_at ? l.finished_at.replace('T', ' ').substring(0, 19) : '-'}</td>
+              <td class="px-3 py-2">
+                <span class="px-1.5 py-0.5 rounded font-bold ${l.status === 'SUCCESS' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                  ${l.status}
+                </span>
+              </td>
+              <td class="px-3 py-2 text-right font-medium">${l.records_extracted}</td>
+              <td class="px-3 py-2 text-right font-bold text-slate-900">${l.records_upserted}</td>
+              <td class="px-3 py-2 text-slate-600 truncate max-w-xs">${l.sources_contacted}</td>
+            </tr>
+          `).join('');
+        }
 
       } catch (err) {
         console.error('Erro ao carregar status do scheduler e logs:', err);
