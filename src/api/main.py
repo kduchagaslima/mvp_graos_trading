@@ -25,6 +25,7 @@ from src.db.models import (
     MembershipRole,
     CostProfile,
     Invitation,
+    SavedScenario,
 )
 from src.domain.commodities import CommodityType, COMMODITY_SPECS
 from src.domain.locations import ORIGINATION_HUBS, PORTS
@@ -38,6 +39,10 @@ from src.domain.models import (
     CostProfileCreateInput,
     CostProfileUpdateInput,
     InvitationCreateInput,
+    OrganizationCreateInput,
+    SavedScenarioCreateInput,
+    ProposalComparisonRequest,
+    ProposalItemInput,
 )
 from src.engines.export_parity import ExportParityEngine
 from src.engines.carry_cost import CarryCostEngine
@@ -518,6 +523,62 @@ def get_my_profile(
     }
 
 
+@app.post("/api/organizations")
+def create_organization(
+    payload: OrganizationCreateInput,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Cria uma nova organização (empresa) e associa o usuário atual como OWNER.
+    Gera automaticamente o perfil de custos padrão para a organização.
+    """
+    slug = payload.slug
+    if not slug:
+        import re
+        slug = re.sub(r"[^a-z0-9]+", "-", payload.name.lower()).strip("-")
+        if not slug:
+            slug = f"org-{current_user.id}"
+
+    # Evita duplicação de slug
+    existing = db.query(Organization).filter(Organization.slug == slug).first()
+    if existing:
+        slug = f"{slug}-{int(datetime.now(timezone.utc).timestamp())}"
+
+    org = Organization(name=payload.name, slug=slug, is_active=True)
+    db.add(org)
+    db.commit()
+    db.refresh(org)
+
+    membership = Membership(
+        user_id=current_user.id,
+        organization_id=org.id,
+        role=MembershipRole.OWNER.value,
+        is_active=True,
+    )
+    db.add(membership)
+
+    default_profile = CostProfile(
+        organization_id=org.id,
+        name="Perfil Padrão Trading",
+        brokerage_margin_usd_ton=2.0,
+        brokerage_fee_brl_bag=0.0,
+        brokerage_payer="NONE",
+        default_funrural_pct=1.5,
+        default_shrinkage_loss_pct=0.3,
+        is_active=True,
+    )
+    db.add(default_profile)
+    db.commit()
+    db.refresh(membership)
+
+    return {
+        "status": "created",
+        "organization": org.to_dict(),
+        "membership": membership.to_dict(),
+    }
+
+
 @app.get("/api/organizations/{org_id}/cost-profiles")
 def list_organization_cost_profiles(
     org_id: int,
@@ -803,6 +864,155 @@ def accept_invitation(
         "message": f"Successfully joined {org_name} as {invitation.role}",
         "organization_id": invitation.organization_id,
         "role": invitation.role,
+    }
+
+
+# ==============================================================================
+# Cenários Salvos por Organização (Ticket U03)
+# ==============================================================================
+
+@app.post("/api/organizations/{org_id}/scenarios")
+def save_organization_scenario(
+    org_id: int,
+    payload: SavedScenarioCreateInput,
+    membership: Membership = Depends(require_role(MembershipRole.ANALYST)),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Salva uma simulação de paridade de exportação personalizada na organização (Ticket U03).
+    Acesso restrito a membros com papel ANALYST ou OWNER.
+    """
+    scenario = SavedScenario(
+        organization_id=org_id,
+        user_id=current_user.id,
+        name=payload.name,
+        commodity=payload.commodity.upper(),
+        hub_id=payload.hub_id,
+        port_id=payload.port_id,
+        cbot_price_cents=payload.cbot_price_cents,
+        port_premium_cents=payload.port_premium_cents,
+        usd_brl_fx=payload.usd_brl_fx,
+        freight_cost_brl_ton=payload.freight_cost_brl_ton,
+        elevation_cost_usd_ton=payload.elevation_cost_usd_ton,
+        demurrage_risk_usd_ton=payload.demurrage_risk_usd_ton,
+        other_port_costs_usd_ton=payload.other_port_costs_usd_ton,
+        tax_fund_brl_bag=payload.tax_fund_brl_bag,
+        net_parity_brl_bag=payload.net_parity_brl_bag,
+        net_parity_brl_ton=payload.net_parity_brl_ton,
+        fob_usd_ton=payload.fob_usd_ton,
+        notes=payload.notes,
+    )
+    db.add(scenario)
+    db.commit()
+    db.refresh(scenario)
+    return scenario.to_dict()
+
+
+@app.get("/api/organizations/{org_id}/scenarios")
+def list_organization_scenarios(
+    org_id: int,
+    limit: int = 20,
+    membership: Membership = Depends(require_role(MembershipRole.READER)),
+    db: Session = Depends(get_db),
+):
+    """
+    Lista todos os cenários salvos de paridade da organização (Ticket U03).
+    """
+    scenarios = (
+        db.query(SavedScenario)
+        .filter(SavedScenario.organization_id == org_id)
+        .order_by(SavedScenario.id.desc())
+        .limit(limit)
+        .all()
+    )
+    return [s.to_dict() for s in scenarios]
+
+
+@app.delete("/api/organizations/{org_id}/scenarios/{scenario_id}")
+def delete_organization_scenario(
+    org_id: int,
+    scenario_id: int,
+    membership: Membership = Depends(require_role(MembershipRole.ANALYST)),
+    db: Session = Depends(get_db),
+):
+    """
+    Remove um cenário salvo da organização.
+    """
+    scen = (
+        db.query(SavedScenario)
+        .filter(SavedScenario.id == scenario_id, SavedScenario.organization_id == org_id)
+        .first()
+    )
+    if not scen:
+        raise HTTPException(status_code=404, detail="Cenário não encontrado")
+    db.delete(scen)
+    db.commit()
+    return {"status": "deleted", "scenario_id": scenario_id}
+
+
+# ==============================================================================
+# Comparador de Propostas / Bids (Ticket U04)
+# ==============================================================================
+
+@app.post("/api/proposals/compare")
+def compare_proposals(payload: ProposalComparisonRequest):
+    """
+    Compara de 2 a 5 propostas/bids de compradores ou rotas portuárias lado a lado (Ticket U04).
+    Calcula a paridade líquida na fazenda para cada proposta e elege a proposta mais rentável.
+    """
+    results = []
+
+    for p in payload.proposals:
+        comm_type = CommodityType.SOJA if p.commodity.upper() == "SOJA" else CommodityType.MILHO
+        inp = ParityCalculationInput(
+            commodity=comm_type,
+            cbot_price_cents=p.cbot_cents,
+            port_premium_cents=p.premium_cents,
+            usd_brl_fx=p.fx_rate,
+            hub_id=p.hub_id,
+            port_id=p.port_id,
+            freight_brl_ton=p.freight_brl_ton,
+            elevation_usd_ton=p.elevation_usd_ton,
+            demurrage_usd_ton=p.demurrage_usd_ton or 0.0,
+            other_port_costs_brl_ton=(p.other_port_usd_ton * p.fx_rate) if p.other_port_usd_ton is not None else None,
+            state_tax_fund_brl_bag=p.tax_fund_brl_bag,
+        )
+        calc = ExportParityEngine.calculate(inp)
+        total_revenue_brl = calc.net_parity_price_brl_bag * p.volume_bags
+        results.append({
+            "name": p.name,
+            "commodity": p.commodity.upper(),
+            "hub_id": p.hub_id,
+            "port_id": p.port_id,
+            "volume_bags": p.volume_bags,
+            "volume_tons": round(p.volume_bags / 16.6667, 1),
+            "fob_usd_ton": calc.fob_usd_ton,
+            "fob_brl_ton": calc.fob_brl_ton,
+            "fob_brl_bag": calc.fob_brl_bag,
+            "road_freight_brl_ton": p.freight_brl_ton,
+            "road_freight_brl_bag": calc.cost_breakdown.freight_brl_bag,
+            "tax_fund_brl_bag": calc.cost_breakdown.state_fund_brl_bag,
+            "net_price_brl_bag": calc.net_parity_price_brl_bag,
+            "net_price_brl_ton": calc.net_parity_price_brl_ton,
+            "total_lot_revenue_brl": round(total_revenue_brl, 2),
+        })
+
+    results.sort(key=lambda x: x["net_price_brl_bag"], reverse=True)
+    best_bid = results[0]
+
+    for r in results:
+        spread_bag = round(r["net_price_brl_bag"] - best_bid["net_price_brl_bag"], 2)
+        spread_lot = round(r["total_lot_revenue_brl"] - best_bid["total_lot_revenue_brl"], 2)
+        r["spread_vs_best_brl_bag"] = spread_bag
+        r["spread_vs_best_lot_brl"] = spread_lot
+        r["is_best"] = (r["name"] == best_bid["name"])
+
+    return {
+        "best_proposal": best_bid["name"],
+        "best_price_brl_bag": best_bid["net_price_brl_bag"],
+        "max_advantage_lot_brl": round(best_bid["total_lot_revenue_brl"] - results[-1]["total_lot_revenue_brl"], 2),
+        "proposals": results,
     }
 
 

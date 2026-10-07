@@ -372,3 +372,62 @@ class Invitation(Base):
             "accepted_at": self.accepted_at.isoformat() if self.accepted_at else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
+
+
+class SavedScenario(Base):
+    """
+    Cenário salvo de paridade de exportação por organização (Ticket U03).
+    Permite armazenar e recarregar simulações com premissas personalizadas.
+    """
+    __tablename__ = "saved_scenarios"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    organization_id = Column(Integer, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(128), nullable=False)
+    commodity = Column(String(16), nullable=False)
+    hub_id = Column(String(32), nullable=False)
+    port_id = Column(String(16), nullable=False)
+    cbot_price_cents = Column(Float, nullable=False)
+    port_premium_cents = Column(Float, nullable=False)
+    usd_brl_fx = Column(Float, nullable=False)
+    freight_cost_brl_ton = Column(Float, nullable=False)
+    elevation_cost_usd_ton = Column(Float, nullable=False)
+    demurrage_risk_usd_ton = Column(Float, nullable=False)
+    other_port_costs_usd_ton = Column(Float, nullable=False, default=15.0)
+    tax_fund_brl_bag = Column(Float, nullable=False, default=0.0)
+    net_parity_brl_bag = Column(Float, nullable=False)
+    net_parity_brl_ton = Column(Float, nullable=False)
+    fob_usd_ton = Column(Float, nullable=False)
+    notes = Column(Text, nullable=True)
+    created_at = Column(UTCDateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(UTCDateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+
+    organization = relationship("Organization")
+    user = relationship("User")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "organization_id": self.organization_id,
+            "user_id": self.user_id,
+            "user_name": self.user.name if self.user else None,
+            "name": self.name,
+            "commodity": self.commodity,
+            "hub_id": self.hub_id,
+            "port_id": self.port_id,
+            "cbot_price_cents": self.cbot_price_cents,
+            "port_premium_cents": self.port_premium_cents,
+            "usd_brl_fx": self.usd_brl_fx,
+            "freight_cost_brl_ton": self.freight_cost_brl_ton,
+            "elevation_cost_usd_ton": self.elevation_cost_usd_ton,
+            "demurrage_risk_usd_ton": self.demurrage_risk_usd_ton,
+            "other_port_costs_usd_ton": self.other_port_costs_usd_ton,
+            "tax_fund_brl_bag": self.tax_fund_brl_bag,
+            "net_parity_brl_bag": self.net_parity_brl_bag,
+            "net_parity_brl_ton": self.net_parity_brl_ton,
+            "fob_usd_ton": self.fob_usd_ton,
+            "notes": self.notes,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }

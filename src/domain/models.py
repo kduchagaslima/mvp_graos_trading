@@ -156,3 +156,48 @@ class CostProfileUpdateInput(BaseModel):
 class InvitationCreateInput(BaseModel):
     email: str = Field(..., description="E-mail corporativo do usuário convidado")
     role: str = Field(default="ANALYST", description="Papel atribuído ao usuário: OWNER, ANALYST ou READER")
+
+
+class OrganizationCreateInput(BaseModel):
+    name: str = Field(..., min_length=2, max_length=128, description="Nome da trading / empresa")
+    slug: Optional[str] = Field(default=None, max_length=64, description="Identificador único da empresa")
+
+
+class SavedScenarioCreateInput(BaseModel):
+    name: str = Field(..., min_length=1, max_length=128, description="Título do cenário salvo")
+    commodity: str = Field(..., description="SOJA ou MILHO")
+    hub_id: str = Field(..., description="Praça de originação (ex: sorriso_mt)")
+    port_id: str = Field(..., description="Porto de destino (ex: STS, BCR)")
+    cbot_price_cents: float = Field(..., gt=0.0, description="Preço CBOT em centavos/bu")
+    port_premium_cents: float = Field(..., description="Prêmio de exportação em centavos/bu")
+    usd_brl_fx: float = Field(..., gt=0.0, description="Câmbio USD/BRL")
+    freight_cost_brl_ton: float = Field(..., ge=0.0, description="Frete rodoviário em R$/ton")
+    elevation_cost_usd_ton: float = Field(..., ge=0.0, description="Elevação portuária em USD/ton")
+    demurrage_risk_usd_ton: float = Field(..., ge=0.0, description="Risco de demurrage em USD/ton")
+    other_port_costs_usd_ton: float = Field(default=15.0, ge=0.0, description="Outras despesas portuárias em USD/ton")
+    tax_fund_brl_bag: float = Field(default=0.0, ge=0.0, description="Fundo estadual retido em R$/sc")
+    net_parity_brl_bag: float = Field(..., description="Paridade líquida calculada na fazenda (R$/sc)")
+    net_parity_brl_ton: float = Field(..., description="Paridade líquida calculada (R$/ton)")
+    fob_usd_ton: float = Field(..., description="Preço FOB em USD/ton")
+    notes: Optional[str] = Field(default=None, description="Observações do trader")
+
+
+class ProposalItemInput(BaseModel):
+    name: str = Field(..., description="Identificação do comprador ou rota (ex: 'Cargill Santos')")
+    commodity: str = Field(default="SOJA", description="SOJA ou MILHO")
+    hub_id: str = Field(..., description="Origem física")
+    port_id: str = Field(..., description="Porto de exportação (STS, PNG, BCR, etc.)")
+    cbot_cents: float = Field(..., description="Cotação CBOT em ¢/bu")
+    premium_cents: float = Field(..., description="Prêmio em ¢/bu")
+    fx_rate: float = Field(..., description="Taxa de câmbio USD/BRL")
+    freight_brl_ton: float = Field(..., description="Frete rodoviário até o porto em R$/ton")
+    elevation_usd_ton: Optional[float] = Field(default=None)
+    demurrage_usd_ton: Optional[float] = Field(default=None)
+    other_port_usd_ton: Optional[float] = Field(default=None)
+    tax_fund_brl_bag: Optional[float] = Field(default=None)
+    volume_bags: float = Field(default=10000.0, gt=0.0, description="Volume do lote simulado em sacas de 60kg")
+
+
+class ProposalComparisonRequest(BaseModel):
+    proposals: List[ProposalItemInput] = Field(..., min_length=2, max_length=5, description="Lista de propostas para comparação")
+

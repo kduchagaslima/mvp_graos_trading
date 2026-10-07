@@ -24,6 +24,11 @@
       border-bottom: 2px solid #16a34a;
       font-weight: 600;
     }
+    @media print {
+      header, nav, footer, button, .no-print { display: none !important; }
+      body { background: #ffffff !important; color: #000000 !important; }
+      .tab-content { display: block !important; }
+    }
   </style>
 </head>
 <body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col">
@@ -86,10 +91,14 @@
   <!-- NAVIGATION TABS -->
   <nav class="bg-slate-100 border-b border-slate-200">
     <div class="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1 py-1 sm:py-0">
+      <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-1 py-1 sm:py-0">
         <button onclick="switchTab('parity')" id="tab-btn-parity" class="tab-btn active px-2 sm:px-3 py-2.5 sm:py-3 text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 flex items-center justify-center space-x-1.5 transition rounded-t-md">
           <i data-lucide="calculator" class="w-4 h-4 shrink-0"></i>
-          <span class="truncate">Paridade FAS/FOB</span>
+          <span class="truncate">Paridade FAS</span>
+        </button>
+        <button onclick="switchTab('compare')" id="tab-btn-compare" class="tab-btn px-2 sm:px-3 py-2.5 sm:py-3 text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 flex items-center justify-center space-x-1.5 transition rounded-t-md">
+          <i data-lucide="scale" class="w-4 h-4 shrink-0 text-emerald-600"></i>
+          <span class="truncate font-semibold text-emerald-800">Comparar Bids</span>
         </button>
         <button onclick="switchTab('matrix')" id="tab-btn-matrix" class="tab-btn px-2 sm:px-3 py-2.5 sm:py-3 text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 flex items-center justify-center space-x-1.5 transition rounded-t-md">
           <i data-lucide="map" class="w-4 h-4 shrink-0"></i>
@@ -97,7 +106,7 @@
         </button>
         <button onclick="switchTab('carry')" id="tab-btn-carry" class="tab-btn px-2 sm:px-3 py-2.5 sm:py-3 text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 flex items-center justify-center space-x-1.5 transition rounded-t-md">
           <i data-lucide="trending-up" class="w-4 h-4 shrink-0"></i>
-          <span class="truncate">Custo de Carrego</span>
+          <span class="truncate">Carrego</span>
         </button>
         <button onclick="switchTab('b3')" id="tab-btn-b3" class="tab-btn px-2 sm:px-3 py-2.5 sm:py-3 text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 flex items-center justify-center space-x-1.5 transition rounded-t-md">
           <i data-lucide="badge-percent" class="w-4 h-4 shrink-0"></i>
@@ -107,9 +116,13 @@
           <i data-lucide="clock" class="w-4 h-4 shrink-0"></i>
           <span class="truncate">Agendamentos</span>
         </button>
+        <button onclick="switchTab('company')" id="tab-btn-company" class="tab-btn px-2 sm:px-3 py-2.5 sm:py-3 text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 flex items-center justify-center space-x-1.5 transition rounded-t-md">
+          <i data-lucide="building-2" class="w-4 h-4 shrink-0 text-indigo-600"></i>
+          <span class="truncate font-semibold text-indigo-800">Minha Empresa</span>
+        </button>
         <button onclick="switchTab('manual')" id="tab-btn-manual" class="tab-btn px-2 sm:px-3 py-2.5 sm:py-3 text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 flex items-center justify-center space-x-1.5 transition rounded-t-md">
           <i data-lucide="book-open" class="w-4 h-4 text-emerald-600 shrink-0"></i>
-          <span class="truncate font-semibold text-emerald-800">Manual do Trader</span>
+          <span class="truncate font-semibold text-emerald-800">Manual Trader</span>
         </button>
       </div>
     </div>
@@ -271,6 +284,26 @@
             <i data-lucide="refresh-cw" class="w-4 h-4"></i>
             <span>Recalcular Paridade FAS</span>
           </button>
+
+          <!-- Barra de Ações Rápidas: Salvar Cenário, WhatsApp e Exportação -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 border-t border-slate-100">
+            <button type="button" onclick="openSaveScenarioModal()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-semibold py-2 rounded-lg transition flex items-center justify-center space-x-1 shadow-sm" title="Salvar este cenário na organização">
+              <i data-lucide="bookmark-plus" class="w-3.5 h-3.5"></i>
+              <span>Salvar</span>
+            </button>
+            <button type="button" onclick="openSavedScenariosModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-semibold py-2 rounded-lg transition flex items-center justify-center space-x-1 shadow-sm" title="Visualizar simulações salvas">
+              <i data-lucide="folder-open" class="w-3.5 h-3.5"></i>
+              <span>Cenários</span>
+            </button>
+            <button type="button" onclick="exportToWhatsApp()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-semibold py-2 rounded-lg transition flex items-center justify-center space-x-1 shadow-sm" title="Copiar resumo formatado para WhatsApp">
+              <i data-lucide="share-2" class="w-3.5 h-3.5"></i>
+              <span>WhatsApp</span>
+            </button>
+            <button type="button" onclick="window.print()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-semibold py-2 rounded-lg transition flex items-center justify-center space-x-1 shadow-sm" title="Imprimir ou gerar PDF">
+              <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+              <span>PDF / Print</span>
+            </button>
+          </div>
         </div>
 
         <!-- Cards de Resultados da Paridade -->
@@ -297,10 +330,16 @@
 
           <!-- Tabela Waterfall de Formação de Preço -->
           <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-            <h3 class="text-sm font-bold text-slate-900 mb-4 flex items-center space-x-2">
-              <i data-lucide="layers" class="w-4 h-4 text-green-600"></i>
-              <span>Decomposição de Custos e Formação FAS (Waterfall)</span>
-            </h3>
+            <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
+              <h3 class="text-sm font-bold text-slate-900 flex items-center space-x-2">
+                <i data-lucide="layers" class="w-4 h-4 text-green-600"></i>
+                <span>Decomposição de Custos e Formação FAS (Waterfall)</span>
+              </h3>
+              <button type="button" onclick="openSavedScenariosModal()" class="text-xs text-indigo-600 hover:text-indigo-800 font-semibold flex items-center space-x-1 transition">
+                <i data-lucide="history" class="w-3.5 h-3.5"></i>
+                <span id="saved-scenarios-badge-text">📂 Cenários Salvos</span>
+              </button>
+            </div>
             <div class="overflow-x-auto">
               <table class="w-full text-sm text-left">
                 <thead class="text-xs uppercase bg-slate-50 text-slate-600 border-y border-slate-200">
@@ -319,6 +358,312 @@
           </div>
         </div>
 
+      </div>
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- TAB: COMPARADOR DE PROPOSTAS / BIDS (TICKET U04) -->
+    <!-- ============================================================== -->
+    <section id="tab-compare" class="tab-content hidden space-y-6">
+      
+      <!-- Top Header & Lot Configuration -->
+      <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold shadow-sm">
+              <i data-lucide="scale" class="w-5 h-5 text-emerald-700"></i>
+            </div>
+            <div>
+              <div class="flex items-center space-x-2">
+                <h2 class="text-base font-bold text-slate-900">Comparador de Propostas & Bids de Compra</h2>
+                <span class="text-[10px] bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-full font-bold uppercase tracking-wide">
+                  Arbitragem de Venda
+                </span>
+              </div>
+              <p class="text-xs text-slate-500 mt-0.5">
+                Simule até 3 propostas de compradores ou rotas de escoamento simultaneamente para eleger a oferta mais rentável e calcular o ganho total no lote.
+              </p>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-3">
+            <div class="flex items-center space-x-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5">
+              <label for="compare-volume-bags" class="text-xs font-semibold text-slate-600">Volume do Lote:</label>
+              <input type="number" id="compare-volume-bags" value="10000" step="500" min="500" class="w-24 bg-white border border-slate-300 rounded px-2 py-1 text-xs font-bold text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-right" />
+              <span class="text-xs font-medium text-slate-500">sacas</span>
+            </div>
+            <button onclick="runProposalsComparison()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2 rounded-lg transition flex items-center space-x-1.5 shadow-sm">
+              <i data-lucide="calculator" class="w-3.5 h-3.5"></i>
+              <span>Executar Comparativo</span>
+            </button>
+            <button id="btn-copy-compare-whatsapp" onclick="exportProposalsComparisonToWhatsApp()" class="hidden bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-semibold px-3 py-2 rounded-lg transition items-center space-x-1.5 shadow-sm">
+              <i data-lucide="share-2" class="w-3.5 h-3.5"></i>
+              <span>Copiar WhatsApp</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 3 Proposal Input Cards -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <!-- Proposal 1 -->
+          <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+            <div class="flex items-center justify-between border-b border-slate-200 pb-2">
+              <span class="text-xs font-bold text-slate-800 uppercase flex items-center gap-1.5">
+                <span class="w-5 h-5 rounded-full bg-emerald-600 text-white text-[10px] font-bold flex items-center justify-center">1</span>
+                <span>Proposta A (Barcarena)</span>
+              </span>
+              <span class="text-[10px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-medium">Arco Norte</span>
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Nome do Comprador / Rota</label>
+              <input type="text" id="prop-1-name" value="Bunge Barcarena" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs font-semibold text-slate-800 focus:outline-none" />
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Commodity</label>
+                <select id="prop-1-comm" class="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-xs font-medium">
+                  <option value="SOJA" selected>Soja</option>
+                  <option value="MILHO">Milho</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Porto</label>
+                <select id="prop-1-port" class="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-xs font-medium">
+                  <option value="BCR" selected>Barcarena (BCR)</option>
+                  <option value="STS">Santos (STS)</option>
+                  <option value="PNG">Paranaguá (PNG)</option>
+                  <option value="ITQ">Itaqui (ITQ)</option>
+                  <option value="RG">Rio Grande (RG)</option>
+                </select>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Origem</label>
+                <select id="prop-1-hub" class="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-xs font-medium">
+                  <option value="sorriso_mt" selected>Sorriso (MT)</option>
+                  <option value="rondonopolis_mt">Rondonópolis (MT)</option>
+                  <option value="rio_verde_go">Rio Verde (GO)</option>
+                  <option value="cascavel_pr">Cascavel (PR)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Prêmio FOB (¢/bu)</label>
+                <input type="number" id="prop-1-prem" value="65.0" step="1.0" class="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-xs font-semibold" />
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Frete (R$/ton)</label>
+                <input type="number" id="prop-1-freight" value="320.0" step="5.0" class="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-xs font-semibold" />
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Elevação (USD/t)</label>
+                <input type="number" id="prop-1-elev" value="8.50" step="0.25" class="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-xs font-semibold" />
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Demurrage (USD/t)</label>
+                <input type="number" id="prop-1-demurrage" value="0.80" step="0.1" class="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-xs font-semibold" />
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Fundo Est. (R$/sc)</label>
+                <input type="number" id="prop-1-tax" value="2.85" step="0.05" class="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-xs font-semibold" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Proposal 2 -->
+          <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+            <div class="flex items-center justify-between border-b border-slate-200 pb-2">
+              <span class="text-xs font-bold text-slate-800 uppercase flex items-center gap-1.5">
+                <span class="w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center">2</span>
+                <span>Proposta B (Santos)</span>
+              </span>
+              <span class="text-[10px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-medium">Sudeste</span>
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Nome do Comprador / Rota</label>
+              <input type="text" id="prop-2-name" value="Cargill Santos" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs font-semibold text-slate-800 focus:outline-none" />
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Commodity</label>
+                <select id="prop-2-comm" class="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-xs font-medium">
+                  <option value="SOJA" selected>Soja</option>
+                  <option value="MILHO">Milho</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Porto</label>
+                <select id="prop-2-port" class="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-xs font-medium">
+                  <option value="STS" selected>Santos (STS)</option>
+                  <option value="BCR">Barcarena (BCR)</option>
+                  <option value="PNG">Paranaguá (PNG)</option>
+                  <option value="ITQ">Itaqui (ITQ)</option>
+                  <option value="RG">Rio Grande (RG)</option>
+                </select>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Origem</label>
+                <select id="prop-2-hub" class="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-xs font-medium">
+                  <option value="sorriso_mt" selected>Sorriso (MT)</option>
+                  <option value="rondonopolis_mt">Rondonópolis (MT)</option>
+                  <option value="rio_verde_go">Rio Verde (GO)</option>
+                  <option value="cascavel_pr">Cascavel (PR)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Prêmio FOB (¢/bu)</label>
+                <input type="number" id="prop-2-prem" value="80.0" step="1.0" class="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-xs font-semibold" />
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Frete (R$/ton)</label>
+                <input type="number" id="prop-2-freight" value="410.0" step="5.0" class="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-xs font-semibold" />
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Elevação (USD/t)</label>
+                <input type="number" id="prop-2-elev" value="8.00" step="0.25" class="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-xs font-semibold" />
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Demurrage (USD/t)</label>
+                <input type="number" id="prop-2-demurrage" value="2.50" step="0.1" class="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-xs font-semibold" />
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Fundo Est. (R$/sc)</label>
+                <input type="number" id="prop-2-tax" value="2.85" step="0.05" class="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-xs font-semibold" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Proposal 3 -->
+          <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+            <div class="flex items-center justify-between border-b border-slate-200 pb-2">
+              <span class="text-xs font-bold text-slate-800 uppercase flex items-center gap-1.5">
+                <span class="w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center">3</span>
+                <span>Proposta C (Paranaguá)</span>
+              </span>
+              <span class="text-[10px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-medium">Sul</span>
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Nome do Comprador / Rota</label>
+              <input type="text" id="prop-3-name" value="Amaggi Paranaguá" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs font-semibold text-slate-800 focus:outline-none" />
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Commodity</label>
+                <select id="prop-3-comm" class="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-xs font-medium">
+                  <option value="SOJA" selected>Soja</option>
+                  <option value="MILHO">Milho</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Porto</label>
+                <select id="prop-3-port" class="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-xs font-medium">
+                  <option value="PNG" selected>Paranaguá (PNG)</option>
+                  <option value="STS">Santos (STS)</option>
+                  <option value="BCR">Barcarena (BCR)</option>
+                  <option value="ITQ">Itaqui (ITQ)</option>
+                  <option value="RG">Rio Grande (RG)</option>
+                </select>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Origem</label>
+                <select id="prop-3-hub" class="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-xs font-medium">
+                  <option value="sorriso_mt" selected>Sorriso (MT)</option>
+                  <option value="rondonopolis_mt">Rondonópolis (MT)</option>
+                  <option value="rio_verde_go">Rio Verde (GO)</option>
+                  <option value="cascavel_pr">Cascavel (PR)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Prêmio FOB (¢/bu)</label>
+                <input type="number" id="prop-3-prem" value="72.0" step="1.0" class="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-xs font-semibold" />
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Frete (R$/ton)</label>
+                <input type="number" id="prop-3-freight" value="390.0" step="5.0" class="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-xs font-semibold" />
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Elevação (USD/t)</label>
+                <input type="number" id="prop-3-elev" value="7.50" step="0.25" class="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-xs font-semibold" />
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Demurrage (USD/t)</label>
+                <input type="number" id="prop-3-demurrage" value="2.00" step="0.1" class="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-xs font-semibold" />
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Fundo Est. (R$/sc)</label>
+                <input type="number" id="prop-3-tax" value="2.85" step="0.05" class="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-xs font-semibold" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Comparison Winner & Results Container -->
+      <div id="compare-results-container" class="space-y-6 hidden">
+        <!-- Winner Banner -->
+        <div class="bg-gradient-to-r from-emerald-600 to-green-700 text-white p-6 rounded-xl shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div class="space-y-1">
+            <span class="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-white/20 text-emerald-100 text-xs font-bold uppercase tracking-wide">
+              🏆 Melhor Oferta Identificada
+            </span>
+            <h3 class="text-2xl font-extrabold" id="compare-winner-title">...</h3>
+            <p class="text-xs text-emerald-100" id="compare-winner-desc">...</p>
+          </div>
+          <div class="flex items-center gap-4 bg-white/10 px-5 py-3 rounded-xl backdrop-blur-sm">
+            <div class="text-right">
+              <span class="text-xs text-emerald-100 uppercase font-semibold block">Vantagem Financeira no Lote:</span>
+              <span class="text-2xl font-black text-white" id="compare-winner-advantage">+R$ 0,00</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3 Results Cards -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4" id="compare-cards-container">
+          <!-- Injetado dinamicamente -->
+        </div>
+
+        <!-- Breakdown Table -->
+        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+          <h3 class="text-sm font-bold text-slate-900 flex items-center space-x-2">
+            <i data-lucide="table" class="w-4 h-4 text-emerald-600"></i>
+            <span>Quadro Comparativo Detalhado de Paridade Líquida</span>
+          </h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs text-left">
+              <thead class="bg-slate-50 uppercase text-slate-600 border-y border-slate-200">
+                <tr>
+                  <th class="px-4 py-2.5">Proposta / Corredor</th>
+                  <th class="px-4 py-2.5 text-center">Porto</th>
+                  <th class="px-4 py-2.5 text-right">FOB (USD/t)</th>
+                  <th class="px-4 py-2.5 text-right">Frete Rod. (R$/t)</th>
+                  <th class="px-4 py-2.5 text-right">Tributo Est.</th>
+                  <th class="px-4 py-2.5 text-right font-bold">Paridade Líquida (R$/sc)</th>
+                  <th class="px-4 py-2.5 text-right font-bold">Receita Total Lote</th>
+                  <th class="px-4 py-2.5 text-center">Spread vs. Vencedora</th>
+                </tr>
+              </thead>
+              <tbody id="compare-table-body" class="divide-y divide-slate-100">
+                <!-- Injetado dinamicamente -->
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -973,6 +1318,147 @@
     </section>
 
     <!-- ============================================================== -->
+    <!-- TAB: MINHA EMPRESA & GOVERNANÇA (TICKETS F10, F11) -->
+    <!-- ============================================================== -->
+    <section id="tab-company" class="tab-content hidden space-y-6">
+      
+      <!-- Organization Info Card -->
+      <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-800 flex items-center justify-center font-bold shadow-sm">
+              <i data-lucide="building-2" class="w-5 h-5 text-indigo-700"></i>
+            </div>
+            <div>
+              <div class="flex items-center space-x-2">
+                <h2 class="text-base font-bold text-slate-900" id="company-name-title">AgriTrading Matriz</h2>
+                <span class="text-[10px] bg-indigo-50 text-indigo-800 border border-indigo-200 px-2 py-0.5 rounded-full font-bold uppercase tracking-wide" id="company-role-badge">
+                  OWNER
+                </span>
+              </div>
+              <p class="text-xs text-slate-500 mt-0.5" id="company-slug-subtitle">
+                Identificador: agritrading-matriz • Espaço de trabalho corporativo
+              </p>
+            </div>
+          </div>
+          <button onclick="loadOrganizationData()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold text-xs px-3.5 py-2 rounded-lg transition flex items-center space-x-1.5 self-start sm:self-center border border-indigo-200 shadow-sm">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+            <span>Atualizar Dados</span>
+          </button>
+        </div>
+
+        <!-- Equipe & Convites -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-2">
+          
+          <!-- Lista de Membros Ativos -->
+          <div class="lg:col-span-2 space-y-3">
+            <h3 class="text-xs font-bold text-slate-700 uppercase flex items-center space-x-1.5">
+              <i data-lucide="users" class="w-4 h-4 text-indigo-600"></i>
+              <span>Membros da Equipe Ativos (<span id="company-members-count">0</span>)</span>
+            </h3>
+            <div class="overflow-x-auto border border-slate-200 rounded-xl">
+              <table class="w-full text-xs text-left">
+                <thead class="bg-slate-50 uppercase text-slate-600 border-b border-slate-200">
+                  <tr>
+                    <th class="px-4 py-2.5">Nome / E-mail</th>
+                    <th class="px-4 py-2.5">Papel (RBAC)</th>
+                    <th class="px-4 py-2.5">Desde</th>
+                    <th class="px-4 py-2.5 text-center">Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="company-members-tbody" class="divide-y divide-slate-100">
+                  <!-- Injetado dinamicamente -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Gerar Convite Form -->
+          <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-4 flex flex-col justify-between">
+            <div class="space-y-3">
+              <h3 class="text-xs font-bold text-slate-800 uppercase flex items-center space-x-1.5">
+                <i data-lucide="user-plus" class="w-4 h-4 text-emerald-600"></i>
+                <span>Convidar Novo Usuário</span>
+              </h3>
+              <p class="text-[11px] text-slate-500">
+                Emite um link de convite seguro com validade de 48 horas para ingressar na sua empresa.
+              </p>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-600 mb-1">E-mail do Convidado</label>
+                <input type="email" id="invite-input-email" placeholder="colega@suatrading.com" class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-600 mb-1">Perfil de Acesso</label>
+                <select id="invite-input-role" class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-800 focus:outline-none">
+                  <option value="ANALYST" selected>ANALYST (Opera calculadoras e salva cenários)</option>
+                  <option value="READER">READER (Apenas visualiza dados e simulações)</option>
+                  <option value="OWNER">OWNER (Administrador pleno da empresa)</option>
+                </select>
+              </div>
+              <button onclick="createCompanyInvitation()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs py-2 rounded-lg transition flex items-center justify-center space-x-1.5 shadow-sm">
+                <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                <span>Gerar Convite de Acesso</span>
+              </button>
+            </div>
+
+            <!-- Box do Convite Gerado -->
+            <div id="invite-result-box" class="hidden mt-2 p-3 bg-white rounded-lg border border-emerald-300 space-y-2">
+              <span class="text-[10px] font-bold text-emerald-800 uppercase block">✅ Convite Criado com Sucesso!</span>
+              <input type="text" id="invite-result-link" readonly class="w-full bg-slate-50 border border-slate-200 rounded px-2 py-1 text-[11px] font-mono text-slate-700 select-all" />
+              <button onclick="copyInviteLink()" class="w-full bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold text-xs py-1.5 rounded transition flex items-center justify-center space-x-1">
+                <i data-lucide="copy" class="w-3 h-3"></i>
+                <span>Copiar Link de Convite</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Parâmetros Privados de Custo (Cost Profile) -->
+        <div class="pt-6 border-t border-slate-200 space-y-4">
+          <div class="flex items-center space-x-2">
+            <i data-lucide="sliders" class="w-4 h-4 text-indigo-600"></i>
+            <h3 class="text-xs font-bold text-slate-800 uppercase">
+              Parâmetros Padrão de Custos da Mesa (Cost Profile Privado)
+            </h3>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 mb-1">Margem Trader (USD/t)</label>
+              <input type="number" id="cp-margin-usd" value="2.00" step="0.25" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs font-semibold" />
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 mb-1">Corretagem Padrão (R$/sc)</label>
+              <input type="number" id="cp-broker-fee" value="0.00" step="0.05" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs font-semibold" />
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 mb-1">Quem Paga Corretagem</label>
+              <select id="cp-broker-payer" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs font-medium">
+                <option value="NONE" selected>NONE (Sem Corretor)</option>
+                <option value="TRADING">TRADING (Trading Paga)</option>
+                <option value="SELLER">SELLER (Retido Produtor)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 mb-1">FUNRURAL Padrão (%)</label>
+              <input type="number" id="cp-funrural" value="1.50" step="0.1" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs font-semibold" />
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 mb-1">Quebra Técnica (%)</label>
+              <input type="number" id="cp-shrinkage" value="0.30" step="0.05" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs font-semibold" />
+            </div>
+          </div>
+          <div class="flex justify-end">
+            <button onclick="saveCompanyCostProfile()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs px-4 py-2 rounded-lg transition flex items-center space-x-1.5 shadow-sm">
+              <i data-lucide="save" class="w-3.5 h-3.5"></i>
+              <span>Salvar Parâmetros da Mesa</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ============================================================== -->
     <!-- TAB 6: MANUAL OPERACIONAL DO TRADER -->
     <!-- ============================================================== -->
     <section id="tab-manual" class="tab-content hidden space-y-8">
@@ -1517,6 +2003,117 @@
     </div>
   </div>
 
+  <!-- MODAL: SALVAR CENÁRIO DE PARIDADE (TICKET U03) -->
+  <div id="save-scenario-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col">
+      <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+        <div class="flex items-center space-x-2.5">
+          <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-800 flex items-center justify-center font-bold">
+            <i data-lucide="bookmark-plus" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-slate-900">Salvar Cenário de Simulação</h3>
+            <p class="text-xs text-slate-500">Salve esta formação de paridade para consultar ou recarregar depois.</p>
+          </div>
+        </div>
+        <button onclick="closeSaveScenarioModal()" class="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-200 transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Nome do Cenário</label>
+          <input type="text" id="input-scenario-name" placeholder="Ex: Sorriso x Barcarena Março (Bid Cargill)" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+        </div>
+        <div class="p-3 bg-indigo-50/50 rounded-xl border border-indigo-100 space-y-1 text-xs">
+          <span class="font-bold text-indigo-900">Resumo da Simulação Atual:</span>
+          <p class="text-slate-600" id="save-scenario-preview-text">...</p>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Observações (Opcional)</label>
+          <textarea id="input-scenario-notes" rows="2" placeholder="Condições comerciais, frete contratado, etc." class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
+        </div>
+      </div>
+      <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end space-x-2">
+        <button onclick="closeSaveScenarioModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold rounded-lg transition">Cancelar</button>
+        <button onclick="confirmSaveScenario()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition shadow-sm flex items-center space-x-1.5">
+          <i data-lucide="check" class="w-3.5 h-3.5"></i>
+          <span>Confirmar e Salvar</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CENÁRIOS SALVOS DA ORGANIZAÇÃO (TICKET U03) -->
+  <div id="saved-scenarios-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-3xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh]">
+      <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+        <div class="flex items-center space-x-2.5">
+          <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-800 flex items-center justify-center font-bold">
+            <i data-lucide="folder-open" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-slate-900">Cenários de Paridade Salvos</h3>
+            <p class="text-xs text-slate-500">Histórico de simulações salvas pela sua organização.</p>
+          </div>
+        </div>
+        <button onclick="closeSavedScenariosModal()" class="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-200 transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div class="p-6 overflow-y-auto space-y-4">
+        <div class="overflow-x-auto border border-slate-200 rounded-xl">
+          <table class="w-full text-xs text-left">
+            <thead class="bg-slate-50 uppercase text-slate-600 border-b border-slate-200">
+              <tr>
+                <th class="px-4 py-2.5">Nome / Rota</th>
+                <th class="px-4 py-2.5">Commodity</th>
+                <th class="px-4 py-2.5 text-right">CBOT</th>
+                <th class="px-4 py-2.5 text-right">Prêmio</th>
+                <th class="px-4 py-2.5 text-right font-bold">Paridade FAS</th>
+                <th class="px-4 py-2.5 text-center">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="saved-scenarios-tbody" class="divide-y divide-slate-100">
+              <!-- Injetado dinamicamente -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
+        <button onclick="closeSavedScenariosModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold rounded-lg transition">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ONBOARDING / CRIAR EMPRESA (TICKET F09) -->
+  <div id="onboarding-modal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col">
+      <div class="p-6 text-center space-y-2 bg-gradient-to-b from-emerald-50 to-white border-b border-slate-100">
+        <div class="w-14 h-14 rounded-2xl bg-emerald-600 text-white flex items-center justify-center text-3xl mx-auto shadow-md">
+          🌾
+        </div>
+        <h3 class="text-lg font-bold text-slate-900">Bem-vindo ao AgriTrading!</h3>
+        <p class="text-xs text-slate-500">Para liberar o salvamento de cenários, gestão de equipe e perfis privados de custos, crie o seu workspace corporativo:</p>
+      </div>
+      <div class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Nome da Empresa / Trading</label>
+          <input type="text" id="onboarding-company-name" placeholder="Ex: AgroTrading Cerrado Ltda" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none" />
+        </div>
+        <p class="text-[11px] text-slate-500 leading-relaxed">
+          Você será configurado como <strong>OWNER</strong> com controle total sobre convites de traders e parâmetros de custos da organização.
+        </p>
+      </div>
+      <div class="p-5 bg-slate-50 border-t border-slate-100 flex justify-end">
+        <button onclick="submitOnboardingCreateOrg()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 rounded-lg transition shadow-sm flex items-center justify-center space-x-2">
+          <span>Criar Workspace e Começar</span>
+          <i data-lucide="arrow-right" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- FOOTER -->
   <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500">
     AgriTrading MVP © 2026 | Arquitetura Serverless AWS (CloudFront, API Gateway, Lambda) + Neon Postgres
@@ -1726,11 +2323,19 @@
           }
           if (orgDisplay) {
             const org = user.memberships && user.memberships[0];
-            const orgName = org ? org.organization_name : 'AgriTrading Matriz';
-            const role = org ? org.role : 'OWNER';
+            const orgName = org ? org.organization_name : 'Sem Organização';
+            const role = org ? org.role : 'Novo';
             const opTag = user.is_platform_operator ? ' • 🛡️ Operador' : '';
             orgDisplay.innerText = `${orgName} (${role})${opTag}`;
           }
+
+          if (user.memberships && user.memberships.length > 0) {
+            loadSavedScenariosCount();
+          } else {
+            checkOnboarding(user);
+          }
+          checkPendingInviteToken();
+
           if (window.lucide) lucide.createIcons();
           return user;
         } else if (res.status === 401) {
@@ -1755,9 +2360,17 @@
       document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
       
-      document.getElementById(`tab-${tabId}`).classList.remove('hidden');
-      document.getElementById(`tab-btn-${tabId}`).classList.add('active');
+      const targetContent = document.getElementById(`tab-${tabId}`);
+      const targetBtn = document.getElementById(`tab-btn-${tabId}`);
+      if (targetContent) targetContent.classList.remove('hidden');
+      if (targetBtn) targetBtn.classList.add('active');
 
+      if (tabId === 'compare') {
+        runProposalsComparison();
+      }
+      if (tabId === 'company') {
+        loadOrganizationData();
+      }
       if (tabId === 'matrix') {
         loadRegionalMatrix();
         loadTaxFundsSummary();
@@ -1773,7 +2386,7 @@
       }
       if (tabId === 'scheduler') loadSchedulerStatus();
       
-      lucide.createIcons();
+      if (window.lucide) lucide.createIcons();
     }
 
     // CONFIGURAÇÕES E MODAL DE CUSTOS PORTUÁRIOS
@@ -1964,6 +2577,7 @@
           body: JSON.stringify(payload)
         });
         const data = await res.json();
+        latestParityCalculation = { payload, data };
 
         // Cards de Resultado
         const fobUsd = data.fob_usd_ton || 0;
@@ -3192,6 +3806,737 @@
 
       } catch (err) {
         console.error('Erro ao carregar arbitragem de frete:', err);
+      }
+    }
+
+    // ==============================================================================
+    // VARIÁVEIS GLOBAIS DE ESTADO (ETAPAS 1 E 2)
+    // ==============================================================================
+    let lastComparisonResult = null;
+    let activeCostProfileId = null;
+
+    function getActiveUserOrgId() {
+      const userStr = sessionStorage.getItem('agri_user_profile');
+      if (!userStr) return null;
+      try {
+        const u = JSON.parse(userStr);
+        if (u.memberships && u.memberships.length > 0) {
+          return u.memberships[0].organization_id;
+        }
+      } catch (e) {
+        console.error('Erro ao ler perfil salvo:', e);
+      }
+      return null;
+    }
+
+    function getAuthHeaders() {
+      const token = sessionStorage.getItem('agri_access_token');
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      return headers;
+    }
+
+    // ==============================================================================
+    // TICKET U03: CENÁRIOS SALVOS POR ORGANIZAÇÃO
+    // ==============================================================================
+    function openSaveScenarioModal() {
+      const token = sessionStorage.getItem('agri_access_token');
+      if (!token) {
+        alert('Para salvar simulações, faça login com sua conta corporativa.');
+        startCognitoLogin();
+        return;
+      }
+      const orgId = getActiveUserOrgId();
+      if (!orgId) {
+        alert('Crie ou ingresse em uma empresa para salvar cenários.');
+        return;
+      }
+
+      if (!latestParityCalculation || !latestParityCalculation.payload) {
+        calculateParity();
+      }
+
+      const p = latestParityCalculation?.payload || {};
+      const d = latestParityCalculation?.data || {};
+      const comm = p.commodity || 'SOJA';
+      const hub = p.hub_id || '';
+      const port = p.port_id || '';
+      const fas = d.net_parity_price_brl_bag ? d.net_parity_price_brl_bag.toFixed(2) : '-';
+
+      const previewEl = document.getElementById('save-scenario-preview-text');
+      if (previewEl) {
+        previewEl.innerText = `${comm} • ${hub} ➔ ${port} • FAS: R$ ${fas}/sc (CBOT ${p.cbot_price_cents}¢ | Dólar R$ ${p.usd_brl_fx})`;
+      }
+
+      const nameInput = document.getElementById('input-scenario-name');
+      if (nameInput) {
+        const now = new Date();
+        const dateStr = `${now.getDate()}/${now.getMonth() + 1}`;
+        nameInput.value = `${comm} ${hub.split('_')[0].toUpperCase()} x ${port} (${dateStr})`;
+      }
+
+      document.getElementById('save-scenario-modal').classList.remove('hidden');
+    }
+
+    function closeSaveScenarioModal() {
+      document.getElementById('save-scenario-modal').classList.add('hidden');
+    }
+
+    async function confirmSaveScenario() {
+      const orgId = getActiveUserOrgId();
+      if (!orgId) {
+        alert('Organização não identificada.');
+        return;
+      }
+      const name = document.getElementById('input-scenario-name')?.value.trim();
+      if (!name) {
+        alert('Por favor, informe um nome para o cenário.');
+        return;
+      }
+      const notes = document.getElementById('input-scenario-notes')?.value.trim() || null;
+
+      const p = latestParityCalculation?.payload || {};
+      const d = latestParityCalculation?.data || {};
+
+      const body = {
+        name: name,
+        commodity: p.commodity || 'SOJA',
+        hub_id: p.hub_id || 'sorriso_mt',
+        port_id: p.port_id || 'STS',
+        cbot_price_cents: p.cbot_price_cents || 1180.0,
+        port_premium_cents: p.port_premium_cents || 65.0,
+        usd_brl_fx: p.usd_brl_fx || 5.485,
+        freight_cost_brl_ton: d.cost_breakdown ? (d.cost_breakdown.freight_brl_bag / 0.06) : null,
+        elevation_cost_usd_ton: p.elevation_usd_ton || 8.0,
+        demurrage_risk_usd_ton: p.demurrage_usd_ton || 0.0,
+        other_port_costs_usd_ton: p.other_port_costs_brl_ton ? (p.other_port_costs_brl_ton / (0.06 * p.usd_brl_fx * 16.6667)) : null,
+        tax_fund_brl_bag: p.state_tax_fund_brl_bag,
+        net_parity_brl_bag: d.net_parity_price_brl_bag,
+        net_parity_brl_ton: d.net_parity_price_brl_ton,
+        fob_usd_ton: d.fob_usd_ton,
+        notes: notes
+      };
+
+      try {
+        const res = await fetch(`${API_BASE}/organizations/${orgId}/scenarios`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(body)
+        });
+
+        if (res.ok) {
+          alert('✅ Cenário salvo com sucesso!');
+          closeSaveScenarioModal();
+          loadSavedScenariosCount();
+        } else {
+          const err = await res.text();
+          alert('Erro ao salvar cenário: ' + err);
+        }
+      } catch (err) {
+        console.error('Falha ao salvar cenário:', err);
+        alert('Erro de conexão ao salvar cenário.');
+      }
+    }
+
+    async function loadSavedScenariosCount() {
+      const orgId = getActiveUserOrgId();
+      if (!orgId) return;
+      try {
+        const res = await fetch(`${API_BASE}/organizations/${orgId}/scenarios`, {
+          headers: getAuthHeaders()
+        });
+        if (res.ok) {
+          const list = await res.json();
+          const badge = document.getElementById('saved-scenarios-badge-text');
+          if (badge) {
+            badge.innerText = `📂 Cenários Salvos (${list.length})`;
+          }
+        }
+      } catch (e) {
+        console.warn('Erro ao atualizar contador de cenários:', e);
+      }
+    }
+
+    async function openSavedScenariosModal() {
+      const orgId = getActiveUserOrgId();
+      if (!orgId) {
+        alert('Faça login com sua conta para acessar os cenários salvos.');
+        startCognitoLogin();
+        return;
+      }
+
+      document.getElementById('saved-scenarios-modal').classList.remove('hidden');
+      const tbody = document.getElementById('saved-scenarios-tbody');
+      tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-center text-slate-500">Carregando cenários...</td></tr>`;
+
+      try {
+        const res = await fetch(`${API_BASE}/organizations/${orgId}/scenarios`, {
+          headers: getAuthHeaders()
+        });
+        if (!res.ok) {
+          tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-center text-red-500">Erro ao carregar cenários da organização.</td></tr>`;
+          return;
+        }
+        const list = await res.json();
+        if (list.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-center text-slate-500">Nenhum cenário salvo ainda. Use o botão 💾 Salvar na Calculadora.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = list.map(s => {
+          const dateStr = s.created_at ? new Date(s.created_at).toLocaleDateString('pt-BR') : '-';
+          const scenJson = encodeURIComponent(JSON.stringify(s));
+          return `
+            <tr class="hover:bg-slate-50">
+              <td class="px-4 py-2.5 font-bold text-slate-900">
+                ${s.name}
+                <span class="block text-[10px] text-slate-400 font-normal">${s.hub_id} ➔ ${s.port_id} • ${dateStr}</span>
+              </td>
+              <td class="px-4 py-2.5 font-medium">${s.commodity}</td>
+              <td class="px-4 py-2.5 text-right font-medium">${s.cbot_price_cents.toFixed(1)} ¢</td>
+              <td class="px-4 py-2.5 text-right font-medium">+${s.port_premium_cents.toFixed(1)} ¢</td>
+              <td class="px-4 py-2.5 text-right font-bold text-emerald-700">R$ ${s.net_parity_brl_bag.toFixed(2)}</td>
+              <td class="px-4 py-2.5 text-center space-x-1.5 whitespace-nowrap">
+                <button onclick="loadScenarioIntoCalculator('${scenJson}')" class="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded font-semibold text-xs transition border border-indigo-200">
+                  Carregar
+                </button>
+                <button onclick="deleteSavedScenario(${s.id})" title="Excluir" class="p-1 text-slate-400 hover:text-red-600 rounded transition">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+        if (window.lucide) lucide.createIcons();
+      } catch (err) {
+        console.error('Falha ao listar cenários salvos:', err);
+        tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-center text-red-500">Erro de rede ao carregar cenários.</td></tr>`;
+      }
+    }
+
+    function closeSavedScenariosModal() {
+      document.getElementById('saved-scenarios-modal').classList.add('hidden');
+    }
+
+    function loadScenarioIntoCalculator(scenJsonEncoded) {
+      try {
+        const s = JSON.parse(decodeURIComponent(scenJsonEncoded));
+        if (document.getElementById('input-commodity')) document.getElementById('input-commodity').value = s.commodity;
+        if (document.getElementById('input-port')) document.getElementById('input-port').value = s.port_id;
+        if (document.getElementById('input-hub')) document.getElementById('input-hub').value = s.hub_id;
+        if (document.getElementById('input-cbot')) document.getElementById('input-cbot').value = s.cbot_price_cents;
+        if (document.getElementById('input-premium')) document.getElementById('input-premium').value = s.port_premium_cents;
+        if (document.getElementById('input-fx')) document.getElementById('input-fx').value = s.usd_brl_fx;
+        if (document.getElementById('input-elevation')) document.getElementById('input-elevation').value = s.elevation_cost_usd_ton.toFixed(2);
+        if (document.getElementById('input-demurrage')) document.getElementById('input-demurrage').value = s.demurrage_risk_usd_ton.toFixed(2);
+        if (document.getElementById('input-state-tax') && s.tax_fund_brl_bag !== null) {
+          document.getElementById('input-state-tax').value = s.tax_fund_brl_bag.toFixed(2);
+          document.getElementById('input-state-tax').dataset.userEdited = 'true';
+        }
+
+        closeSavedScenariosModal();
+        switchTab('parity');
+        calculateParity();
+      } catch (err) {
+        console.error('Erro ao carregar cenário:', err);
+      }
+    }
+
+    async function deleteSavedScenario(scenId) {
+      if (!confirm('Deseja realmente remover este cenário salvo?')) return;
+      const orgId = getActiveUserOrgId();
+      if (!orgId) return;
+
+      try {
+        const res = await fetch(`${API_BASE}/organizations/${orgId}/scenarios/${scenId}`, {
+          method: 'DELETE',
+          headers: getAuthHeaders()
+        });
+        if (res.ok) {
+          openSavedScenariosModal();
+          loadSavedScenariosCount();
+        } else {
+          alert('Falha ao remover cenário.');
+        }
+      } catch (e) {
+        console.error('Erro ao remover cenário:', e);
+      }
+    }
+
+    // ==============================================================================
+    // TICKET U06: EXPORTAÇÃO EXECUTIVA PARA WHATSAPP
+    // ==============================================================================
+    function exportToWhatsApp() {
+      const comm = document.getElementById('input-commodity')?.value || 'SOJA';
+      const commName = comm === 'SOJA' ? 'Soja em Grão (CBOT ZS)' : 'Milho em Grão (CBOT ZC)';
+      const port = document.getElementById('input-port')?.value || 'STS';
+      const hub = document.getElementById('input-hub')?.value || 'sorriso_mt';
+      const hubEl = document.getElementById('input-hub');
+      const portEl = document.getElementById('input-port');
+      const hubText = hubEl && hubEl.selectedOptions[0] ? hubEl.selectedOptions[0].text : hub;
+      const portText = portEl && portEl.selectedOptions[0] ? portEl.selectedOptions[0].text : port;
+
+      const cbot = parseFloat(document.getElementById('input-cbot')?.value || 1180.0).toFixed(2);
+      const premium = parseFloat(document.getElementById('input-premium')?.value || 65.0).toFixed(2);
+      const fx = parseFloat(document.getElementById('input-fx')?.value || 5.485).toFixed(4);
+      const cash = parseFloat(document.getElementById('input-cash')?.value || 122.5).toFixed(2);
+
+      const fobUsd = document.getElementById('res-fob-usd')?.innerText.replace('/ton', '').trim() || '$0.00';
+      const fobBrl = document.getElementById('res-fob-brl')?.innerText.trim() || 'R$ 0,00';
+      const fasBrl = document.getElementById('res-fas-brl')?.innerText.replace('/sc', '').trim() || 'R$ 0,00';
+      const marginBrl = document.getElementById('res-margin-brl')?.innerText.replace('/sc', '').trim() || 'R$ 0,00';
+      const marginPct = document.getElementById('res-margin-pct')?.innerText.trim() || '0%';
+
+      const now = new Date().toLocaleDateString('pt-BR');
+
+      const text = `🌾 *AGRITRADING - RELATÓRIO EXECUTIVO DE PARIDADE* 🌾
+🗓️ *Data:* ${now}
+🌱 *Commodity:* ${commName}
+📍 *Rota:* ${hubText} ➔ ${portText}
+
+📊 *INDICADORES DE MERCADO:*
+• CBOT: ${cbot} ¢/bu
+• Prêmio FOB: ${premium} ¢/bu
+• Dólar PTAX: R$ ${fx}
+• Preço FOB Porto: ${fobUsd} (${fobBrl})
+
+💰 *FORMAÇÃO DE PREÇO LÍQUIDO:*
+🎯 *PARIDADE LÍQUIDA FAS: ${fasBrl}*
+💵 Preço Balcão Ref.: R$ ${cash} / sc
+📈 *Margem da Mesa:* ${marginBrl} (${marginPct})
+
+_Gerado via AgriTrading Intelligence Platform_`;
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          alert('📋 Relatório formatado copiado com sucesso!\nCole diretamente na conversa do WhatsApp.');
+        }).catch(() => {
+          prompt('Copie o relatório abaixo para o WhatsApp:', text);
+        });
+      } else {
+        prompt('Copie o relatório abaixo para o WhatsApp:', text);
+      }
+    }
+
+    // ==============================================================================
+    // TICKET U04: COMPARADOR DE PROPOSTAS / BIDS
+    // ==============================================================================
+    async function runProposalsComparison() {
+      const volumeBags = parseFloat(document.getElementById('compare-volume-bags')?.value || 10000);
+      const cbot = parseFloat(document.getElementById('input-cbot')?.value || 1180.0);
+      const fx = parseFloat(document.getElementById('input-fx')?.value || 5.485);
+
+      const proposals = [
+        {
+          name: document.getElementById('prop-1-name')?.value || 'Proposta 1',
+          commodity: document.getElementById('prop-1-comm')?.value || 'SOJA',
+          port_id: document.getElementById('prop-1-port')?.value || 'BCR',
+          hub_id: document.getElementById('prop-1-hub')?.value || 'sorriso_mt',
+          volume_bags: volumeBags,
+          cbot_cents: cbot,
+          premium_cents: parseFloat(document.getElementById('prop-1-prem')?.value || 65.0),
+          fx_rate: fx,
+          freight_brl_ton: parseFloat(document.getElementById('prop-1-freight')?.value || 320.0),
+          elevation_usd_ton: parseFloat(document.getElementById('prop-1-elev')?.value || 8.5),
+          demurrage_usd_ton: parseFloat(document.getElementById('prop-1-demurrage')?.value || 0.8),
+          tax_fund_brl_bag: parseFloat(document.getElementById('prop-1-tax')?.value || 2.85)
+        },
+        {
+          name: document.getElementById('prop-2-name')?.value || 'Proposta 2',
+          commodity: document.getElementById('prop-2-comm')?.value || 'SOJA',
+          port_id: document.getElementById('prop-2-port')?.value || 'STS',
+          hub_id: document.getElementById('prop-2-hub')?.value || 'sorriso_mt',
+          volume_bags: volumeBags,
+          cbot_cents: cbot,
+          premium_cents: parseFloat(document.getElementById('prop-2-prem')?.value || 80.0),
+          fx_rate: fx,
+          freight_brl_ton: parseFloat(document.getElementById('prop-2-freight')?.value || 410.0),
+          elevation_usd_ton: parseFloat(document.getElementById('prop-2-elev')?.value || 8.0),
+          demurrage_usd_ton: parseFloat(document.getElementById('prop-2-demurrage')?.value || 2.5),
+          tax_fund_brl_bag: parseFloat(document.getElementById('prop-2-tax')?.value || 2.85)
+        },
+        {
+          name: document.getElementById('prop-3-name')?.value || 'Proposta 3',
+          commodity: document.getElementById('prop-3-comm')?.value || 'SOJA',
+          port_id: document.getElementById('prop-3-port')?.value || 'PNG',
+          hub_id: document.getElementById('prop-3-hub')?.value || 'sorriso_mt',
+          volume_bags: volumeBags,
+          cbot_cents: cbot,
+          premium_cents: parseFloat(document.getElementById('prop-3-prem')?.value || 72.0),
+          fx_rate: fx,
+          freight_brl_ton: parseFloat(document.getElementById('prop-3-freight')?.value || 390.0),
+          elevation_usd_ton: parseFloat(document.getElementById('prop-3-elev')?.value || 7.5),
+          demurrage_usd_ton: parseFloat(document.getElementById('prop-3-demurrage')?.value || 2.0),
+          tax_fund_brl_bag: parseFloat(document.getElementById('prop-3-tax')?.value || 2.85)
+        }
+      ];
+
+      try {
+        const res = await fetch(`${API_BASE}/proposals/compare`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ proposals })
+        });
+
+        if (!res.ok) {
+          const err = await res.text();
+          console.error('Erro na comparação de propostas:', err);
+          return;
+        }
+
+        const data = await res.json();
+        lastComparisonResult = data;
+
+        // Render Results
+        const resultsContainer = document.getElementById('compare-results-container');
+        if (resultsContainer) resultsContainer.classList.remove('hidden');
+
+        const btnCopyWhatsApp = document.getElementById('btn-copy-compare-whatsapp');
+        if (btnCopyWhatsApp) btnCopyWhatsApp.classList.remove('hidden');
+
+        document.getElementById('compare-winner-title').innerText = `${data.best_proposal} (R$ ${data.best_price_brl_bag.toFixed(2)}/sc)`;
+        document.getElementById('compare-winner-desc').innerText = `Melhor rota gerando a maior receita líquida total na fazenda para ${volumeBags.toLocaleString('pt-BR')} sacas.`;
+        document.getElementById('compare-winner-advantage').innerText = `+R$ ${data.max_advantage_lot_brl.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+
+        // 3 Cards
+        const cardsContainer = document.getElementById('compare-cards-container');
+        cardsContainer.innerHTML = data.proposals.map(p => {
+          const isWinner = p.is_best;
+          return `
+            <div class="bg-white p-5 rounded-xl border ${isWinner ? 'border-2 border-emerald-500 shadow-md ring-2 ring-emerald-100' : 'border-slate-200 shadow-sm'} space-y-3 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                  <span class="text-xs font-bold text-slate-800">${p.name}</span>
+                  ${isWinner ? '<span class="text-[10px] bg-emerald-600 text-white px-2 py-0.5 rounded-full font-bold uppercase">🏆 Vencedora</span>' : '<span class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-medium">Porto ' + p.port_id + '</span>'}
+                </div>
+                <div class="mt-2">
+                  <span class="text-[11px] text-slate-500 uppercase font-medium">Paridade Líquida Balcão</span>
+                  <div class="text-2xl font-black ${isWinner ? 'text-emerald-700' : 'text-slate-800'}">
+                    R$ ${p.net_price_brl_bag.toFixed(2)} <span class="text-xs font-normal text-slate-500">/sc</span>
+                  </div>
+                  <div class="text-xs text-slate-600 mt-1">
+                    Receita do Lote: <strong class="text-slate-900 font-bold">R$ ${p.total_lot_revenue_brl.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div class="pt-2 border-t border-slate-100 text-xs">
+                ${isWinner ? `
+                  <div class="p-2 bg-emerald-50 rounded-lg text-emerald-800 font-semibold text-center">
+                    ⭐ Maior rentabilidade por saca
+                  </div>
+                ` : `
+                  <div class="p-2 bg-slate-50 rounded-lg text-slate-700 space-y-0.5 text-[11px]">
+                    <div class="flex justify-between">
+                      <span>Desvantagem por saca:</span>
+                      <strong class="text-red-600">-R$ ${Math.abs(p.spread_vs_best_brl_bag).toFixed(2)}/sc</strong>
+                    </div>
+                    <div class="flex justify-between">
+                      <span>Diferença no lote:</span>
+                      <strong class="text-red-600">-R$ ${Math.abs(p.spread_vs_best_lot_brl).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
+                    </div>
+                  </div>
+                `}
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        // Breakdown Table
+        const tbody = document.getElementById('compare-table-body');
+        tbody.innerHTML = data.proposals.map(p => {
+          const isWinner = p.is_best;
+          return `
+            <tr class="hover:bg-slate-50 ${isWinner ? 'bg-emerald-50/40 font-semibold' : ''}">
+              <td class="px-4 py-2.5 font-bold text-slate-900 flex items-center space-x-1.5">
+                <span>${p.name}</span>
+                ${isWinner ? '<span class="text-[10px] text-emerald-700 font-bold">🏆</span>' : ''}
+              </td>
+              <td class="px-4 py-2.5 text-center font-medium">${p.port_id}</td>
+              <td class="px-4 py-2.5 text-right">$${p.fob_usd_ton.toFixed(2)}</td>
+              <td class="px-4 py-2.5 text-right">R$ ${p.road_freight_brl_ton.toFixed(2)}</td>
+              <td class="px-4 py-2.5 text-right">R$ ${p.tax_fund_brl_bag.toFixed(2)}</td>
+              <td class="px-4 py-2.5 text-right font-black ${isWinner ? 'text-emerald-700' : 'text-slate-800'}">R$ ${p.net_price_brl_bag.toFixed(2)}</td>
+              <td class="px-4 py-2.5 text-right font-bold text-slate-900">R$ ${p.total_lot_revenue_brl.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+              <td class="px-4 py-2.5 text-center font-bold">
+                ${isWinner ? '<span class="text-emerald-700">MELHOR</span>' : '<span class="text-red-600">-R$ ' + Math.abs(p.spread_vs_best_brl_bag).toFixed(2) + '/sc</span>'}
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        if (window.lucide) lucide.createIcons();
+      } catch (err) {
+        console.error('Falha ao comparar propostas:', err);
+      }
+    }
+
+    // ==============================================================================
+    // TICKETS F10 & F11: GESTÃO DA EMPRESA, EQUIPE & PARÂMETROS
+    // ==============================================================================
+    async function loadOrganizationData() {
+      const userStr = sessionStorage.getItem('agri_user_profile');
+      if (!userStr) {
+        startCognitoLogin();
+        return;
+      }
+      const user = JSON.parse(userStr);
+      const membership = user.memberships && user.memberships[0];
+
+      if (!membership) {
+        checkOnboarding(user);
+        return;
+      }
+
+      const orgId = membership.organization_id;
+      const orgName = membership.organization_name;
+      const role = membership.role;
+
+      const titleEl = document.getElementById('company-name-title');
+      const badgeEl = document.getElementById('company-role-badge');
+      const subEl = document.getElementById('company-slug-subtitle');
+
+      if (titleEl) titleEl.innerText = orgName;
+      if (badgeEl) badgeEl.innerText = role;
+      if (subEl) subEl.innerText = `ID da Organização: #${orgId} • Papel: ${role}`;
+
+      // Carregar Membros
+      try {
+        const resMem = await fetch(`${API_BASE}/organizations/${orgId}/members`, {
+          headers: getAuthHeaders()
+        });
+        if (resMem.ok) {
+          const members = await resMem.json();
+          document.getElementById('company-members-count').innerText = members.length;
+          const tbody = document.getElementById('company-members-tbody');
+          tbody.innerHTML = members.map(m => {
+            const joined = m.joined_at ? new Date(m.joined_at).toLocaleDateString('pt-BR') : '-';
+            const isMe = m.user_id === user.id;
+            const canRemove = role === 'OWNER' && !isMe;
+            return `
+              <tr class="hover:bg-slate-50">
+                <td class="px-4 py-2.5 font-bold text-slate-900">
+                  ${m.name || m.email}
+                  <span class="block text-[10px] text-slate-500 font-normal">${m.email} ${isMe ? '(Você)' : ''}</span>
+                </td>
+                <td class="px-4 py-2.5">
+                  <span class="px-2 py-0.5 rounded text-[10px] font-bold ${m.role === 'OWNER' ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'}">
+                    ${m.role}
+                  </span>
+                </td>
+                <td class="px-4 py-2.5 text-slate-500">${joined}</td>
+                <td class="px-4 py-2.5 text-center">
+                  ${canRemove ? `
+                    <button onclick="removeCompanyMember(${m.user_id})" class="text-xs text-red-600 hover:text-red-800 font-semibold p-1">
+                      Remover
+                    </button>
+                  ` : '<span class="text-slate-300">-</span>'}
+                </td>
+              </tr>
+            `;
+          }).join('');
+        }
+      } catch (e) {
+        console.error('Erro ao listar membros:', e);
+      }
+
+      // Carregar Cost Profile
+      try {
+        const resCp = await fetch(`${API_BASE}/organizations/${orgId}/cost-profiles`, {
+          headers: getAuthHeaders()
+        });
+        if (resCp.ok) {
+          const profiles = await resCp.json();
+          if (profiles.length > 0) {
+            const cp = profiles[0];
+            activeCostProfileId = cp.id;
+            if (document.getElementById('cp-margin-usd')) document.getElementById('cp-margin-usd').value = cp.brokerage_margin_usd_ton.toFixed(2);
+            if (document.getElementById('cp-broker-fee')) document.getElementById('cp-broker-fee').value = cp.brokerage_fee_brl_bag.toFixed(2);
+            if (document.getElementById('cp-broker-payer')) document.getElementById('cp-broker-payer').value = cp.brokerage_payer;
+            if (document.getElementById('cp-funrural')) document.getElementById('cp-funrural').value = cp.default_funrural_pct.toFixed(2);
+            if (document.getElementById('cp-shrinkage')) document.getElementById('cp-shrinkage').value = cp.default_shrinkage_loss_pct.toFixed(2);
+          }
+        }
+      } catch (e) {
+        console.error('Erro ao carregar perfil de custos:', e);
+      }
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    async function createCompanyInvitation() {
+      const orgId = getActiveUserOrgId();
+      if (!orgId) return;
+
+      const email = document.getElementById('invite-input-email')?.value.trim();
+      const role = document.getElementById('invite-input-role')?.value;
+
+      if (!email || !email.includes('@')) {
+        alert('Por favor, informe um endereço de e-mail válido.');
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/organizations/${orgId}/invitations`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ email, role })
+        });
+
+        if (res.ok) {
+          const inv = await res.json();
+          const inviteUrl = `${window.location.origin}/?invite_token=${inv.token}`;
+          const box = document.getElementById('invite-result-box');
+          const inputLink = document.getElementById('invite-result-link');
+          if (inputLink) inputLink.value = inviteUrl;
+          if (box) box.classList.remove('hidden');
+          document.getElementById('invite-input-email').value = '';
+          alert('✅ Convite gerado com sucesso! Envie o link copiado ao novo usuário.');
+        } else {
+          const err = await res.text();
+          alert('Erro ao emitir convite: ' + err);
+        }
+      } catch (e) {
+        console.error('Erro ao criar convite:', e);
+      }
+    }
+
+    function copyInviteLink() {
+      const input = document.getElementById('invite-result-link');
+      if (input && input.value) {
+        navigator.clipboard.writeText(input.value).then(() => {
+          alert('📋 Link de convite copiado para a Área de Transferência!');
+        }).catch(() => {
+          prompt('Copie o link de convite:', input.value);
+        });
+      }
+    }
+
+    async function removeCompanyMember(userId) {
+      if (!confirm('Deseja realmente remover este usuário da empresa?')) return;
+      const orgId = getActiveUserOrgId();
+      if (!orgId) return;
+
+      try {
+        const res = await fetch(`${API_BASE}/organizations/${orgId}/members/${userId}`, {
+          method: 'DELETE',
+          headers: getAuthHeaders()
+        });
+        if (res.ok) {
+          alert('Membro removido da organização.');
+          loadOrganizationData();
+        } else {
+          const err = await res.text();
+          alert('Falha ao remover membro: ' + err);
+        }
+      } catch (e) {
+        console.error('Erro ao remover membro:', e);
+      }
+    }
+
+    async function saveCompanyCostProfile() {
+      const orgId = getActiveUserOrgId();
+      if (!orgId || !activeCostProfileId) {
+        alert('Perfil de custo não identificado.');
+        return;
+      }
+
+      const body = {
+        brokerage_margin_usd_ton: parseFloat(document.getElementById('cp-margin-usd')?.value || 2.0),
+        brokerage_fee_brl_bag: parseFloat(document.getElementById('cp-broker-fee')?.value || 0.0),
+        brokerage_payer: document.getElementById('cp-broker-payer')?.value || 'NONE',
+        default_funrural_pct: parseFloat(document.getElementById('cp-funrural')?.value || 1.5),
+        default_shrinkage_loss_pct: parseFloat(document.getElementById('cp-shrinkage')?.value || 0.3)
+      };
+
+      try {
+        const res = await fetch(`${API_BASE}/organizations/${orgId}/cost-profiles/${activeCostProfileId}`, {
+          method: 'PUT',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(body)
+        });
+
+        if (res.ok) {
+          alert('✅ Parâmetros de custos atualizados com sucesso!');
+        } else {
+          const err = await res.text();
+          alert('Erro ao atualizar custos: ' + err);
+        }
+      } catch (e) {
+        console.error('Erro ao atualizar custos:', e);
+      }
+    }
+
+    // ==============================================================================
+    // TICKET F09: ONBOARDING DE NOVOS USUÁRIOS
+    // ==============================================================================
+    function checkOnboarding(user) {
+      if (user && (!user.memberships || user.memberships.length === 0)) {
+        document.getElementById('onboarding-modal').classList.remove('hidden');
+      }
+    }
+
+    async function submitOnboardingCreateOrg() {
+      const name = document.getElementById('onboarding-company-name')?.value.trim();
+      if (!name) {
+        alert('Por favor, informe o nome da sua empresa / trading.');
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/organizations`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ name: name })
+        });
+
+        if (res.ok) {
+          alert(`🎉 Workspace "${name}" criado com sucesso!`);
+          document.getElementById('onboarding-modal').classList.add('hidden');
+          await refreshUserProfile();
+          switchTab('parity');
+        } else {
+          const err = await res.text();
+          alert('Erro ao criar organização: ' + err);
+        }
+      } catch (e) {
+        console.error('Erro ao criar organização:', e);
+      }
+    }
+
+    // Checar se há convite pendente na URL
+    async function checkPendingInviteToken() {
+      const urlParams = new URLSearchParams(window.location.search);
+      let inviteToken = urlParams.get('invite_token');
+
+      if (!inviteToken) {
+        inviteToken = sessionStorage.getItem('agri_pending_invite');
+      }
+
+      if (inviteToken) {
+        const token = sessionStorage.getItem('agri_access_token');
+        if (!token) {
+          sessionStorage.setItem('agri_pending_invite', inviteToken);
+          return;
+        }
+
+        try {
+          const res = await fetch(`${API_BASE}/invitations/${inviteToken}/accept`, {
+            method: 'POST',
+            headers: getAuthHeaders()
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            sessionStorage.removeItem('agri_pending_invite');
+            alert(`🎉 Convite aceito! ${data.message}`);
+            await refreshUserProfile();
+          } else {
+            console.warn('Convite não pôde ser aceito:', await res.text());
+          }
+        } catch (e) {
+          console.error('Erro ao aceitar convite:', e);
+        }
       }
     }
 
