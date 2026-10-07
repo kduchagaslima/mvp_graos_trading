@@ -1720,12 +1720,16 @@
             userBadge.classList.remove('hidden');
             userBadge.classList.add('flex');
           }
-          if (emailDisplay) emailDisplay.innerText = user.email || fallbackEmail;
+          if (emailDisplay) {
+            emailDisplay.innerText = user.name ? `${user.name}` : (user.email || fallbackEmail);
+            emailDisplay.title = user.email || '';
+          }
           if (orgDisplay) {
             const org = user.memberships && user.memberships[0];
-            const orgName = org ? org.organization_name : 'Organização Padrão';
-            const role = org ? org.role : 'leitor';
-            orgDisplay.innerText = `${orgName} • ${role.toUpperCase()}`;
+            const orgName = org ? org.organization_name : 'AgriTrading Matriz';
+            const role = org ? org.role : 'OWNER';
+            const opTag = user.is_platform_operator ? ' • 🛡️ Operador' : '';
+            orgDisplay.innerText = `${orgName} (${role})${opTag}`;
           }
           if (window.lucide) lucide.createIcons();
           return user;
