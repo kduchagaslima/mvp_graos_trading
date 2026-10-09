@@ -34,7 +34,7 @@ resource "aws_lambda_function" "api" {
   timeout       = 30
 
   filename         = "${path.module}/build/lambda_function.zip"
-  source_code_hash = filebase64sha256("${path.module}/build/lambda_function.zip")
+  source_code_hash = fileexists("${path.module}/build/lambda_function.zip") ? filebase64sha256("${path.module}/build/lambda_function.zip") : null
 
   environment {
     variables = {

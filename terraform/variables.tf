@@ -43,7 +43,7 @@ variable "cognito_domain_prefix" {
 variable "cognito_callback_urls" {
   type        = list(string)
   description = "URLs permitidas de callback para redirecionamento após autenticação"
-  default     = [
+  default = [
     "https://d1qfxp2g7u6ypc.cloudfront.net",
     "https://d1qfxp2g7u6ypc.cloudfront.net/",
     "http://localhost:8000/callback",
@@ -55,7 +55,7 @@ variable "cognito_callback_urls" {
 variable "cognito_logout_urls" {
   type        = list(string)
   description = "URLs permitidas para redirecionamento após logout"
-  default     = [
+  default = [
     "https://d1qfxp2g7u6ypc.cloudfront.net",
     "https://d1qfxp2g7u6ypc.cloudfront.net/",
     "http://localhost:8000/login",
