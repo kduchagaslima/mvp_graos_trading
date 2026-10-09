@@ -50,6 +50,10 @@ resource "aws_cognito_user_pool" "pool" {
   admin_create_user_config {
     allow_admin_create_user_only = false
   }
+
+  lifecycle {
+    ignore_changes = [schema]
+  }
 }
 
 resource "random_string" "cognito_suffix" {
