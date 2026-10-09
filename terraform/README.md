@@ -95,9 +95,74 @@ aws cloudfront create-invalidation \
 
 ---
 
+## 🤖 Pipeline CI/CD Automatizado (GitHub Actions)
+
+A infraestrutura e o frontend possuem esteira de automação contínua configurada em `.github/workflows/`:
+* **`ci.yml`**: Executado em Pull Requests e pushes de desenvolvimento. Realiza testes automatizados (`pytest`), compilação de sintaxe (`compileall`), validação de código Terraform (`fmt`, `init`, `validate`) e empacotamento da Lambda gerando checksum SHA-256 e artefato.
+* **`deploy.yml`**: Executado automaticamente no push para a branch `main` (ou acionamento manual via `workflow_dispatch`). Conecta-se à AWS de forma segura via OIDC, constrói e provisiona a infraestrutura via `terraform apply -auto-approve`, sincroniza o frontend estático no bucket S3, invalida o cache do CloudFront e executa smoke test no endpoint público.
+
+### 🔐 GitHub Secrets Obrigatórias
+
+Configure os seguintes segredos no repositório do GitHub (**Settings** > **Secrets and variables** > **Actions**):
+
+| Secret | Descrição | Exemplo |
+| :--- | :--- | :--- |
+| `AWS_ROLE_ARN` | ARN da IAM Role configurada com OIDC para o GitHub Actions | `arn:aws:iam::123456789012:role/AgriTradingGitHubActionsDeploy` |
+| `DATABASE_URL` | String de conexão para o Neon Postgres (com SSL) | `postgresql://user:pass@ep-pooler.us-east-1.aws.neon.tech/agri_trading?sslmode=require` |
+| `AWS_ACCESS_KEY_ID` *(opcional)* | Chave de acesso AWS para autenticação estática de fallback | `AKIAIOSFODNN7EXAMPLE` |
+| `AWS_SECRET_ACCESS_KEY` *(opcional)* | Chave secreta AWS para autenticação de fallback | `wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY` |
+
+---
+
+### 🛡️ Configuração da IAM Role para GitHub Actions (OIDC)
+
+Para máxima segurança sem armazenamento de chaves permanentes, utilize autenticação federada OpenID Connect (OIDC).
+
+#### 1. Trust Relationship (Assume Role Policy)
+
+Configure a confiança OIDC da Role limitando ao repositório:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::<ACCOUNT_ID>:oidc-provider/token.actions.githubusercontent.com"
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+        },
+        "StringLike": {
+          "token.actions.githubusercontent.com:sub": "repo:<ORGANIZACAO_OU_USUARIO>/mvp_graos_trading:*"
+        }
+      }
+    }
+  ]
+}
+```
+
+#### 2. Permissões Mínimas Recomendadas para a Role
+
+A Role de deploy necessita de permissões para gerenciar a stack serverless:
+* **AWS Lambda**: `lambda:CreateFunction`, `lambda:UpdateFunctionCode`, `lambda:UpdateFunctionConfiguration`, `lambda:GetFunction`, `lambda:DeleteFunction`, `lambda:AddPermission`, `lambda:RemovePermission`.
+* **Amazon API Gateway (v2)**: `apigateway:GET`, `apigateway:POST`, `apigateway:PUT`, `apigateway:PATCH`, `apigateway:DELETE`.
+* **Amazon S3**: `s3:*` restrito aos buckets de frontend (`agri-trading-frontend-*`).
+* **Amazon CloudFront**: `cloudfront:CreateDistribution`, `cloudfront:UpdateDistribution`, `cloudfront:GetDistribution`, `cloudfront:CreateInvalidation`, `cloudfront:GetInvalidation`.
+* **Amazon EventBridge Scheduler**: `scheduler:CreateSchedule`, `scheduler:UpdateSchedule`, `scheduler:GetSchedule`, `scheduler:DeleteSchedule`.
+* **Amazon Cognito**: `cognito-idp:*` para gerenciamento do User Pool e App Client da aplicação.
+* **IAM**: `iam:PassRole`, `iam:GetRole`, `iam:CreateRole`, `iam:AttachRolePolicy`, `iam:PutRolePolicy` para a role de execução da Lambda (`agri-trading-lambda-exec-*`).
+* **Amazon CloudWatch Logs**: `logs:CreateLogGroup`, `logs:PutRetentionPolicy`, `logs:DescribeLogGroups`.
+
+---
+
 ## 🧹 Destruição de Recursos (Clean-up)
 
 Para encerrar e remover todos os recursos da nuvem:
 ```bash
 terraform destroy -auto-approve
 ```
+
