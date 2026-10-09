@@ -65,7 +65,7 @@ def decode_and_validate_jwt(token: str) -> Dict[str, Any]:
     1. Assinatura RS256 e algoritmo permitido
     2. Validade temporal (exp)
     3. token_use == 'access' (ID token explicitamente rejeitado para acesso a APIs)
-    4. client_id / aud de acordo com a configuração
+    4. client_id obrigatório e idêntico ao app client configurado (access token)
     """
     try:
         unverified_header = jwt.get_unverified_header(token)
@@ -129,9 +129,9 @@ def decode_and_validate_jwt(token: str) -> Dict[str, Any]:
         )
 
     # 4. Validação de client_id (se configurado)
-    if COGNITO_APP_CLIENT_ID and not _TEST_PUBLIC_KEY:
+    if COGNITO_APP_CLIENT_ID:
         token_client_id = payload.get("client_id")
-        if token_client_id and token_client_id != COGNITO_APP_CLIENT_ID:
+        if token_client_id != COGNITO_APP_CLIENT_ID:
             raise HTTPException(status_code=401, detail="Token client_id mismatch")
 
     return payload
