@@ -45,9 +45,9 @@ if command -v /home/celima/.local/bin/uv &> /dev/null; then
         --with httpx \
         --with pyjwt \
         --with cryptography \
-        pytest -o cache_dir=/tmp/.pytest_cache -v tests/
+        python3 -m pytest -p tests.fixtures.offline_pytest -o cache_dir=/tmp/.pytest_cache -v tests/
 else
-    pytest -o cache_dir=/tmp/.pytest_cache -v tests/
+    python3 -m pytest -p tests.fixtures.offline_pytest -o cache_dir=/tmp/.pytest_cache -v tests/
 fi
 echo "✅ Todos os testes automatizados passaram com sucesso."
 

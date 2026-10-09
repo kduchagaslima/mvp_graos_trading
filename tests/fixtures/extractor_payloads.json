@@ -1,0 +1,10 @@
+{
+  "ptax_valid": {"value": [{"cotacaoVenda": 5.2238, "cotacaoCompra": 5.2232, "dataHoraCotacao": "2026-10-02 13:00:00.000"}]},
+  "ptax_empty": {"value": []},
+  "ptax_missing_rate": {"value": [{"cotacaoVenda": 5.2238}]},
+  "ptax_invalid_rate": {"value": [{"cotacaoVenda": "invalid", "cotacaoCompra": 5.2232}]},
+  "ptax_invalid_shape": {"value": "invalid"},
+  "cbot_valid": {"ZS=F": 1185.25, "ZC=F": 435.5},
+  "cbot_missing": {"ZS=F": null, "ZC=F": null},
+  "cbot_invalid": {"ZS=F": "invalid", "ZC=F": "invalid"}
+}
