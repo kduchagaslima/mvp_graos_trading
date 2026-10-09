@@ -8,6 +8,9 @@ Valida:
 """
 
 from datetime import datetime, timezone, timedelta
+import base64
+import json
+from types import SimpleNamespace
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -27,6 +30,7 @@ from src.db.models import (
     CostProfile,
     Invitation,
 )
+from src.api import auth
 from src.api.auth import set_test_public_key
 
 
@@ -121,23 +125,22 @@ def test_adversarial_token_tampering_and_forgery(trusted_keypair, attacker_keypa
     assert "Token verification failed" in res_forged.json()["detail"]
 
     # 2. Token com header alg='none'
-    try:
-        none_token = jwt.encode({"sub": "victim-user-123", "token_use": "access"}, key="", algorithm="none")
-        res_none = client.get("/api/me", headers={"Authorization": f"Bearer {none_token}"})
-        assert res_none.status_code == 401
-        assert "Only RS256 is permitted" in res_none.json()["detail"]
-    except Exception:
-        # Se PyJWT rejeitar algorithm=none por segurança na serialização, teste é aprovado
-        pass
+    none_token = jwt.encode({"sub": "victim-user-123", "token_use": "access"}, key="", algorithm="none")
+    res_none = client.get("/api/me", headers={"Authorization": f"Bearer {none_token}"})
+    assert res_none.status_code == 401
+    assert "Only RS256 is permitted" in res_none.json()["detail"]
 
     # 3. Adulteração do payload de um token legítimo
     legit_token = make_token(trusted_keypair["priv"], {"sub": "legit-user"})
     parts = legit_token.split(".")
-    # Altera um caractere no payload Base64
-    corrupted_payload = parts[1][:-2] + ("A" if parts[1][-2] != "A" else "B") + parts[1][-1]
+    # Re-encode a valid JSON payload with a different subject, preserving the signature.
+    payload = jwt.decode(legit_token, options={"verify_signature": False})
+    payload["sub"] = "victim-user-123"
+    corrupted_payload = base64.urlsafe_b64encode(json.dumps(payload).encode()).rstrip(b"=").decode()
     corrupted_token = f"{parts[0]}.{corrupted_payload}.{parts[2]}"
     res_corrupted = client.get("/api/me", headers={"Authorization": f"Bearer {corrupted_token}"})
     assert res_corrupted.status_code == 401
+    assert "Token verification failed" in res_corrupted.json()["detail"]
 
 
 def test_adversarial_cross_tenant_access_denials(trusted_keypair, f14_db):
@@ -339,3 +342,28 @@ def test_e2e_complete_company_onboarding_and_parity_workflow(trusted_keypair, f1
     assert res_analyst_profiles.status_code == 200
     assert len(res_analyst_profiles.json()) == 1
     assert res_analyst_profiles.json()[0]["name"] == "Exportação Safra 25/26"
+
+
+@pytest.mark.parametrize("key_source", ["test-key", "local-jwks"])
+@pytest.mark.parametrize("client_claim", ["expected-client", "other-client", None, "", 123])
+def test_access_token_client_binding(trusted_keypair, f14_db, monkeypatch, key_source, client_claim):
+    """Configured Cognito client binding also applies when verification uses a test key."""
+    monkeypatch.setattr(auth, "COGNITO_APP_CLIENT_ID", "expected-client")
+    monkeypatch.setattr(auth, "COGNITO_ISSUER", "https://local.invalid/pool")
+    claims = {"sub": "client-binding-user", "iss": auth.COGNITO_ISSUER}
+    if client_claim is not None:
+        claims["client_id"] = client_claim
+    if key_source == "local-jwks":
+        monkeypatch.setattr(auth, "_TEST_PUBLIC_KEY", None)
+        public_key = serialization.load_pem_public_key(trusted_keypair["pub"].encode())
+        fake_client = SimpleNamespace(get_signing_key_from_jwt=lambda token: SimpleNamespace(key=public_key))
+        monkeypatch.setattr(auth, "get_jwks_client", lambda: fake_client)
+    token = make_token(trusted_keypair["priv"], claims)
+    response = TestClient(app).get("/api/me", headers={"Authorization": f"Bearer {token}"})
+    if client_claim == "expected-client":
+        assert response.status_code == 200
+        assert f14_db.query(User).filter_by(cognito_sub="client-binding-user").count() == 1
+    else:
+        assert response.status_code == 401
+        assert response.json()["detail"] == "Token client_id mismatch"
+        assert f14_db.query(User).filter_by(cognito_sub="client-binding-user").count() == 0

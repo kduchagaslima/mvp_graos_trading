@@ -1,9 +1,10 @@
 """
 Inventário Formal e Congelamento de Contratos de API (Ticket F01).
-Classifica os 24 endpoints da aplicação por camada de acesso (Público, Mercado Cliente, Motores, Operador da Plataforma)
+Classifica os endpoints da aplicação por camada de acesso (Público, Mercado Cliente, Motores, Operador da Plataforma)
 e valida a rastreabilidade com o Git SHA e ambiente de execução.
 """
 
+from collections import Counter
 import subprocess
 import platform
 import sys
@@ -14,7 +15,7 @@ from fastapi.routing import APIRoute
 from src.api.main import app
 
 
-# Classificação Formal dos 24 Endpoints Existentes
+# Classificação formal dos endpoints existentes
 EXPECTED_ACCESS_TIERS = {
     # 1. PÚBLICAS / STATUS (Abertas ao tráfego geral e health check)
     "PUBLIC": [
@@ -42,6 +43,7 @@ EXPECTED_ACCESS_TIERS = {
         ("POST", "/api/parity/batch"),
         ("POST", "/api/carry/calculate"),
         ("POST", "/api/stress/simulate"),
+        ("POST", "/api/proposals/compare"),
     ],
     # 4. OPERADOR DA PLATAFORMA (Rotas administrativas protegidas por require_platform_operator em F12)
     "OPERATOR_ADMIN": [
@@ -56,6 +58,10 @@ EXPECTED_ACCESS_TIERS = {
     # 5. CLIENTE PRIVADO / TENANT (Identidade, organizações, convites, membros e perfis privados - F09, F10, F11)
     "CLIENT_PRIVATE": [
         ("GET", "/api/me"),
+        ("POST", "/api/organizations"),
+        ("GET", "/api/organizations/{org_id}/scenarios"),
+        ("POST", "/api/organizations/{org_id}/scenarios"),
+        ("DELETE", "/api/organizations/{org_id}/scenarios/{scenario_id}"),
         ("GET", "/api/organizations/{org_id}/cost-profiles"),
         ("POST", "/api/organizations/{org_id}/cost-profiles"),
         ("GET", "/api/organizations/{org_id}/cost-profiles/{profile_id}"),
@@ -80,29 +86,63 @@ def get_git_commit_sha() -> str:
         return "UNKNOWN_SHA"
 
 
+# HEAD/OPTIONS are protocol helpers, explicitly excluded from the business inventory.
+IGNORED_METHODS = {"HEAD", "OPTIONS"}
+
+
+def assert_routes_inventory(routes, tiers=EXPECTED_ACCESS_TIERS):
+    registered = [
+        (method.upper(), route.path)
+        for route in routes if isinstance(route, APIRoute)
+        for method in route.methods if method.upper() not in IGNORED_METHODS
+    ]
+    expected = [
+        (method.upper(), path) for entries in tiers.values() for method, path in entries
+        if method.upper() not in IGNORED_METHODS
+    ]
+    registered_counts = Counter(registered)
+    expected_counts = Counter(expected)
+    assert all(count == 1 for count in registered_counts.values()), (
+        f"Duplicate registered routes: {registered_counts}"
+    )
+    assert all(count == 1 for count in expected_counts.values()), (
+        f"Duplicate inventory entries: {expected_counts}"
+    )
+    missing = set(expected) - set(registered)
+    extra = set(registered) - set(expected)
+    assert not missing and not extra, f"Route inventory mismatch: missing={sorted(missing)}, extra={sorted(extra)}"
+
+
 def test_api_routes_inventory_completeness():
-    """
-    Garante que todos os 24 endpoints da aplicação estão presentes, mapeados e classificados.
-    Nenhuma rota pode ser adicionada ou removida sem atualização formal deste inventário.
-    """
-    registered_routes = []
-    for route in app.routes:
-        if isinstance(route, APIRoute):
-            for method in route.methods:
-                if method not in ("HEAD", "OPTIONS"):
-                    registered_routes.append((method, route.path))
+    """Compare exact method/path pairs, including duplicate detection."""
+    assert_routes_inventory(app.routes)
 
-    # Consolida rotas esperadas das 4 categorias
-    expected_all = []
-    for tier, routes in EXPECTED_ACCESS_TIERS.items():
-        expected_all.extend(routes)
 
-    assert len(expected_all) == 35, f"Esperado exatamente 35 endpoints, encontrados {len(expected_all)}"
+@pytest.mark.parametrize("mutation", ["extra", "removed", "duplicate"])
+def test_inventory_detects_route_mutations(mutation):
+    routes = list(app.routes)
+    if mutation == "extra":
+        routes.append(APIRoute("/api/fictitious", lambda: None, methods=["GET"]))
+    elif mutation == "removed":
+        routes = [route for route in routes if getattr(route, "path", None) != "/health"]
+    else:
+        routes.append(next(route for route in routes if isinstance(route, APIRoute)))
+    with pytest.raises(AssertionError, match="Route inventory mismatch|Duplicate registered routes"):
+        assert_routes_inventory(routes)
 
-    for expected_method, expected_path in expected_all:
-        assert (expected_method, expected_path) in registered_routes, (
-            f"Endpoint esperado {expected_method} {expected_path} não foi encontrado nas rotas registradas do FastAPI."
-        )
+
+def test_inventory_detects_duplicate_classification():
+    tiers = {tier: list(routes) for tier, routes in EXPECTED_ACCESS_TIERS.items()}
+    tiers["CLIENT_PRIVATE"].append(("GET", "/health"))
+    with pytest.raises(AssertionError, match="Duplicate inventory entries"):
+        assert_routes_inventory(app.routes, tiers)
+
+
+def test_inventory_handles_head_and_options_explicitly():
+    routes = list(app.routes) + [
+        APIRoute("/health", lambda: None, methods=["HEAD", "OPTIONS"])
+    ]
+    assert_routes_inventory(routes)
 
 
 def test_git_sha_and_environment_audit_traceability():
@@ -121,7 +161,7 @@ def test_git_sha_and_environment_audit_traceability():
     print(f"\n[AUDIT TRACEABILITY] Commit SHA: {sha}")
     print(f"[AUDIT TRACEABILITY] OS/Platform: {platform.system()} {platform.release()}")
     print(f"[AUDIT TRACEABILITY] Python Version: {sys.version.split()[0]}")
-    print(f"[AUDIT TRACEABILITY] Total Endpoints Mapeados: 35")
+    print(f"[AUDIT TRACEABILITY] Total Endpoints Mapeados: {sum(len(routes) for routes in EXPECTED_ACCESS_TIERS.values())}")
 
 
 def test_public_endpoints_smoke():
