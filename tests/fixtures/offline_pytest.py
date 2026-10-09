@@ -1,4 +1,4 @@
-"""Opt-in offline gate loaded by run_checks.sh before test collection.
+"""Offline gate loaded by pytest.ini before test collection.
 
 Blocks Python DNS and IP sockets, substitutes yfinance with a synthetic unavailable-price provider,
 and uses a disposable SQLite database. Dependencies must be installed first.
