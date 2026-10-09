@@ -45,7 +45,6 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     1. EventBridge Scheduler (disparos cron de B3 / Macro)
     2. API Gateway HTTP API v2 (requisições REST / Swagger)
     """
-    ensure_db_initialized()
     logger.info(f"Lambda acionada. Origem/Tipo do evento: {list(event.keys())}")
 
     # 1. Trata disparos agendados via Amazon EventBridge Scheduler
@@ -57,6 +56,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     )
 
     if is_eventbridge:
+        ensure_db_initialized()
         job_type = event.get("job_type", "B3_SETTLEMENT")
         logger.info(f"[EVENTBRIDGE] Executando rotina agendada: {job_type}")
 
@@ -77,11 +77,37 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             "body": json.dumps({"status": "SUCCESS", "job_type": job_type, "result": res}),
         }
 
-    # 2. Trata requisições HTTP REST vindas do Amazon API Gateway
+    # 2. Rota de Healthcheck rápida para liveness e smoke tests pós-deploy
+    raw_path = event.get("rawPath", "") or event.get("path", "")
+    if raw_path == "/health":
+        if MANGUM_AVAILABLE:
+            try:
+                return mangum_handler(event, context)
+            except Exception as exc:
+                logger.error(f"Erro ao atender /health via mangum: {exc}")
+        return {
+            "statusCode": 200,
+            "headers": {"Content-Type": "application/json"},
+            "body": json.dumps({"status": "healthy", "service": "mvp-graos-trading"}),
+        }
+
+    # 3. Para endpoints de negócio e transacionais, garante sincronização de schema
+    ensure_db_initialized()
+
+    # 4. Trata requisições HTTP REST vindas do Amazon API Gateway
     if MANGUM_AVAILABLE:
-        return mangum_handler(event, context)
+        try:
+            return mangum_handler(event, context)
+        except Exception as exc:
+            logger.exception(f"Erro ao processar requisição ASGI: {exc}")
+            return {
+                "statusCode": 500,
+                "headers": {"Content-Type": "application/json"},
+                "body": json.dumps({"error": "Internal Server Error", "detail": str(exc)}),
+            }
     else:
         return {
             "statusCode": 500,
+            "headers": {"Content-Type": "application/json"},
             "body": json.dumps({"error": "Mangum não configurado no runtime"}),
         }

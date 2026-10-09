@@ -35,3 +35,6 @@ terraform/*.tfstate
 terraform/*.tfstate.*
 terraform/terraform.tfvars
 terraform/build/
+
+# Archives
+docs/*.zip
