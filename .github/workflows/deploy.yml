@@ -1,0 +1,113 @@
+name: CD & Deploy Serverless na AWS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy da Infraestrutura Serverless e Frontend
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout do Repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Atualizar pip
+        run: |
+          python -m pip install --upgrade pip
+
+      - name: Configurar Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.9.0'
+
+      - name: Autenticar na AWS via OIDC (Role Assumption com Fallback)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+          audience: sts.amazonaws.com
+
+      - name: Empacotar Lambda Function
+        run: |
+          bash terraform/scripts/build_lambda.sh
+
+      - name: Inicializar Terraform
+        run: |
+          terraform -chdir=terraform init
+
+      - name: Aplicar Infraestrutura Terraform (Apply Auto-Approve)
+        run: |
+          terraform -chdir=terraform apply -auto-approve \
+            -var="database_url=${{ secrets.DATABASE_URL }}"
+
+      - name: Capturar Outputs do Terraform
+        id: tf-outputs
+        run: |
+          S3_BUCKET=$(terraform -chdir=terraform output -raw s3_frontend_bucket)
+          CF_DIST_ID=$(terraform -chdir=terraform output -raw cloudfront_distribution_id)
+          API_ENDPOINT=$(terraform -chdir=terraform output -raw api_gateway_endpoint)
+          CF_URL=$(terraform -chdir=terraform output -raw cloudfront_url)
+
+          echo "s3_bucket=${S3_BUCKET}" >> $GITHUB_OUTPUT
+          echo "cf_dist_id=${CF_DIST_ID}" >> $GITHUB_OUTPUT
+          echo "api_endpoint=${API_ENDPOINT}" >> $GITHUB_OUTPUT
+          echo "cf_url=${CF_URL}" >> $GITHUB_OUTPUT
+
+      - name: Publicar Frontend Estático no Amazon S3
+        run: |
+          echo "Sincronizando arquivos do frontend para o bucket: ${{ steps.tf-outputs.outputs.s3_bucket }}"
+          aws s3 sync frontend/ s3://${{ steps.tf-outputs.outputs.s3_bucket }}/ --delete
+          aws s3 cp frontend/index.html s3://${{ steps.tf-outputs.outputs.s3_bucket }}/index.html --content-type text/html
+
+      - name: Invalidar Cache do Amazon CloudFront
+        run: |
+          echo "Criando invalidação de cache para a distribuição: ${{ steps.tf-outputs.outputs.cf_dist_id }}"
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ steps.tf-outputs.outputs.cf_dist_id }} \
+            --paths "/*"
+
+      - name: Executar Smoke Test Pós-Deploy
+        run: |
+          API_URL="${{ steps.tf-outputs.outputs.api_endpoint }}"
+          echo "Iniciando smoke test no endpoint público: ${API_URL}/health"
+          SUCCESS=false
+          for i in {1..12}; do
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${API_URL}/health" || true)
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "✅ Smoke test aprovado! Healthcheck retornou HTTP 200 (Tentativa $i)."
+              SUCCESS=true
+              break
+            fi
+            echo "Tentativa $i: Recebido HTTP $HTTP_CODE. Aguardando 10s para propagação..."
+            sleep 10
+          done
+
+          if [ "$SUCCESS" != "true" ]; then
+            echo "❌ Smoke test falhou após retentativas. O endpoint ${API_URL}/health não retornou 200."
+            exit 1
+          fi
+
+      - name: Resumo do Deploy
+        run: |
+          echo "=========================================================="
+          echo "🚀 Deploy Serverless Concluído com Sucesso!"
+          echo "Aplicação (CloudFront): ${{ steps.tf-outputs.outputs.cf_url }}"
+          echo "API Backend (API Gateway): ${{ steps.tf-outputs.outputs.api_endpoint }}"
+          echo "=========================================================="

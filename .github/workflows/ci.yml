@@ -1,15 +1,20 @@
-name: AgriTrading CI & Regressão
+name: CI & Validação Serverless
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
+      - 'feat/**'
+      - 'fix/**'
+      - 'graos-**'
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
-  test-and-verify:
+  test:
+    name: Testes Automatizados (Python 3.11)
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout do Repositório
         uses: actions/checkout@v4
@@ -20,19 +25,84 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
 
-      - name: Instalar Dependências
+      - name: Instalar Dependências de Teste
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install httpx pytest pytest-cov
 
-      - name: Compilar e Validar Sintaxe
+      - name: Compilar Sintaxe Python (compileall)
         run: |
           python -m compileall -q src/ tests/
 
-      - name: Executar Testes Automatizados e Inventário de API
+      - name: Executar Suite de Testes (pytest)
         env:
           STAGE: test
           PYTHONPATH: .
         run: |
           pytest -v --cov=src --cov-report=term-missing tests/
+
+  terraform-validate:
+    name: Validação Terraform
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do Repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.9.0'
+
+      - name: Verificar Formatação (terraform fmt)
+        run: |
+          terraform -chdir=terraform fmt -check
+
+      - name: Inicializar Terraform (sem backend remoto)
+        run: |
+          terraform -chdir=terraform init -backend=false
+
+      - name: Gerar Placeholder do Artefato para Validação
+        run: |
+          mkdir -p terraform/build
+          touch terraform/build/lambda_function.zip
+
+      - name: Validar Sintaxe e Configurações (terraform validate)
+        run: |
+          terraform -chdir=terraform validate
+
+  lambda-package:
+    name: Build & Empacotamento Lambda
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do Repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Atualizar pip
+        run: |
+          python -m pip install --upgrade pip
+
+      - name: Empacotar Lambda Function
+        run: |
+          bash terraform/scripts/build_lambda.sh
+
+      - name: Exibir SHA-256 do Pacote Gerado
+        run: |
+          echo "=========================================================="
+          echo "🔐 SHA-256 Checksum do Pacote Lambda:"
+          sha256sum terraform/build/lambda_function.zip
+          echo "=========================================================="
+
+      - name: Publicar Artefato da Lambda
+        uses: actions/upload-artifact@v4
+        with:
+          name: lambda-function
+          path: terraform/build/lambda_function.zip
+          if-no-files-found: error
+          retention-days: 7
