@@ -33,6 +33,13 @@ class ParityCalculationInput(BaseModel):
     # Preço de mercado balcão atual (para cálculo de Basis e margem da originação)
     current_cash_price_brl_bag: Optional[float] = Field(default=None, description="Preço de balcão praticado na praça (R$/saca)")
 
+    # Eixos de Transparência e Proveniência (ADR-004 e W3C PROV)
+    origin_axis: Optional[str] = Field(default="OBSERVED", description="Eixo Origem: OBSERVED, MANUAL, ESTIMATED, DEMO, UNVERIFIED")
+    freshness_axis: Optional[str] = Field(default="CURRENT", description="Eixo Atualidade: CURRENT, STALE, UNKNOWN")
+    quote_origins: Optional[Dict[str, str]] = Field(default=None, description="Origem detalhada por cotação de entrada")
+    quote_freshness: Optional[Dict[str, str]] = Field(default=None, description="Atualidade detalhada por cotação de entrada")
+    allow_stale: bool = Field(default=False, description="Autorização explícita para uso de dados STALE")
+
 
 class CostBreakdownBag(BaseModel):
     fob_gross_brl_bag: float
@@ -79,6 +86,13 @@ class ParityCalculationResult(BaseModel):
     current_cash_price_brl_bag: Optional[float] = None
     originator_spread_brl_bag: Optional[float] = None  # Paridade - Balcão
     originator_margin_pct: Optional[float] = None
+
+    # Eixos de Transparência e Rastreabilidade W3C PROV
+    origin_axis: str = "OBSERVED"
+    freshness_axis: str = "CURRENT"
+    decision_ready: bool = True
+    parity_run_id: Optional[str] = None
+    lineage_w3c_prov: Optional[Dict[str, Any]] = None
 
 
 class CarryCalculationInput(BaseModel):

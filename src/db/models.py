@@ -431,3 +431,40 @@ class SavedScenario(Base):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
+
+
+class MarketQuotesLineage(Base):
+    """
+    Tabela de Lineage (W3C PROV) associando execuções de paridade, cotações e inputs.
+    """
+    __tablename__ = "market_quotes_lineage"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    quote_id = Column(Integer, ForeignKey("market_quotes.id", ondelete="SET NULL"), nullable=True, index=True)
+    parity_snapshot_id = Column(Integer, ForeignKey("parity_snapshots.id", ondelete="SET NULL"), nullable=True, index=True)
+    parity_run_id = Column(String(64), nullable=False, index=True)
+    formula_version = Column(String(32), nullable=False)
+    parameter_version = Column(String(32), nullable=False)
+    origin_axis = Column(String(32), nullable=False)
+    freshness_axis = Column(String(32), nullable=False)
+    decision_ready = Column(Boolean, nullable=False, default=False)
+    inputs_json = Column(Text, nullable=False)
+    created_at = Column(UTCDateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+
+    quote = relationship("MarketQuote")
+    parity_snapshot = relationship("ParitySnapshot")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "quote_id": self.quote_id,
+            "parity_snapshot_id": self.parity_snapshot_id,
+            "parity_run_id": self.parity_run_id,
+            "formula_version": self.formula_version,
+            "parameter_version": self.parameter_version,
+            "origin_axis": self.origin_axis,
+            "freshness_axis": self.freshness_axis,
+            "decision_ready": self.decision_ready,
+            "inputs_json": self.inputs_json,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }

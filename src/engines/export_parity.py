@@ -3,7 +3,8 @@ Motor de Cálculo de Paridade de Exportação de Grãos (FAS / FOB / Balcão Int
 Implementa as fórmulas e convenções oficiais do mercado físico e de trading brasileiro.
 """
 
-from typing import Optional
+import uuid
+from typing import Optional, Dict, Any
 from src.domain.commodities import get_commodity_specs, CommodityType
 from src.domain.locations import ORIGINATION_HUBS, PORTS
 from src.domain.models import (
@@ -17,10 +18,54 @@ class ExportParityEngine:
     """
     Executa a formação do preço de paridade de exportação partindo da cotação internacional
     até a fazenda/armazém no interior do Brasil.
+    Em conformidade com a Política de Transparência de Dados (ADR-004 e W3C PROV).
     """
+
+    FORMULA_VERSION = "v1.2-GRAOS-007"
+    PARAMETER_VERSION = "2026.10"
 
     @classmethod
     def calculate(cls, inp: ParityCalculationInput) -> ParityCalculationResult:
+        # ==============================================================================
+        # Validação da Política de Transparência de Dados (ADR-004 e W3C PROV)
+        # ==============================================================================
+        quote_origins = inp.quote_origins or {}
+        quote_freshness = inp.quote_freshness or {}
+
+        all_origins = [inp.origin_axis] + list(quote_origins.values())
+        all_freshness = [inp.freshness_axis] + list(quote_freshness.values())
+
+        # 1. Bloqueio Obrigatório de Origem: DEMO e UNVERIFIED
+        for origin in all_origins:
+            if origin == "DEMO":
+                raise ValueError("Cálculo bloqueado pela Política de Transparência: inputs com origem DEMO não são permitidos em produção.")
+            if origin == "UNVERIFIED":
+                raise ValueError("Cálculo bloqueado pela Política de Transparência: inputs com origem UNVERIFIED não são permitidos em produção.")
+
+        # 2. Bloqueio Obrigatório de Atualidade: UNKNOWN e STALE não autorizado
+        for fresh in all_freshness:
+            if fresh == "UNKNOWN":
+                raise ValueError("Cálculo bloqueado pela Política de Transparência: inputs com atualidade UNKNOWN não são permitidos em produção.")
+            if fresh == "STALE" and not inp.allow_stale:
+                raise ValueError("Cálculo bloqueado pela Política de Transparência: inputs STALE detectados sem parâmetro allow_stale=True.")
+
+        # 3. Propagação de Origem: DEMO > UNVERIFIED > ESTIMATED > MANUAL > OBSERVED
+        if "ESTIMATED" in all_origins:
+            resolved_origin = "ESTIMATED"
+        elif "MANUAL" in all_origins:
+            resolved_origin = "MANUAL"
+        else:
+            resolved_origin = "OBSERVED"
+
+        # 4. Propagação de Atualidade: UNKNOWN > STALE > CURRENT
+        if "STALE" in all_freshness:
+            resolved_freshness = "STALE"
+        else:
+            resolved_freshness = "CURRENT"
+
+        # 5. Indicador DECISION_READY
+        decision_ready = (resolved_origin == "OBSERVED" and resolved_freshness == "CURRENT")
+
         specs = get_commodity_specs(inp.commodity)
         
         # Validar ou carregar praça e porto
@@ -127,6 +172,32 @@ class ExportParityEngine:
             net_parity_brl_bag=net_parity_brl_bag,
         )
 
+        parity_run_id = f"run_{uuid.uuid4().hex[:12]}"
+        lineage_w3c_prov = {
+            "prov:id": parity_run_id,
+            "prov:type": "prov:Activity",
+            "prov:used": {
+                "cbot_price": {"value": inp.cbot_price_cents, "unit": "cents/bu", "origin": quote_origins.get("CBOT", inp.origin_axis)},
+                "usd_brl_fx": {"value": inp.usd_brl_fx, "unit": "BRL/USD", "origin": quote_origins.get("FX", inp.origin_axis)},
+                "port_premium": {"value": inp.port_premium_cents, "unit": "cents/bu", "origin": quote_origins.get("PREMIUM", inp.origin_axis)},
+                "freight": {"value": freight_ton, "unit": "BRL/ton", "origin": "ESTIMATED"},
+                "elevation": {"value": elevation_usd_ton, "unit": "USD/ton", "origin": "ESTIMATED"},
+            },
+            "prov:generated": {
+                "fob_usd_ton": round(fob_usd_ton, 2),
+                "fob_brl_bag": round(fob_brl_bag, 2),
+                "fas_brl_bag": fas_brl_bag,
+                "net_parity_brl_bag": round(net_parity_brl_bag, 2),
+                "net_parity_brl_ton": round(net_parity_brl_ton, 2),
+            },
+            "prov:wasAssociatedWith": "ExportParityEngine",
+            "formula_version": cls.FORMULA_VERSION,
+            "parameter_version": cls.PARAMETER_VERSION,
+            "origin_axis": resolved_origin,
+            "freshness_axis": resolved_freshness,
+            "decision_ready": decision_ready,
+        }
+
         return ParityCalculationResult(
             commodity=inp.commodity,
             hub_id=inp.hub_id,
@@ -146,4 +217,9 @@ class ExportParityEngine:
             current_cash_price_brl_bag=inp.current_cash_price_brl_bag,
             originator_spread_brl_bag=round(originator_spread, 2) if originator_spread is not None else None,
             originator_margin_pct=round(originator_margin_pct, 2) if originator_margin_pct is not None else None,
+            origin_axis=resolved_origin,
+            freshness_axis=resolved_freshness,
+            decision_ready=decision_ready,
+            parity_run_id=parity_run_id,
+            lineage_w3c_prov=lineage_w3c_prov,
         )

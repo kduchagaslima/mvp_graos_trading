@@ -59,3 +59,22 @@ CREATE TABLE IF NOT EXISTS extraction_logs (
     details_json TEXT,
     error_message TEXT
 );
+
+-- 4. Tabela de Lineage (W3C PROV)
+CREATE TABLE IF NOT EXISTS market_quotes_lineage (
+    id SERIAL PRIMARY KEY,
+    quote_id INTEGER REFERENCES market_quotes(id),
+    parity_snapshot_id INTEGER REFERENCES parity_snapshots(id),
+    parity_run_id VARCHAR(64) NOT NULL,
+    formula_version VARCHAR(32) NOT NULL,
+    parameter_version VARCHAR(32) NOT NULL,
+    origin_axis VARCHAR(32) NOT NULL, -- OBSERVED, MANUAL, ESTIMATED, DEMO, UNVERIFIED
+    freshness_axis VARCHAR(32) NOT NULL, -- CURRENT, STALE, UNKNOWN
+    decision_ready BOOLEAN NOT NULL DEFAULT false,
+    inputs_json TEXT NOT NULL, -- Relaciona custos, timestamps, fontes (W3C PROV entities)
+    created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_lineage_run_id ON market_quotes_lineage (parity_run_id);
+CREATE INDEX IF NOT EXISTS idx_lineage_quote_id ON market_quotes_lineage (quote_id);
+CREATE INDEX IF NOT EXISTS idx_lineage_parity_id ON market_quotes_lineage (parity_snapshot_id);

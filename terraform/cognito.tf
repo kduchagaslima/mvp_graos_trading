@@ -101,3 +101,28 @@ resource "aws_cognito_user_pool_client" "public_client" {
   callback_urls = var.cognito_callback_urls
   logout_urls   = var.cognito_logout_urls
 }
+
+resource "aws_cognito_user_pool_ui_customization" "ui_customization" {
+  client_id    = aws_cognito_user_pool_client.public_client.id
+  user_pool_id = aws_cognito_user_pool_domain.domain.user_pool_id
+
+  css = <<EOF
+.logo-customizable {
+    max-width: 100%;
+    max-height: 40%;
+}
+.banner-customizable {
+    background-color: #f8f9fa;
+    padding: 20px;
+}
+.submitButton-customizable {
+    background-color: #2e7d32;
+    color: #ffffff;
+}
+.submitButton-customizable:hover {
+    background-color: #1b5e20;
+}
+EOF
+
+  image_file = filebase64("${path.module}/../docs/assets/agritrading_logo_oficial.jpg")
+}
