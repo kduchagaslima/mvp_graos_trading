@@ -4,7 +4,7 @@ Modelos de dados (Pydantic) para entradas, saídas e relatórios analíticos do 
 
 from datetime import date
 from pydantic import BaseModel, Field
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 from src.domain.commodities import CommodityType
 
 
