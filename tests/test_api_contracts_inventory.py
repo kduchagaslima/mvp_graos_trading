@@ -40,6 +40,7 @@ EXPECTED_ACCESS_TIERS = {
     # 3. MOTORES DE CÁLCULO (Cálculos de negócio com parâmetros do usuário)
     "CLIENT_ENGINES": [
         ("POST", "/api/parity/calculate"),
+        ("GET", "/api/parity/lineage/{parity_run_id}"),
         ("POST", "/api/parity/batch"),
         ("POST", "/api/carry/calculate"),
         ("POST", "/api/stress/simulate"),

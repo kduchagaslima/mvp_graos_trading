@@ -1,10 +1,18 @@
 # Backlog do AgriTrading
 
-## UX/UI
-- **Melhoria da Tela de Login (Cognito Hosted UI):** A tela atual está feia. Redesenhar para um padrão mais profissional e moderno, injetando CSS customizado no Cognito e incluindo a logo oficial.
-  - *Logo selecionada:* Salva em `docs/assets/agritrading_logo_oficial.jpg`
+## UX/UI & Transparência
+- [x] **Melhoria da Tela de Login (Cognito Hosted UI):** Redesenhar para padrão profissional, CSS customizado no Cognito e logo oficial otimizada (26KB).
+- [x] **Revisão do Manual do Trader:** Publicado em `docs/MANUAL_DO_TRADER.md` e integrado à Tab 6 com checklist `DECISION_READY` e impressão/PDF.
+- [x] **Exibição do Selo DECISION_READY e Linhagem W3C PROV na Calculadora:** Exibição do badge visual `DECISION_READY` / `REVISÃO NECESSÁRIA`, eixos de transparência e modal interativo de linhagem W3C PROV (`parity_run_id`, `prov:used`, `prov:generated`, JSON completo).
+- [x] **Modal de Termos de Uso e Política de Privacidade (LGPD / Ag Data Transparent):** Apresentação no rodapé e modal dedicado com prazo de retenção de 5 anos, direitos dos titulares (LGPD Art. 18) e aviso sobre dados agregados para treinamento de IA.
 
-## Engenharia de Backend / Arquitetura de Dados (Transparência de Paridade)
-- **Tabela Satélite W3C PROV:** Criar tabela `MARKET_QUOTES_LINEAGE` no banco de dados para registrar a derivação matemática (fórmula, versão, inputs) sem poluir a base principal de cotações.
-- **Validação de Qualidade e Atualidade:** Implementar no motor de cálculo o bloqueio de dados `DEMO` e `UNVERIFIED` em ambiente produtivo.
-- **Motor de TTL Dinâmico:** Implementar regras de expiração (STALE) por fonte (ex: 20 min para CBOT, boletim para PTAX, 24h para CEPEA).
+## Engenharia de Backend & Auditoria de Dados
+- [x] **Tabela Satélite W3C PROV:** Criar tabela `MARKET_QUOTES_LINEAGE` no DDL e ORM para registrar derivação sem sobrecarregar cotações principais.
+- [x] **Validação de Qualidade e Atualidade:** Bloqueio obrigatório de dados `DEMO`, `UNVERIFIED`, `UNKNOWN` e `STALE` (sem autorização).
+- [x] **Motor de TTL Dinâmico:** Regras de expiração por fonte (CBOT 20min pregão, PTAX boletim, CEPEA 24h, Frete 72h).
+- [x] **Migração Versionada 006 (`006_market_quotes_lineage.sql`):** Adicionado script SQL em `src/db/migrations/` e validada idempotência no `run_migrations()`.
+- [x] **Endpoint de Auditoria de Linhagem (`GET /api/parity/lineage/{parity_run_id}`):** Persistência automática das execuções de paridade e rota de consulta de linhagem W3C PROV.
+
+## Próximos Passos (Fase 3 - Futuro)
+- **Conectores Reais em Streaming / Webhook:** Ingestão de cotações B3/CBOT via feeds de mercado em tempo real.
+- **Alarmes e Observabilidade:** Alertas no CloudWatch se cotações críticas ficarem STALE em horário comercial.

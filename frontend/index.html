@@ -2135,7 +2135,7 @@ th[aria-sort="descending"] .ux-sort-button::after { content:'↓'; margin-left:5
 </button></div><div class="nav-group"><p class="nav-group-label">APOIO</p><button class="tab-btn" data-section="manual" id="tab-btn-manual" onclick="switchTab('manual')" type="button">
 <i class="nav-icon" data-lucide="book-open"></i>
 <span class="nav-label">Guia do trader</span>
-</button></div></nav><footer class="sidebar-footer"><span class="context-pill">Mesa de operações</span><p>Da cotação à decisão.</p><span class="sidebar-version">AgriTrading · MVP 2026</span></footer></aside><button aria-label="Fechar navegação" class="sidebar-scrim" id="sidebar-scrim" tabindex="-1" type="button"></button>
+</button></div></nav><footer class="sidebar-footer"><span class="context-pill">Mesa de operações</span><p>Da cotação à decisão.</p><div class="mt-2 pt-2 border-t border-slate-100 flex flex-col gap-1"><button type="button" onclick="openPrivacyModal()" class="text-left text-[11px] text-emerald-700 hover:text-emerald-800 font-semibold hover:underline inline-flex items-center gap-1.5"><i class="w-3.5 h-3.5" data-lucide="shield"></i><span>Termos &amp; Privacidade (LGPD)</span></button><span class="sidebar-version text-[10px] text-slate-400">AgriTrading · MVP 2026</span></div></footer></aside><button aria-label="Fechar navegação" class="sidebar-scrim" id="sidebar-scrim" tabindex="-1" type="button"></button>
 <!-- TOP HEADER -->
 <header class="app-header"><div class="app-header-inner"><div class="header-left"><button aria-controls="sidebar-navigation" aria-expanded="false" aria-label="Abrir navegação" class="mobile-nav-toggle" id="mobile-nav-toggle" type="button"><i data-lucide="menu"></i></button><div class="header-context"><span>Mesa de operações</span><span class="header-date">Análise de originação e exportação</span></div></div><div aria-label="Referências de mercado" class="market-strip"><div class="market-item"><span>USD / BRL</span><strong id="ticker-fx">—</strong></div><div class="market-item"><span>SOJA · CBOT</span><strong id="ticker-soja">—</strong></div><div class="market-item"><span>MILHO · CBOT</span><strong id="ticker-milho">—</strong></div><span class="data-origin" id="market-data-status">Verificando dados</span></div><div class="flex items-center space-x-2 pl-3 border-l border-slate-200" id="auth-header-container">
 <button aria-label="Entrar na conta" class="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-md shadow-sm transition" id="btn-login" onclick="startCognitoLogin()" type="button">
@@ -2303,7 +2303,18 @@ th[aria-sort="descending"] .ux-sort-button::after { content:'↓'; margin-left:5
 <span class="result-label">Paridade líquida na origem</span>
 <div class="result-value" id="res-fas-brl">—</div>
 <div class="result-meta" id="res-fas-usd">—</div>
-<p class="result-note">Preço de referência por saca de 60 kg, após os custos da operação.</p><span class="data-origin" id="parity-result-status">Aguardando cálculo</span></div><div class="result-actions">
+<p class="result-note">Preço de referência por saca de 60 kg, após os custos da operação.</p>
+<div class="flex items-center justify-between mt-3 pt-3 border-t border-slate-100 flex-wrap gap-2">
+  <div class="flex items-center gap-2">
+    <span class="data-origin" id="parity-result-status">Aguardando cálculo</span>
+    <span id="badge-decision-ready" class="hidden text-xs px-2.5 py-0.5 rounded-full font-bold border"></span>
+  </div>
+  <button id="btn-view-lineage" type="button" onclick="openLineageModal()" class="hidden inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-md px-2.5 py-1 transition" title="Ver Linhagem W3C PROV e Auditoria de Dados">
+    <i class="w-3.5 h-3.5" data-lucide="shield-check"></i>
+    <span>Linhagem dos dados</span>
+  </button>
+</div>
+</div><div class="result-actions">
 <button class="secondary-button" data-requires-result="true" disabled="" onclick="openSaveScenarioModal()" title="Salvar este cenário na organização" type="button">
 <i class="w-3.5 h-3.5" data-lucide="bookmark-plus"></i>
 <span>Salvar</span>
@@ -4331,6 +4342,26 @@ th[aria-sort="descending"] .ux-sort-button::after { content:'↓'; margin-left:5
 
         if (window.renderParityPresentation) window.renderParityPresentation(data, payload);
 
+        const badgeReady = document.getElementById('badge-decision-ready');
+        if (badgeReady) {
+          badgeReady.classList.remove('hidden');
+          if (data.decision_ready) {
+            badgeReady.className = 'text-xs px-2.5 py-0.5 rounded-full font-bold bg-emerald-50 text-emerald-800 border border-emerald-300';
+            badgeReady.innerHTML = '<span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-600 mr-1.5 align-middle"></span>DECISION_READY';
+          } else {
+            badgeReady.className = 'text-xs px-2.5 py-0.5 rounded-full font-bold bg-amber-50 text-amber-800 border border-amber-300';
+            badgeReady.innerHTML = '<span class="inline-block w-1.5 h-1.5 rounded-full bg-amber-600 mr-1.5 align-middle"></span>REVISÃO NECESSÁRIA';
+          }
+        }
+        const btnLineage = document.getElementById('btn-view-lineage');
+        if (btnLineage) {
+          btnLineage.classList.remove('hidden');
+        }
+        const resStatus = document.getElementById('parity-result-status');
+        if (resStatus && data.origin_axis && data.freshness_axis) {
+          resStatus.textContent = `${data.origin_axis} · ${data.freshness_axis}`;
+        }
+
         if (marginVal >= 0) {
           marginEl.className = 'text-2xl font-bold mt-1 text-green-700';
         } else {
@@ -6328,6 +6359,129 @@ _Gerado via AgriTrading Intelligence Platform_`;
       document.getElementById('btn-chart-waterfall')?.setAttribute('aria-pressed',String(currentCarryChartType==='waterfall'));
     }
     document.addEventListener('DOMContentLoaded', updateSegmentedControlStates);
+
+    // ==============================================================================
+    // LINHAGEM W3C PROV & PRIVACIDADE LGPD
+    // ==============================================================================
+    function openLineageModal() {
+      if (!latestParityCalculation || !latestParityCalculation.data) {
+        alert('Nenhum cálculo de paridade ativo para inspecionar linhagem.');
+        return;
+      }
+      const data = latestParityCalculation.data;
+      const lineage = data.lineage_w3c_prov || {};
+      const runId = data.parity_run_id || lineage['prov:id'] || 'N/A';
+
+      const elRunId = document.getElementById('lineage-run-id');
+      if (elRunId) elRunId.textContent = runId;
+
+      const elDecision = document.getElementById('lineage-badge-decision');
+      if (elDecision) {
+        if (data.decision_ready) {
+          elDecision.className = 'text-xs px-2.5 py-1 rounded-full font-bold bg-emerald-100 text-emerald-800 border border-emerald-300';
+          elDecision.textContent = '✓ DECISION_READY';
+        } else {
+          elDecision.className = 'text-xs px-2.5 py-1 rounded-full font-bold bg-amber-100 text-amber-800 border border-amber-300';
+          elDecision.textContent = '⚠ REVISÃO NECESSÁRIA';
+        }
+      }
+
+      const elOrigin = document.getElementById('lineage-badge-origin');
+      if (elOrigin) elOrigin.textContent = data.origin_axis || lineage.origin_axis || 'OBSERVED';
+
+      const elFreshness = document.getElementById('lineage-badge-freshness');
+      if (elFreshness) elFreshness.textContent = data.freshness_axis || lineage.freshness_axis || 'CURRENT';
+
+      const elEngine = document.getElementById('lineage-badge-engine');
+      if (elEngine) elEngine.textContent = `${lineage['prov:wasAssociatedWith'] || 'ExportParityEngine'} (${lineage.formula_version || 'v1.0'})`;
+
+      const usedTbody = document.getElementById('lineage-used-tbody');
+      if (usedTbody) {
+        const used = lineage['prov:used'] || {};
+        const labels = {
+          cbot_price: 'Cotação Futura CBOT',
+          usd_brl_fx: 'Câmbio Comercial USD/BRL (PTAX)',
+          port_premium: 'Prêmio de Exportação no Porto',
+          freight: 'Frete Rodoviário Origem-Porto',
+          elevation: 'Elevação Portuária (THC)'
+        };
+        const rows = Object.entries(used).map(([k, item]) => {
+          const name = labels[k] || k;
+          const val = typeof item.value === 'number' ? item.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) : (item.value ?? '-');
+          const unit = item.unit || '-';
+          const origin = item.origin || 'OBSERVED';
+          const originColor = origin === 'OBSERVED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : (origin === 'ESTIMATED' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-100 text-slate-700 border-slate-200');
+          return `<tr>
+            <td class="px-3 py-2 text-xs font-semibold text-slate-800">${name}</td>
+            <td class="px-3 py-2 text-xs font-mono font-bold text-slate-900 text-right">${val}</td>
+            <td class="px-3 py-2 text-xs text-slate-500">${unit}</td>
+            <td class="px-3 py-2 text-xs text-center"><span class="px-2 py-0.5 rounded text-[11px] font-semibold border ${originColor}">${origin}</span></td>
+          </tr>`;
+        }).join('');
+        usedTbody.innerHTML = rows || '<tr><td colspan="4" class="text-center text-xs text-slate-400 py-2">Sem insumos registrados</td></tr>';
+      }
+
+      const genContainer = document.getElementById('lineage-generated-container');
+      if (genContainer) {
+        const gen = lineage['prov:generated'] || {};
+        genContainer.innerHTML = `
+          <div class="bg-slate-50 border border-slate-200 rounded-lg p-2.5">
+            <span class="text-[10px] uppercase font-bold text-slate-500">FOB Porto (USD/ton)</span>
+            <div class="text-sm font-bold text-slate-900">$${Number(gen.fob_usd_ton || data.fob_usd_ton || 0).toFixed(2)}</div>
+          </div>
+          <div class="bg-slate-50 border border-slate-200 rounded-lg p-2.5">
+            <span class="text-[10px] uppercase font-bold text-slate-500">FOB Porto (R$/sc)</span>
+            <div class="text-sm font-bold text-slate-900">R$ ${Number(gen.fob_brl_bag || data.fob_brl_bag || 0).toFixed(2)}</div>
+          </div>
+          <div class="bg-slate-50 border border-slate-200 rounded-lg p-2.5">
+            <span class="text-[10px] uppercase font-bold text-slate-500">FAS Interior (R$/sc)</span>
+            <div class="text-sm font-bold text-slate-900">R$ ${Number(gen.fas_brl_bag || (data.cost_breakdown ? data.cost_breakdown.fas_brl_bag : 0)).toFixed(2)}</div>
+          </div>
+          <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-2.5">
+            <span class="text-[10px] uppercase font-bold text-emerald-800">Paridade Líquida (R$/sc)</span>
+            <div class="text-sm font-bold text-emerald-900">R$ ${Number(gen.net_parity_brl_bag || data.net_parity_price_brl_bag || 0).toFixed(2)}</div>
+          </div>
+        `;
+      }
+
+      const elRaw = document.getElementById('lineage-raw-json');
+      if (elRaw) {
+        elRaw.textContent = JSON.stringify(lineage, null, 2);
+      }
+
+      document.getElementById('lineage-modal').classList.remove('hidden');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function closeLineageModal() {
+      document.getElementById('lineage-modal').classList.add('hidden');
+    }
+
+    function copyLineageJson() {
+      const elRaw = document.getElementById('lineage-raw-json');
+      if (elRaw && elRaw.textContent) {
+        navigator.clipboard.writeText(elRaw.textContent).then(() => {
+          alert('JSON W3C PROV copiado para a área de transferência!');
+        }).catch(() => {
+          alert('Falha ao copiar.');
+        });
+      }
+    }
+
+    function openPrivacyModal() {
+      document.getElementById('privacy-modal').classList.remove('hidden');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function closePrivacyModal() {
+      document.getElementById('privacy-modal').classList.add('hidden');
+    }
+
+    window.openLineageModal = openLineageModal;
+    window.closeLineageModal = closeLineageModal;
+    window.copyLineageJson = copyLineageJson;
+    window.openPrivacyModal = openPrivacyModal;
+    window.closePrivacyModal = closePrivacyModal;
 </script><div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4" id="ports-modal">
 <div class="bg-white w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
 <!-- Header do Modal -->
@@ -6532,7 +6686,210 @@ _Gerado via AgriTrading Intelligence Platform_`;
 </button>
 </div>
 </div>
-</div><script data-design-module="ux-runtime.js">/* AgriTrading UX runtime — carregado depois do legado.
+</div>
+<div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4" id="lineage-modal">
+  <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+    <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+      <div class="flex items-center space-x-2.5">
+        <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
+          <i class="w-4 h-4" data-lucide="shield-check"></i>
+        </div>
+        <div>
+          <h3 class="text-base font-bold text-slate-900">Linhagem W3C PROV &amp; Rastreabilidade</h3>
+          <p class="text-xs text-slate-500">Auditoria completa de proveniência de dados e motores de paridade.</p>
+        </div>
+      </div>
+      <button aria-label="Fechar janela" class="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-200 transition" onclick="closeLineageModal()" type="button">
+        <i class="w-5 h-5" data-lucide="x"></i>
+      </button>
+    </div>
+    <div class="p-6 overflow-y-auto space-y-5">
+      <div class="bg-slate-50 rounded-xl p-4 border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div>
+          <div class="text-[10px] uppercase font-bold text-slate-500 mb-0.5">Identificador de Execução (Activity ID)</div>
+          <div class="flex items-center gap-2">
+            <code id="lineage-run-id" class="text-xs font-mono font-bold bg-white px-2.5 py-1 rounded border border-slate-300 text-slate-800 select-all">run_...</code>
+            <span id="lineage-badge-decision" class="text-xs px-2.5 py-1 rounded-full font-bold">DECISION_READY</span>
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-[11px] text-slate-500 font-medium">Origem:</span>
+          <span id="lineage-badge-origin" class="text-xs px-2 py-0.5 rounded-md font-semibold bg-blue-50 text-blue-700 border border-blue-200">OBSERVED</span>
+          <span class="text-[11px] text-slate-500 font-medium">Recência:</span>
+          <span id="lineage-badge-freshness" class="text-xs px-2 py-0.5 rounded-md font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">CURRENT</span>
+        </div>
+      </div>
+
+      <div>
+        <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+          <i class="w-3.5 h-3.5 text-slate-500" data-lucide="arrow-down-left"></i>
+          <span>Insumos de Mercado Utilizados (prov:used)</span>
+        </h4>
+        <div class="border border-slate-200 rounded-xl overflow-hidden">
+          <table class="w-full text-left">
+            <thead class="bg-slate-100 text-slate-600 text-[11px] uppercase border-b border-slate-200 font-semibold">
+              <tr>
+                <th class="px-3 py-2">Parâmetro / Insumo</th>
+                <th class="px-3 py-2 text-right">Valor Utilizado</th>
+                <th class="px-3 py-2">Unidade</th>
+                <th class="px-3 py-2 text-center">Eixo Origem</th>
+              </tr>
+            </thead>
+            <tbody id="lineage-used-tbody" class="divide-y divide-slate-100 text-xs">
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div>
+        <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+          <i class="w-3.5 h-3.5 text-slate-500" data-lucide="arrow-up-right"></i>
+          <span>Entregáveis Calculados (prov:generated)</span>
+        </h4>
+        <div id="lineage-generated-container" class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+        </div>
+      </div>
+
+      <div class="text-[11px] text-slate-500 bg-slate-50 rounded-lg p-3 border border-slate-100 flex items-center justify-between">
+        <div>
+          <strong>Motor de Cálculo:</strong> <span id="lineage-badge-engine">ExportParityEngine (v1.0)</span>
+        </div>
+        <div>
+          <strong>Retenção de Auditoria:</strong> 5 anos
+        </div>
+      </div>
+
+      <details class="group bg-slate-50 border border-slate-200 rounded-xl overflow-hidden">
+        <summary class="p-3 text-xs font-bold text-slate-700 cursor-pointer select-none hover:bg-slate-100 flex items-center justify-between">
+          <span class="flex items-center gap-1.5">
+            <i class="w-3.5 h-3.5 text-slate-500" data-lucide="code"></i>
+            <span>Inspecionar Objeto W3C PROV Completo (JSON)</span>
+          </span>
+          <span class="text-xs text-slate-400 group-open:rotate-180 transition-transform">▼</span>
+        </summary>
+        <div class="p-3 pt-0">
+          <div class="relative">
+            <pre id="lineage-raw-json" class="bg-slate-900 text-emerald-400 p-3 rounded-lg text-[11px] font-mono overflow-x-auto max-h-48 mt-2"></pre>
+            <button type="button" onclick="copyLineageJson()" class="absolute top-4 right-2 text-[11px] bg-slate-800 hover:bg-slate-700 text-white px-2 py-1 rounded transition border border-slate-700">
+              Copiar JSON
+            </button>
+          </div>
+        </div>
+      </details>
+    </div>
+    <div class="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+      <div class="flex items-center gap-1 text-[11px] text-slate-500">
+        <i class="w-3.5 h-3.5 text-emerald-600" data-lucide="check-circle-2"></i>
+        <span>Padrão Ag Data Transparent &amp; W3C PROV-DM</span>
+      </div>
+      <button class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold rounded-lg transition" onclick="closeLineageModal()" type="button">
+        Fechar
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4" id="privacy-modal">
+  <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+    <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+      <div class="flex items-center space-x-2.5">
+        <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
+          <i class="w-4 h-4" data-lucide="shield"></i>
+        </div>
+        <div>
+          <h3 class="text-base font-bold text-slate-900">Termos de Uso, Privacidade &amp; Governança de Dados</h3>
+          <p class="text-xs text-slate-500">Conformidade com a LGPD (Lei 13.709/2018) e Padrões Ag Data Transparent</p>
+        </div>
+      </div>
+      <button aria-label="Fechar janela" class="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-200 transition" onclick="closePrivacyModal()" type="button">
+        <i class="w-5 h-5" data-lucide="x"></i>
+      </button>
+    </div>
+    <div class="p-6 overflow-y-auto space-y-5 text-xs text-slate-700 leading-relaxed">
+      <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 space-y-1">
+        <div class="font-bold text-emerald-900 text-sm flex items-center gap-1.5">
+          <i class="w-4 h-4 text-emerald-700" data-lucide="check-shield"></i>
+          <span>Compromisso com a Transparência do Agronegócio</span>
+        </div>
+        <p class="text-emerald-800 text-[11px]">
+          O AgriTrading adota as melhores práticas de governança do <strong>Ag Data Transparent</strong> e estrita observância à Lei Geral de Proteção de Dados (LGPD). Seus dados operacionais e decisões de comercialização pertencem à sua organização.
+        </p>
+      </div>
+
+      <div class="space-y-2">
+        <h4 class="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+          <i class="w-4 h-4 text-slate-600" data-lucide="clock"></i>
+          <span>1. Prazo de Retenção de Dados (5 Anos)</span>
+        </h4>
+        <p>
+          Em conformidade com as exigências regulatórias, fiscais e de auditoria de comércio exterior e originação agrícola brasileira, todos os registros de linhagem de dados (<code class="bg-slate-100 px-1 py-0.5 rounded text-[11px]">market_quotes_lineage</code>), cotações registradas, simulações salvas e logs de cálculo de paridade são mantidos sob custódia segura por um período de <strong>5 (cinco) anos</strong> a contar da data de cálculo.
+        </p>
+        <p class="text-slate-500 text-[11px]">
+          Após o decurso do prazo prescricional e regulatório, os registros passam por rotina de arquivamento frio ou expurgo seguro, ressalvadas as obrigações legais de preservação probatória.
+        </p>
+      </div>
+
+      <div class="space-y-2">
+        <h4 class="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+          <i class="w-4 h-4 text-slate-600" data-lucide="cpu"></i>
+          <span>2. Agregação de Dados &amp; Treinamento de Modelos de Inteligência Artificial</span>
+        </h4>
+        <p>
+          Em consonância com as diretrizes do Ag Data Transparent relativas a modelos analíticos:
+        </p>
+        <ul class="list-disc pl-5 space-y-1 text-slate-600">
+          <li>
+            <strong>Estatísticas Agregadas:</strong> Dados de mercado, tendências de liquidez regional e parâmetros médios agregados (como médias de fretes e dispersões de prêmios por corredor logístico) podem ser compilados e utilizados de forma <strong>estritamente anonimizada</strong> para calibração e treinamento de algoritmos preditivos e modelos de IA da plataforma.
+          </li>
+          <li>
+            <strong>Proteção de Segredo Comercial:</strong> Nenhuma informação concorrencial sensível, identidade de cooperativas/produtores, contratos individuais, spreads particulares de originação ou estratégia confidencial de negociação de qualquer trading ou corretora é compartilhada com terceiros ou exposta a outros participantes de mercado.
+          </li>
+        </ul>
+      </div>
+
+      <div class="space-y-2">
+        <h4 class="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+          <i class="w-4 h-4 text-slate-600" data-lucide="user-check"></i>
+          <span>3. Direitos dos Titulares de Dados (LGPD - Art. 18)</span>
+        </h4>
+        <p>
+          Como usuário e titular de dados pessoais cadastrados na plataforma (nome, e-mail corporativo, organização vinculada), você tem o direito garantido de requerer a qualquer momento:
+        </p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-600">
+          <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+            <strong>• Confirmação e Acesso:</strong> Obter declaração sobre a existência de tratamento dos seus dados.
+          </div>
+          <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+            <strong>• Correção e Atualização:</strong> Solicitar retificação de dados incorretos, incompletos ou desatualizados.
+          </div>
+          <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+            <strong>• Portabilidade:</strong> Exportar relatórios em formato estruturado (PDF / JSON) dos seus cenários.
+          </div>
+          <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+            <strong>• Revogação e Exclusão:</strong> Revogar consentimento e solicitar exclusão da conta institucional.
+          </div>
+        </div>
+      </div>
+
+      <div class="space-y-2">
+        <h4 class="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+          <i class="w-4 h-4 text-slate-600" data-lucide="scale"></i>
+          <span>4. Princípios Ag Data Transparent (11 Dimensões)</span>
+        </h4>
+        <p class="text-[11px] text-slate-600">
+          Nosso compromisso voluntário assegura transparência ativa quanto a: (1) Propriedade do dado do produtor; (2) Categorias coletadas; (3) Finalidade exclusiva; (4) Proibição de venda de dados brutos a terceiros; (5) Notificação tempestiva de alterações contratuais; e (6) Rastreabilidade criptográfica da proveniência das cotações.
+        </p>
+      </div>
+    </div>
+    <div class="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+      <span class="text-[11px] text-slate-400">Canal DPO: privacidade@agritrading.com.br</span>
+      <button class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition" onclick="closePrivacyModal()" type="button">
+        Entendido e de acordo
+      </button>
+    </div>
+  </div>
+</div>
+<script data-design-module="ux-runtime.js">/* AgriTrading UX runtime — carregado depois do legado.
  * Este arquivo não conhece segredos, não altera regras de negócio e só observa/coordena o DOM existente.
  */
 (function uxRuntime() {
@@ -7765,7 +8122,22 @@ _Gerado via AgriTrading Intelligence Platform_`;
       const context = document.getElementById('result-context');
       context.textContent = `${payload.commodity === 'SOJA' ? 'Soja' : 'Milho'} · ${data.hub_name || payload.hub_id} → ${data.port_name || payload.port_id}`;
       const status = document.getElementById('parity-result-status');
-      status.textContent = 'Simulação calculada · parâmetros manuais';
+      status.textContent = `${data.origin_axis || 'OBSERVED'} · ${data.freshness_axis || 'CURRENT'}`;
+      const badgeReady = document.getElementById('badge-decision-ready');
+      if (badgeReady) {
+        badgeReady.classList.remove('hidden');
+        if (data.decision_ready) {
+          badgeReady.className = 'text-xs px-2.5 py-0.5 rounded-full font-bold bg-emerald-50 text-emerald-800 border border-emerald-300';
+          badgeReady.innerHTML = '<span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-600 mr-1.5 align-middle"></span>DECISION_READY';
+        } else {
+          badgeReady.className = 'text-xs px-2.5 py-0.5 rounded-full font-bold bg-amber-50 text-amber-800 border border-amber-300';
+          badgeReady.innerHTML = '<span class="inline-block w-1.5 h-1.5 rounded-full bg-amber-600 mr-1.5 align-middle"></span>REVISÃO NECESSÁRIA';
+        }
+      }
+      const btnLineage = document.getElementById('btn-view-lineage');
+      if (btnLineage) {
+        btnLineage.classList.remove('hidden');
+      }
       const chart = document.getElementById('parity-waterfall-chart');
       const portCosts = Number(c.elevation_brl_bag) + Number(c.other_port_costs_brl_bag) + Number(c.demurrage_brl_bag || 0);
       const remaining = deductions.reduce((sum, [label, value]) => label === 'Frete rodoviário' || ['Elevação portuária','Despesas acessórias','Demurrage'].includes(label) ? sum : sum + Number(value), 0);

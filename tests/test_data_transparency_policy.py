@@ -170,3 +170,89 @@ def test_market_quotes_lineage_model():
     assert d["parity_run_id"] == "run_test123"
     assert d["origin_axis"] == "OBSERVED"
     assert d["decision_ready"] is True
+
+
+def test_api_parity_calculate_persists_lineage_and_get_endpoint():
+    from fastapi.testclient import TestClient
+    from src.api.main import app
+    from src.db.connection import Base, get_db
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    from sqlalchemy.pool import StaticPool
+
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(bind=engine)
+    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+    def override_get_db():
+        db = TestingSessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_db] = override_get_db
+    client = TestClient(app)
+
+    payload = {
+        "commodity": "SOJA",
+        "cbot_price_cents": 1250.0,
+        "port_premium_cents": 85.0,
+        "usd_brl_fx": 5.55,
+        "hub_id": "sorriso_mt",
+        "port_id": "STS",
+    }
+
+    res = client.post("/api/parity/calculate", json=payload)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["decision_ready"] is True
+    assert "parity_run_id" in data
+    run_id = data["parity_run_id"]
+
+    # Consulta endpoint de linhagem
+    res_lineage = client.get(f"/api/parity/lineage/{run_id}")
+    assert res_lineage.status_code == 200
+    lineage_data = res_lineage.json()
+    assert lineage_data["parity_run_id"] == run_id
+    assert lineage_data["origin_axis"] == "OBSERVED"
+    assert lineage_data["freshness_axis"] == "CURRENT"
+    assert lineage_data["decision_ready"] is True
+
+    # Consulta run inexistente -> 404
+    res_404 = client.get("/api/parity/lineage/run_inexistente_999")
+    assert res_404.status_code == 404
+
+    app.dependency_overrides.clear()
+
+
+def test_frontend_transparency_and_privacy_elements():
+    """Valida a presença de componentes de transparência e privacidade no frontend HTML."""
+    from pathlib import Path
+    html_path = Path(__file__).resolve().parent.parent / "frontend" / "index.html"
+    assert html_path.exists()
+    content = html_path.read_text(encoding="utf-8")
+
+    # Item 1.1: Selo e linhagem interativa
+    assert 'id="badge-decision-ready"' in content
+    assert 'id="btn-view-lineage"' in content
+    assert 'id="lineage-modal"' in content
+    assert 'openLineageModal' in content
+    assert 'closeLineageModal' in content
+    assert 'lineage-used-tbody' in content
+    assert 'lineage-generated-container' in content
+
+    # Item 1.2: Modal de termos/privacidade e link de rodapé
+    assert 'id="privacy-modal"' in content
+    assert 'openPrivacyModal' in content
+    assert 'closePrivacyModal' in content
+    assert '5 (cinco) anos' in content or '5 anos' in content
+    assert 'Ag Data Transparent' in content
+    assert 'Inteligência Artificial' in content
+    assert 'LGPD' in content
+
+

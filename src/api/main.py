@@ -26,6 +26,7 @@ from src.db.models import (
     CostProfile,
     Invitation,
     SavedScenario,
+    MarketQuotesLineage,
 )
 from src.domain.commodities import CommodityType, COMMODITY_SPECS
 from src.domain.locations import ORIGINATION_HUBS, PORTS
@@ -414,12 +415,38 @@ def get_candlestick_data(symbol: str, days: int = 30, db: Session = Depends(get_
 # ==============================================================================
 
 @app.post("/api/parity/calculate", response_model=ParityCalculationResult)
-def calculate_export_parity(payload: ParityCalculationInput):
+def calculate_export_parity(payload: ParityCalculationInput, db: Session = Depends(get_db)):
     try:
         result = ExportParityEngine.calculate(payload)
+        if db is not None and result.parity_run_id:
+            try:
+                lineage_record = MarketQuotesLineage(
+                    parity_run_id=result.parity_run_id,
+                    formula_version=ExportParityEngine.FORMULA_VERSION,
+                    parameter_version=ExportParityEngine.PARAMETER_VERSION,
+                    origin_axis=result.origin_axis,
+                    freshness_axis=result.freshness_axis,
+                    decision_ready=result.decision_ready,
+                    inputs_json=json.dumps(result.lineage_w3c_prov or {}),
+                )
+                db.add(lineage_record)
+                db.commit()
+            except Exception:
+                db.rollback()
         return result
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/api/parity/lineage/{parity_run_id}")
+def get_parity_lineage(parity_run_id: str, db: Session = Depends(get_db)):
+    """
+    Retorna a linhagem e evidências de proveniência W3C PROV de um cálculo de paridade (Ticket F02 / ADR-004).
+    """
+    lineage = db.query(MarketQuotesLineage).filter(MarketQuotesLineage.parity_run_id == parity_run_id).first()
+    if not lineage:
+        raise HTTPException(status_code=404, detail=f"Linhagem não encontrada para o identificador '{parity_run_id}'.")
+    return lineage.to_dict()
 
 
 @app.post("/api/parity/batch")
