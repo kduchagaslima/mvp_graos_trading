@@ -27,6 +27,7 @@ from src.db.models import (
     Invitation,
     SavedScenario,
     MarketQuotesLineage,
+    CompanyFreightContract,
 )
 from src.domain.commodities import CommodityType, COMMODITY_SPECS
 from src.domain.locations import ORIGINATION_HUBS, PORTS
@@ -44,6 +45,8 @@ from src.domain.models import (
     SavedScenarioCreateInput,
     ProposalComparisonRequest,
     ProposalItemInput,
+    CompanyFreightContractCreateInput,
+    CompanyFreightContractBatchInput,
 )
 from src.engines.export_parity import ExportParityEngine
 from src.engines.carry_cost import CarryCostEngine
@@ -397,6 +400,16 @@ def get_freight_arbitrage(
         raise HTTPException(status_code=404, detail=str(e))
 
 
+@app.get("/api/freight/antt-floor")
+def get_freight_antt_floor(db: Session = Depends(get_db)):
+    """
+    Retorna os pisos mínimos regulatórios de frete rodoviário da ANTT (Resolução nº 5.867/2020)
+    e matriz de conformidade legal para cada corredor logístico de grãos.
+    """
+    from src.services.antt_freight import ANTTFreightService
+    return ANTTFreightService.get_corridors_compliance_summary(db=db)
+
+
 
 
 
@@ -698,6 +711,117 @@ def update_organization_cost_profile(
     db.commit()
     db.refresh(profile)
     return profile.to_dict()
+
+
+# ==============================================================================
+# Contratos Privados de Frete da Empresa / Trading (Item 3)
+# ==============================================================================
+
+@app.get("/api/organizations/{org_id}/freight-contracts")
+def list_organization_freight_contracts(
+    org_id: int,
+    membership: Membership = Depends(require_role(MembershipRole.READER)),
+    db: Session = Depends(get_db),
+):
+    """
+    Lista todos os contratos privados de frete da organização.
+    """
+    contracts = (
+        db.query(CompanyFreightContract)
+        .filter(CompanyFreightContract.organization_id == org_id)
+        .order_by(CompanyFreightContract.updated_at.desc())
+        .all()
+    )
+    return [c.to_dict() for c in contracts]
+
+
+@app.post("/api/organizations/{org_id}/freight-contracts")
+def create_organization_freight_contract(
+    org_id: int,
+    payload: CompanyFreightContractCreateInput,
+    membership: Membership = Depends(require_role(MembershipRole.ANALYST)),
+    db: Session = Depends(get_db),
+):
+    """
+    Cadastra ou atualiza um contrato privado de frete para uma rota na organização.
+    """
+    orig_key = payload.origin_id.lower()
+    dest_key = payload.destination_id.upper()
+
+    contract = CompanyFreightContract(
+        organization_id=org_id,
+        origin_id=orig_key,
+        destination_id=dest_key,
+        carrier_name=payload.carrier_name,
+        contract_code=payload.contract_code,
+        freight_brl_ton=payload.freight_brl_ton,
+        volume_contracted_tons=payload.volume_contracted_tons,
+        valid_from=payload.valid_from,
+        valid_until=payload.valid_until,
+        is_active=payload.is_active,
+        notes=payload.notes,
+    )
+    db.add(contract)
+    db.commit()
+    db.refresh(contract)
+    return contract.to_dict()
+
+
+@app.post("/api/organizations/{org_id}/freight-contracts/batch")
+def batch_upload_organization_freight_contracts(
+    org_id: int,
+    payload: CompanyFreightContractBatchInput,
+    membership: Membership = Depends(require_role(MembershipRole.ANALYST)),
+    db: Session = Depends(get_db),
+):
+    """
+    Importação em lote de contratos privados de frete para a organização.
+    """
+    created = []
+    for item in payload.contracts:
+        c = CompanyFreightContract(
+            organization_id=org_id,
+            origin_id=item.origin_id.lower(),
+            destination_id=item.destination_id.upper(),
+            carrier_name=item.carrier_name,
+            contract_code=item.contract_code,
+            freight_brl_ton=item.freight_brl_ton,
+            volume_contracted_tons=item.volume_contracted_tons,
+            valid_from=item.valid_from,
+            valid_until=item.valid_until,
+            is_active=item.is_active,
+            notes=item.notes,
+        )
+        db.add(c)
+        created.append(c)
+
+    db.commit()
+    for c in created:
+        db.refresh(c)
+    return [c.to_dict() for c in created]
+
+
+@app.delete("/api/organizations/{org_id}/freight-contracts/{contract_id}")
+def delete_organization_freight_contract(
+    org_id: int,
+    contract_id: int,
+    membership: Membership = Depends(require_role(MembershipRole.ANALYST)),
+    db: Session = Depends(get_db),
+):
+    """
+    Remove um contrato privado de frete da organização.
+    """
+    contract = (
+        db.query(CompanyFreightContract)
+        .filter(CompanyFreightContract.id == contract_id, CompanyFreightContract.organization_id == org_id)
+        .first()
+    )
+    if not contract:
+        raise HTTPException(status_code=404, detail="Freight contract not found in this organization")
+
+    db.delete(contract)
+    db.commit()
+    return {"status": "deleted", "message": "Freight contract deleted successfully", "id": contract_id}
 
 
 # ==============================================================================

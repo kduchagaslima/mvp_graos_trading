@@ -256,6 +256,7 @@ class Organization(Base):
 
     memberships = relationship("Membership", back_populates="organization", cascade="all, delete-orphan")
     cost_profiles = relationship("CostProfile", back_populates="organization", cascade="all, delete-orphan")
+    freight_contracts = relationship("CompanyFreightContract", back_populates="organization", cascade="all, delete-orphan")
 
     def to_dict(self):
         return {
@@ -468,3 +469,53 @@ class MarketQuotesLineage(Base):
             "inputs_json": self.inputs_json,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
+
+
+class CompanyFreightContract(Base):
+    """
+    Contrato privado de frete rodoviário de uma organização/trading (Tenant).
+    Permite parametrizar tarifas negociadas por rota específica, substituindo o benchmark.
+    """
+    __tablename__ = "company_freight_contracts"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    organization_id = Column(Integer, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
+    origin_id = Column(String(32), nullable=False)
+    destination_id = Column(String(16), nullable=False)
+    carrier_name = Column(String(128), nullable=False)
+    contract_code = Column(String(64), nullable=False)
+    freight_brl_ton = Column(Float, nullable=False)
+    volume_contracted_tons = Column(Float, nullable=True)
+    valid_from = Column(Date, nullable=True)
+    valid_until = Column(Date, nullable=True)
+    is_active = Column(Boolean, nullable=False, default=True)
+    notes = Column(Text, nullable=True)
+    created_at = Column(UTCDateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(UTCDateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+
+    organization = relationship("Organization", back_populates="freight_contracts")
+
+    __table_args__ = (
+        Index("idx_company_freight_org_id", "organization_id"),
+        Index("idx_company_freight_route", "organization_id", "origin_id", "destination_id"),
+    )
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "organization_id": self.organization_id,
+            "origin_id": self.origin_id,
+            "destination_id": self.destination_id,
+            "carrier_name": self.carrier_name,
+            "contract_code": self.contract_code,
+            "freight_brl_ton": self.freight_brl_ton,
+            "freight_brl_bag": round(self.freight_brl_ton * 0.06, 2),
+            "volume_contracted_tons": self.volume_contracted_tons,
+            "valid_from": self.valid_from.isoformat() if self.valid_from else None,
+            "valid_until": self.valid_until.isoformat() if self.valid_until else None,
+            "is_active": self.is_active,
+            "notes": self.notes,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+

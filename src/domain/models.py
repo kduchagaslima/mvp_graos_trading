@@ -215,3 +215,21 @@ class ProposalItemInput(BaseModel):
 class ProposalComparisonRequest(BaseModel):
     proposals: List[ProposalItemInput] = Field(..., min_length=2, max_length=5, description="Lista de propostas para comparação")
 
+
+class CompanyFreightContractCreateInput(BaseModel):
+    origin_id: str = Field(..., description="ID da praça de originação (ex: sorriso_mt)")
+    destination_id: str = Field(..., description="ID do porto de destino (ex: STS, BCR)")
+    carrier_name: str = Field(..., min_length=2, max_length=128, description="Nome da transportadora ou frotista")
+    contract_code: str = Field(..., min_length=1, max_length=64, description="Código de referência do contrato")
+    freight_brl_ton: float = Field(..., gt=0.0, description="Tarifa de frete contratada em R$/tonelada")
+    volume_contracted_tons: Optional[float] = Field(default=None, ge=0.0, description="Volume total contratado em toneladas")
+    valid_from: Optional[date] = Field(default=None, description="Data inicial de vigência")
+    valid_until: Optional[date] = Field(default=None, description="Data final de vigência")
+    is_active: bool = Field(default=True, description="Se o contrato está ativo para cálculo")
+    notes: Optional[str] = Field(default=None, description="Observações complementares")
+
+
+class CompanyFreightContractBatchInput(BaseModel):
+    contracts: List[CompanyFreightContractCreateInput] = Field(..., description="Lista de contratos de frete para importação em lote")
+
+

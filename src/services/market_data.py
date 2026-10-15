@@ -375,10 +375,53 @@ class MarketDataService:
 
         return candles
 
-    def get_freight_rate(self, origin_id: str, destination_id: str, db: Optional[Any] = None) -> float:
-        """Retorna a cotação mais recente de frete rodoviário (R$/ton)."""
+    def get_freight_rate(
+        self,
+        origin_id: str,
+        destination_id: str,
+        org_id: Optional[int] = None,
+        db: Optional[Any] = None,
+    ) -> float:
+        """Retorna a cotação mais recente de frete rodoviário (R$/ton), priorizando contrato privado da empresa se houver."""
         orig_key = origin_id.lower()
         dest_key = destination_id.upper()
+
+        # 1. Contrato Privado da Trading (Tenant)
+        if org_id is not None:
+            try:
+                from src.db.models import CompanyFreightContract
+                if db is not None:
+                    contract = (
+                        db.query(CompanyFreightContract)
+                        .filter(
+                            CompanyFreightContract.organization_id == org_id,
+                            CompanyFreightContract.origin_id == orig_key,
+                            CompanyFreightContract.destination_id == dest_key,
+                            CompanyFreightContract.is_active == True,
+                        )
+                        .order_by(CompanyFreightContract.updated_at.desc())
+                        .first()
+                    )
+                    if contract and contract.freight_brl_ton:
+                        return float(contract.freight_brl_ton)
+                else:
+                    with SessionLocal() as session:
+                        contract = (
+                            session.query(CompanyFreightContract)
+                            .filter(
+                                CompanyFreightContract.organization_id == org_id,
+                                CompanyFreightContract.origin_id == orig_key,
+                                CompanyFreightContract.destination_id == dest_key,
+                                CompanyFreightContract.is_active == True,
+                            )
+                            .order_by(CompanyFreightContract.updated_at.desc())
+                            .first()
+                        )
+                        if contract and contract.freight_brl_ton:
+                            return float(contract.freight_brl_ton)
+            except Exception:
+                pass
+
         sym = f"FREIGHT_{orig_key.upper()}_{dest_key}"
         try:
             if db is not None:
@@ -413,6 +456,14 @@ class MarketDataService:
                 corridor = "Arco Norte" if port_id in ["BCR", "ITQ"] else ("Santos / Sudeste" if port_id == "STS" else "Sul")
                 dist_km = ROUTE_DISTANCES_KM.get((hub_id.lower(), port_id.upper()), 1500)
 
+                # Piso Regulatório ANTT (Resolução 5.867/2020)
+                from src.services.antt_freight import ANTTFreightService
+                antt_calc = ANTTFreightService.calculate_floor_rate(dist_km, vehicle_type="9_EIXOS_RODOTREM")
+                antt_floor_ton = antt_calc["floor_rate_brl_ton"]
+                antt_floor_bag = antt_calc["floor_rate_brl_bag"]
+                spread_vs_floor = round(current_rate - antt_floor_ton, 2)
+                compliance_status = "ABOVE_FLOOR" if spread_vs_floor >= 0 else "BELOW_FLOOR"
+
                 routes.append({
                     "origin_id": hub_id,
                     "origin_name": hub.name,
@@ -423,6 +474,10 @@ class MarketDataService:
                     "symbol": f"FREIGHT_{hub_id.upper()}_{port_id.upper()}",
                     "freight_brl_ton": round(current_rate, 2),
                     "freight_brl_bag": round(current_rate * 0.06, 2),
+                    "antt_floor_brl_ton": antt_floor_ton,
+                    "antt_floor_brl_bag": antt_floor_bag,
+                    "antt_compliance_status": compliance_status,
+                    "antt_spread_brl_ton": spread_vs_floor,
                     "corridor": corridor,
                     "distance_km": dist_km,
                     "is_default": (port_id == hub.default_port_id),

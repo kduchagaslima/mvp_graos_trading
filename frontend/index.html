@@ -2764,8 +2764,8 @@ th[aria-sort="descending"] .ux-sort-button::after { content:'↓'; margin-left:5
 </button>
 </div>
 </div>
-<!-- 4 Cards de Métricas de Frete -->
-<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+<!-- 5 Cards de Métricas de Frete e Conformidade ANTT -->
+<div class="grid grid-cols-2 lg:grid-cols-5 gap-3">
 <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
 <div class="flex items-center justify-between text-slate-500 text-xs font-medium">
 <span>Frete Spot Atual</span>
@@ -2792,11 +2792,21 @@ th[aria-sort="descending"] .ux-sort-button::after { content:'↓'; margin-left:5
 </div>
 <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-200">
 <div class="flex items-center justify-between text-emerald-800 text-xs font-medium">
-<span>Economia de Arbitragem</span>
+<span>Economia Arbitragem</span>
 <span class="text-[10px] bg-emerald-200 text-emerald-900 px-1.5 py-0.5 rounded font-bold uppercase" id="kpi-arbitrage-corridor">Arco Norte</span>
 </div>
 <div class="text-xl font-bold text-emerald-800 mt-1" id="kpi-freight-savings">+R$ 67,58 <span class="text-xs font-normal text-emerald-700">/ton</span></div>
-<div class="text-xs font-bold text-emerald-700 mt-0.5" id="kpi-freight-savings-bag">+R$ 4,05 / saca vs. Santos</div>
+<div class="text-xs font-bold text-emerald-700 mt-0.5" id="kpi-freight-savings-bag">+R$ 4,05 / saca vs. STS</div>
+</div>
+<div class="bg-indigo-50/70 p-4 rounded-xl border border-indigo-200 cursor-pointer hover:bg-indigo-50 transition" onclick="openAnttModal()" title="Ver memória de cálculo do piso mínimo regulatório ANTT">
+<div class="flex items-center justify-between text-indigo-900 text-xs font-medium">
+<span>Piso Mínimo ANTT</span>
+<i class="w-4 h-4 text-indigo-600" data-lucide="scale"></i>
+</div>
+<div class="text-xl font-bold text-slate-900 mt-1" id="kpi-freight-antt-floor">R$ -- <span class="text-xs font-normal text-slate-500">/ton</span></div>
+<div class="text-xs font-semibold mt-0.5 flex items-center gap-1" id="kpi-freight-antt-badge">
+<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-200 text-slate-700">Calculando...</span>
+</div>
 </div>
 </div>
 <!-- Gráfico de Tendência Histórica do Frete -->
@@ -2836,7 +2846,11 @@ th[aria-sort="descending"] .ux-sort-button::after { content:'↓'; margin-left:5
 <p class="text-[11px] text-slate-500">
                 Soma de frete rodoviário, elevação portuária (THC), despesas acessórias e provisão de demurrage para cada corredor viável.
               </p>
-</div>
+<div class="flex items-center gap-2">
+<button class="text-[11px] font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-md border border-indigo-200 transition flex items-center gap-1 shadow-sm" onclick="openAnttModal()" type="button">
+<i class="w-3.5 h-3.5" data-lucide="scale"></i>
+<span>Tabela Piso ANTT</span>
+</button>
 <span class="text-[11px] font-medium text-slate-500 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200">
               Taxa de Câmbio: <strong class="text-slate-800" id="arbitrage-fx-label">R$ 5,4850</strong>
 </span>
@@ -3390,6 +3404,58 @@ th[aria-sort="descending"] .ux-sort-button::after { content:'↓'; margin-left:5
 <span>Salvar Parâmetros da Mesa</span>
 </button>
 </div>
+</div>
+
+<!-- Seção: Contratos Privados de Frete Rodoviário (Item 3) -->
+<div class="pt-6 border-t border-slate-200 space-y-4">
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div>
+      <div class="flex items-center space-x-2">
+        <i class="w-4 h-4 text-emerald-600" data-lucide="truck"></i>
+        <h3 class="text-xs font-bold text-slate-800 uppercase">
+          Contratos Privados de Frete Rodoviário (Tabela Própria da Trading)
+        </h3>
+      </div>
+      <p class="text-xs text-slate-500 mt-0.5">
+        Cadastre os fretes negociados por contrato com suas transportadoras. Valores ativos substituem automaticamente as referências públicas de mercado nos cálculos de paridade e arbitragem da sua organização.
+      </p>
+    </div>
+    <div class="flex items-center gap-2">
+      <button class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5 border border-slate-200" onclick="openFreightBatchModal()" type="button">
+        <i class="w-3.5 h-3.5" data-lucide="upload-cloud"></i>
+        <span>Importar em Lote (JSON)</span>
+      </button>
+      <button class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-3.5 py-1.5 rounded-lg transition flex items-center space-x-1.5 shadow-sm" onclick="openFreightContractModal()" type="button">
+        <i class="w-3.5 h-3.5" data-lucide="plus"></i>
+        <span>Novo Contrato</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="overflow-x-auto border border-slate-200 rounded-xl">
+    <table class="w-full text-xs text-left">
+      <thead class="bg-slate-50 uppercase text-slate-600 border-b border-slate-200 font-bold">
+        <tr>
+          <th class="px-4 py-2.5" scope="col">Rota (Origem ➔ Destino)</th>
+          <th class="px-4 py-2.5" scope="col">Transportadora</th>
+          <th class="px-4 py-2.5" scope="col">Cód. Contrato</th>
+          <th class="px-4 py-2.5 text-right" scope="col">Frete (R$/ton)</th>
+          <th class="px-4 py-2.5 text-right" scope="col">Equiv. (R$/sc)</th>
+          <th class="px-4 py-2.5 text-right" scope="col">Volume (t)</th>
+          <th class="px-4 py-2.5 text-center" scope="col">Vigência</th>
+          <th class="px-4 py-2.5 text-center" scope="col">Status</th>
+          <th class="px-4 py-2.5 text-center" scope="col">Ações</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100" id="company-freight-contracts-tbody">
+        <tr>
+          <td colspan="9" class="px-4 py-6 text-center text-slate-400">
+            Nenhum contrato privado cadastrado. A mesa utilizará as tarifas públicas de mercado.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 </div>
 </div>
 </section>
@@ -5272,6 +5338,7 @@ th[aria-sort="descending"] .ux-sort-button::after { content:'↓'; margin-left:5
         if (Array.isArray(routes) && routes.length > 0) {
           freightRoutesCache = routes;
           populateFreightDestinations();
+          updateAnttFloorKpi();
         }
       } catch (err) {
         console.error('Erro ao carregar rotas de frete:', err);
@@ -5374,6 +5441,7 @@ th[aria-sort="descending"] .ux-sort-button::after { content:'↓'; margin-left:5
 
         // Renderizar Gráfico Chart.js
         renderFreightChart(data.series);
+        updateAnttFloorKpi();
 
         if (window.lucide) lucide.createIcons();
 
@@ -5549,6 +5617,13 @@ th[aria-sort="descending"] .ux-sort-button::after { content:'↓'; margin-left:5
             recBadge = '<span class="px-2.5 py-1 rounded-full font-medium text-xs bg-slate-100 text-slate-600">Alternativa</span>';
           }
 
+          const rInfo = (freightRoutesCache || []).find(r => r.origin_id === currentFreightOrigin && r.destination_id === p.port_id);
+          const anttBadge = rInfo && rInfo.antt_floor_brl_ton ? `
+            <span class="inline-flex items-center gap-1 text-[9px] font-semibold mt-0.5 px-1 py-0.2 rounded ${rInfo.antt_compliance_status === 'ABOVE_FLOOR' ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-800'}">
+              Piso ANTT: R$ ${rInfo.antt_floor_brl_ton.toFixed(2)}
+            </span>
+          ` : '';
+
           return `
             <tr class="hover:bg-slate-50 ${isBest ? 'bg-emerald-50/40 font-medium' : ''}">
               <td class="px-3.5 py-3 font-bold text-slate-900 flex items-center space-x-2">
@@ -5559,6 +5634,7 @@ th[aria-sort="descending"] .ux-sort-button::after { content:'↓'; margin-left:5
               <td class="px-3.5 py-3 text-right">
                 <span class="font-bold text-slate-800">R$ ${p.road_freight_brl_ton.toFixed(2)}</span>
                 <span class="block text-[10px] text-slate-500">R$ ${p.road_freight_brl_bag.toFixed(2)}/sc</span>
+                ${anttBadge}
               </td>
               <td class="px-3.5 py-3 text-right text-slate-700">
                 <span>R$ ${p.elevation_cost_brl_ton.toFixed(2)}</span>
@@ -6142,6 +6218,8 @@ _Gerado via AgriTrading Intelligence Platform_`;
         console.error('Erro ao carregar perfil de custos:', e);
       }
 
+      await loadCompanyFreightContracts();
+
       if (window.lucide) lucide.createIcons();
     }
 
@@ -6245,6 +6323,336 @@ _Gerado via AgriTrading Intelligence Platform_`;
         }
       } catch (e) {
         console.error('Erro ao atualizar custos:', e);
+      }
+    }
+
+    // ==============================================================================
+    // ITEM 3: CONTRATOS PRIVADOS DE FRETE DA TRADING
+    // ==============================================================================
+    let companyFreightContractsCache = [];
+
+    async function loadCompanyFreightContracts() {
+      const orgId = getActiveUserOrgId();
+      if (!orgId) return;
+
+      const tbody = document.getElementById('company-freight-contracts-tbody');
+      if (!tbody) return;
+
+      try {
+        const res = await fetch(`${API_BASE}/organizations/${orgId}/freight-contracts`, {
+          headers: getAuthHeaders()
+        });
+        if (!res.ok) return;
+
+        const data = await res.json();
+        companyFreightContractsCache = data;
+
+        if (!data || data.length === 0) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="9" class="px-4 py-6 text-center text-slate-400">
+                Nenhum contrato privado cadastrado. A mesa utilizará as tarifas públicas de mercado.
+              </td>
+            </tr>
+          `;
+          return;
+        }
+
+        tbody.innerHTML = data.map(c => {
+          const originName = HUB_NAMES[c.origin_id] || c.origin_id;
+          const destName = PORT_NAMES[c.destination_id] || c.destination_id;
+          const equivBag = (c.freight_brl_ton * 0.06).toFixed(2);
+          const volStr = c.volume_contracted_tons ? c.volume_contracted_tons.toLocaleString('pt-BR') : '—';
+          const validFrom = c.valid_from ? new Date(c.valid_from + 'T00:00:00').toLocaleDateString('pt-BR') : '—';
+          const validUntil = c.valid_until ? new Date(c.valid_until + 'T00:00:00').toLocaleDateString('pt-BR') : '—';
+          const statusBadge = c.is_active
+            ? '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">Ativo</span>'
+            : '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-200 text-slate-700">Inativo</span>';
+
+          return `
+            <tr class="hover:bg-slate-50">
+              <td class="px-4 py-2.5 font-bold text-slate-900">
+                ${originName} ➔ ${destName}
+              </td>
+              <td class="px-4 py-2.5 text-slate-700">${c.carrier_name}</td>
+              <td class="px-4 py-2.5 font-mono text-slate-600 text-[11px]">${c.contract_code}</td>
+              <td class="px-4 py-2.5 text-right font-bold text-emerald-700">R$ ${c.freight_brl_ton.toFixed(2)}</td>
+              <td class="px-4 py-2.5 text-right text-slate-600">R$ ${equivBag}</td>
+              <td class="px-4 py-2.5 text-right text-slate-600">${volStr}</td>
+              <td class="px-4 py-2.5 text-center text-slate-500">${validFrom} a ${validUntil}</td>
+              <td class="px-4 py-2.5 text-center">${statusBadge}</td>
+              <td class="px-4 py-2.5 text-center">
+                <button onclick="deleteCompanyFreightContract(${c.id})" class="text-xs text-red-600 hover:text-red-800 font-semibold p-1 hover:bg-red-50 rounded transition" title="Excluir contrato">
+                  Excluir
+                </button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        if (window.lucide) lucide.createIcons();
+      } catch (err) {
+        console.error('Erro ao carregar contratos de frete:', err);
+      }
+    }
+
+    function openFreightContractModal() {
+      const modal = document.getElementById('freight-contract-modal');
+      if (modal) modal.classList.remove('hidden');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function closeFreightContractModal() {
+      const modal = document.getElementById('freight-contract-modal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    async function saveCompanyFreightContract() {
+      const orgId = getActiveUserOrgId();
+      if (!orgId) {
+        alert('Organização não identificada. Efetue login novamente.');
+        return;
+      }
+
+      const origin = document.getElementById('fc-origin')?.value;
+      const dest = document.getElementById('fc-destination')?.value;
+      const carrier = document.getElementById('fc-carrier')?.value.trim();
+      const code = document.getElementById('fc-code')?.value.trim();
+      const rate = parseFloat(document.getElementById('fc-rate')?.value || 0);
+      const vol = document.getElementById('fc-volume')?.value ? parseFloat(document.getElementById('fc-volume').value) : null;
+      const validFrom = document.getElementById('fc-valid-from')?.value || null;
+      const validUntil = document.getElementById('fc-valid-until')?.value || null;
+      const notes = document.getElementById('fc-notes')?.value.trim() || null;
+      const isActive = document.getElementById('fc-active')?.checked ?? true;
+
+      if (!carrier || !code || rate <= 0) {
+        alert('Por favor, preencha transportadora, código do contrato e tarifa de frete válida.');
+        return;
+      }
+
+      const payload = {
+        origin_id: origin,
+        destination_id: dest,
+        carrier_name: carrier,
+        contract_code: code,
+        freight_brl_ton: rate,
+        volume_contracted_tons: vol,
+        valid_from: validFrom,
+        valid_until: validUntil,
+        is_active: isActive,
+        notes: notes,
+      };
+
+      try {
+        const res = await fetch(`${API_BASE}/organizations/${orgId}/freight-contracts`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          alert('✅ Contrato privado de frete salvo com sucesso!');
+          closeFreightContractModal();
+          await loadCompanyFreightContracts();
+          await loadFreightRoutes();
+          await loadFreightHistory();
+        } else {
+          const err = await res.text();
+          alert('Erro ao salvar contrato: ' + err);
+        }
+      } catch (err) {
+        console.error('Erro ao salvar contrato de frete:', err);
+        alert('Erro ao conectar ao servidor.');
+      }
+    }
+
+    async function deleteCompanyFreightContract(contractId) {
+      if (!confirm('Deseja realmente excluir este contrato privado de frete?')) return;
+      const orgId = getActiveUserOrgId();
+      if (!orgId) return;
+
+      try {
+        const res = await fetch(`${API_BASE}/organizations/${orgId}/freight-contracts/${contractId}`, {
+          method: 'DELETE',
+          headers: getAuthHeaders()
+        });
+
+        if (res.ok) {
+          await loadCompanyFreightContracts();
+          await loadFreightRoutes();
+          await loadFreightHistory();
+        } else {
+          const err = await res.text();
+          alert('Erro ao excluir contrato: ' + err);
+        }
+      } catch (err) {
+        console.error('Erro ao excluir contrato de frete:', err);
+      }
+    }
+
+    function openFreightBatchModal() {
+      const modal = document.getElementById('freight-batch-modal');
+      if (modal) modal.classList.remove('hidden');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function closeFreightBatchModal() {
+      const modal = document.getElementById('freight-batch-modal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function fillFreightBatchTemplate() {
+      const sample = [
+        {
+          "origin_id": "sorriso_mt",
+          "destination_id": "STS",
+          "carrier_name": "TransGrãos Logística",
+          "contract_code": "TG-2026-01",
+          "freight_brl_ton": 395.0,
+          "volume_contracted_tons": 50000.0,
+          "valid_from": "2026-01-01",
+          "valid_until": "2026-12-31"
+        },
+        {
+          "origin_id": "sorriso_mt",
+          "destination_id": "BCR",
+          "carrier_name": "Norte Cargas S/A",
+          "contract_code": "NC-2026-08",
+          "freight_brl_ton": 335.0,
+          "volume_contracted_tons": 30000.0,
+          "valid_from": "2026-01-01",
+          "valid_until": "2026-12-31"
+        },
+        {
+          "origin_id": "rio_verde_go",
+          "destination_id": "STS",
+          "carrier_name": "Rodoviário Cerrado",
+          "contract_code": "RC-2026-22",
+          "freight_brl_ton": 215.0,
+          "volume_contracted_tons": 40000.0,
+          "valid_from": "2026-01-01",
+          "valid_until": "2026-12-31"
+        }
+      ];
+      const ta = document.getElementById('fc-batch-json');
+      if (ta) ta.value = JSON.stringify(sample, null, 2);
+    }
+
+    async function saveCompanyFreightBatch() {
+      const orgId = getActiveUserOrgId();
+      if (!orgId) {
+        alert('Organização não identificada.');
+        return;
+      }
+
+      const raw = document.getElementById('fc-batch-json')?.value.trim();
+      if (!raw) {
+        alert('Cole os contratos no formato JSON.');
+        return;
+      }
+
+      let parsed;
+      try {
+        parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) throw new Error('O JSON deve ser um array de contratos.');
+      } catch (err) {
+        alert('JSON inválido: ' + err.message);
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/organizations/${orgId}/freight-contracts/batch`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ contracts: parsed })
+        });
+
+        if (res.ok) {
+          const created = await res.json();
+          alert(`✅ ${created.length} contratos importados com sucesso!`);
+          closeFreightBatchModal();
+          await loadCompanyFreightContracts();
+          await loadFreightRoutes();
+          await loadFreightHistory();
+        } else {
+          const err = await res.text();
+          alert('Erro ao importar contratos: ' + err);
+        }
+      } catch (err) {
+        console.error('Erro na importação em lote:', err);
+        alert('Erro ao conectar ao servidor.');
+      }
+    }
+
+    // ==============================================================================
+    // ITEM 1: TABELA E CONFORMIDADE DE PISO MÍNIMO ANTT
+    // ==============================================================================
+    function updateAnttFloorKpi() {
+      const rInfo = (freightRoutesCache || []).find(r => r.origin_id === currentFreightOrigin && r.destination_id === currentFreightDest);
+      const kpiFloorEl = document.getElementById('kpi-freight-antt-floor');
+      const kpiBadgeEl = document.getElementById('kpi-freight-antt-badge');
+      if (!kpiFloorEl || !kpiBadgeEl) return;
+
+      if (rInfo && rInfo.antt_floor_brl_ton) {
+        kpiFloorEl.innerHTML = `R$ ${rInfo.antt_floor_brl_ton.toFixed(2)} <span class="text-xs font-normal text-slate-500">/ton</span>`;
+        if (rInfo.antt_compliance_status === 'ABOVE_FLOOR') {
+          kpiBadgeEl.innerHTML = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 inline-flex items-center gap-1"><i data-lucide="shield-check" class="w-3 h-3"></i> Conforme (+R$ ${rInfo.antt_spread_brl_ton.toFixed(2)}/t)</span>`;
+        } else {
+          kpiBadgeEl.innerHTML = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 inline-flex items-center gap-1"><i data-lucide="alert-triangle" class="w-3 h-3"></i> Abaixo Piso (-R$ ${Math.abs(rInfo.antt_spread_brl_ton).toFixed(2)}/t)</span>`;
+        }
+      } else {
+        kpiFloorEl.innerHTML = `R$ -- <span class="text-xs font-normal text-slate-500">/ton</span>`;
+        kpiBadgeEl.innerHTML = `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-200 text-slate-700">Calculando...</span>`;
+      }
+      if (window.lucide) lucide.createIcons();
+    }
+
+    async function openAnttModal() {
+      const modal = document.getElementById('antt-modal');
+      if (modal) modal.classList.remove('hidden');
+      await loadAnttData();
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function closeAnttModal() {
+      const modal = document.getElementById('antt-modal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    async function loadAnttData() {
+      const tbody = document.getElementById('antt-modal-tbody');
+      if (!tbody) return;
+
+      try {
+        const res = await fetch(`${API_BASE}/freight/antt-floor`);
+        if (!res.ok) return;
+
+        const data = await res.json();
+        tbody.innerHTML = data.map(item => {
+          const isAbove = (item.compliance_status === 'ABOVE_FLOOR');
+          const spreadSign = item.spread_vs_floor_brl_ton >= 0 ? '+' : '';
+          return `
+            <tr class="hover:bg-slate-50">
+              <td class="px-3 py-2.5 font-bold text-slate-800">
+                ${item.origin_name} (${item.origin_state}) ➔ ${item.destination_name} (${item.destination_state})
+              </td>
+              <td class="px-3 py-2.5 text-center text-slate-600">${item.distance_km} km</td>
+              <td class="px-3 py-2.5 text-right font-bold text-slate-900">R$ ${item.market_freight_brl_ton.toFixed(2)}</td>
+              <td class="px-3 py-2.5 text-right text-slate-700">R$ ${item.antt_floor_7_axles_brl_ton.toFixed(2)}</td>
+              <td class="px-3 py-2.5 text-right font-bold text-indigo-900">R$ ${item.antt_floor_9_axles_brl_ton.toFixed(2)}</td>
+              <td class="px-3 py-2.5 text-right font-semibold ${isAbove ? 'text-emerald-700' : 'text-red-600'}">
+                ${spreadSign}R$ ${item.spread_vs_floor_brl_ton.toFixed(2)} (${spreadSign}${item.spread_vs_floor_pct}%)
+              </td>
+              <td class="px-3 py-2.5 text-center">
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${isAbove ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}">
+                  ${isAbove ? '✓ Conforme' : '⚠ Risco Legal'}
+                </span>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        console.error('Erro ao carregar dados ANTT:', err);
       }
     }
 
@@ -6482,6 +6890,17 @@ _Gerado via AgriTrading Intelligence Platform_`;
     window.copyLineageJson = copyLineageJson;
     window.openPrivacyModal = openPrivacyModal;
     window.closePrivacyModal = closePrivacyModal;
+    window.openAnttModal = openAnttModal;
+    window.closeAnttModal = closeAnttModal;
+    window.loadAnttData = loadAnttData;
+    window.openFreightContractModal = openFreightContractModal;
+    window.closeFreightContractModal = closeFreightContractModal;
+    window.saveCompanyFreightContract = saveCompanyFreightContract;
+    window.deleteCompanyFreightContract = deleteCompanyFreightContract;
+    window.openFreightBatchModal = openFreightBatchModal;
+    window.closeFreightBatchModal = closeFreightBatchModal;
+    window.fillFreightBatchTemplate = fillFreightBatchTemplate;
+    window.saveCompanyFreightBatch = saveCompanyFreightBatch;
 </script><div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4" id="ports-modal">
 <div class="bg-white w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
 <!-- Header do Modal -->
@@ -6886,6 +7305,200 @@ _Gerado via AgriTrading Intelligence Platform_`;
       <button class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition" onclick="closePrivacyModal()" type="button">
         Entendido e de acordo
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Piso Mínimo Regulatório ANTT (Item 1) -->
+<div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4" id="antt-modal">
+  <div class="bg-white w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+    <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+      <div class="flex items-center space-x-2.5">
+        <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-800 flex items-center justify-center font-bold">
+          <i class="w-4 h-4" data-lucide="scale"></i>
+        </div>
+        <div>
+          <h3 class="text-base font-bold text-slate-900">Tabela de Piso Mínimo de Frete ANTT (Lei nº 13.703/2018)</h3>
+          <p class="text-xs text-slate-500">Resolução ANTT nº 5.867/2020 · Granel Sólido (Carga Lotação - Soja e Milho)</p>
+        </div>
+      </div>
+      <button aria-label="Fechar janela" class="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-200 transition" onclick="closeAnttModal()" type="button">
+        <i class="w-5 h-5" data-lucide="x"></i>
+      </button>
+    </div>
+    <div class="p-6 overflow-y-auto space-y-4 text-xs">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-slate-800">Bitrem (7 Eixos)</span>
+            <span class="text-[10px] bg-slate-200 text-slate-800 font-bold px-2 py-0.5 rounded">37t úteis</span>
+          </div>
+          <p class="text-[11px] text-slate-600">
+            • Coeficiente de Deslocamento (CC): <strong>R$ 5,8504 / km</strong><br>
+            • Coeficiente Carga/Descarga (CCD): <strong>R$ 482,15 (fixo)</strong><br>
+            • Fórmula: <code class="bg-white px-1 py-0.5 rounded border border-slate-200">((5.8504 × km) + 482.15) / 37</code>
+          </p>
+        </div>
+        <div class="p-4 bg-indigo-50/60 rounded-xl border border-indigo-200 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-indigo-900">Rodotrem (9 Eixos) — Padrão Corredores Longos</span>
+            <span class="text-[10px] bg-indigo-200 text-indigo-900 font-bold px-2 py-0.5 rounded">49t úteis</span>
+          </div>
+          <p class="text-[11px] text-indigo-800">
+            • Coeficiente de Deslocamento (CC): <strong>R$ 7,1245 / km</strong><br>
+            • Coeficiente Carga/Descarga (CCD): <strong>R$ 584,30 (fixo)</strong><br>
+            • Fórmula: <code class="bg-white px-1 py-0.5 rounded border border-indigo-200">((7.1245 × km) + 584.30) / 49</code>
+          </p>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto border border-slate-200 rounded-xl">
+        <table class="w-full text-xs text-left">
+          <thead class="bg-slate-100 uppercase text-slate-700 border-b border-slate-200 font-bold">
+            <tr>
+              <th class="px-3 py-2.5" scope="col">Corredor Logístico</th>
+              <th class="px-3 py-2.5 text-center" scope="col">Distância</th>
+              <th class="px-3 py-2.5 text-right" scope="col">Frete Spot Mercado</th>
+              <th class="px-3 py-2.5 text-right" scope="col">Piso 7 Eixos</th>
+              <th class="px-3 py-2.5 text-right font-bold text-slate-900" scope="col">Piso 9 Eixos (Ref)</th>
+              <th class="px-3 py-2.5 text-right" scope="col">Spread vs. Piso</th>
+              <th class="px-3 py-2.5 text-center" scope="col">Status Legal</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100" id="antt-modal-tbody">
+            <!-- Preenchido dinamicamente via Javascript -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="p-4 bg-amber-50 rounded-xl border border-amber-200 text-amber-900 space-y-1">
+        <strong class="font-bold flex items-center gap-1.5"><i class="w-4 h-4 text-amber-600" data-lucide="alert-triangle"></i> Penalidades e Risco Jurídico (Art. 5º-A da Lei nº 13.703/2018):</strong>
+        <p class="text-slate-700 leading-relaxed text-[11px]">
+          O contratante que pagar frete abaixo do piso mínimo regulatório fixado pela ANTT fica sujeito ao pagamento de <strong>indenização em valor equivalente ao dobro da diferença apurada</strong>, além de multas administrativas aplicáveis pela fiscalização rodoviária.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Novo Contrato Privado de Frete (Item 3) -->
+<div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4" id="freight-contract-modal">
+  <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col">
+    <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+      <div class="flex items-center space-x-2.5">
+        <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
+          <i class="w-4 h-4" data-lucide="truck"></i>
+        </div>
+        <div>
+          <h3 class="text-base font-bold text-slate-900">Novo Contrato Privado de Frete</h3>
+          <p class="text-xs text-slate-500">Cadastre a tarifa acordada com a transportadora para a rota.</p>
+        </div>
+      </div>
+      <button aria-label="Fechar janela" class="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-200 transition" onclick="closeFreightContractModal()" type="button">
+        <i class="w-5 h-5" data-lucide="x"></i>
+      </button>
+    </div>
+    <form class="p-6 space-y-4 text-xs" onsubmit="event.preventDefault(); saveCompanyFreightContract();">
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block font-semibold text-slate-600 mb-1" for="fc-origin">Origem (Praça)</label>
+          <select id="fc-origin" class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-medium" required>
+            <option value="sorriso_mt">Sorriso - MT</option>
+            <option value="rondonopolis_mt">Rondonópolis - MT</option>
+            <option value="rio_verde_go">Rio Verde - GO</option>
+            <option value="cascavel_pr">Cascavel - PR</option>
+            <option value="passo_fundo_rs">Passo Fundo - RS</option>
+            <option value="lem_ba">Luís Eduardo Magalhães - BA</option>
+          </select>
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-600 mb-1" for="fc-destination">Destino (Porto)</label>
+          <select id="fc-destination" class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-medium" required>
+            <option value="STS">Santos (STS)</option>
+            <option value="PNG">Paranaguá (PNG)</option>
+            <option value="BCR">Barcarena (BCR)</option>
+            <option value="ITQ">Itaqui (ITQ)</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block font-semibold text-slate-600 mb-1" for="fc-carrier">Transportadora</label>
+          <input id="fc-carrier" type="text" class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs" placeholder="Ex: TransGrãos do Brasil" required>
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-600 mb-1" for="fc-code">Código do Contrato</label>
+          <input id="fc-code" type="text" class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-mono" placeholder="Ex: CT-2026-001" required>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block font-semibold text-slate-600 mb-1" for="fc-rate">Frete Contratado (R$/ton)</label>
+          <input id="fc-rate" type="number" step="0.5" class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-900" placeholder="Ex: 380.00" required>
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-600 mb-1" for="fc-volume">Volume Contratado (tons)</label>
+          <input id="fc-volume" type="number" step="100" class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs" placeholder="Ex: 25000">
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block font-semibold text-slate-600 mb-1" for="fc-valid-from">Válido De</label>
+          <input id="fc-valid-from" type="date" class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-600 mb-1" for="fc-valid-until">Válido Até</label>
+          <input id="fc-valid-until" type="date" class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs">
+        </div>
+      </div>
+      <div>
+        <label class="block font-semibold text-slate-600 mb-1" for="fc-notes">Observações</label>
+        <textarea id="fc-notes" rows="2" class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs" placeholder="Condições específicas, tolerâncias de quebra, prazos..."></textarea>
+      </div>
+      <div class="flex items-center space-x-2">
+        <input id="fc-active" type="checkbox" checked class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+        <label for="fc-active" class="font-semibold text-slate-700">Contrato ativo (substituir tarifa de mercado nos cálculos)</label>
+      </div>
+      <div class="pt-2 flex justify-end gap-2">
+        <button type="button" onclick="closeFreightContractModal()" class="px-4 py-2 border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-100 transition font-medium">Cancelar</button>
+        <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-sm transition font-semibold">Salvar Contrato</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Importação em Lote de Fretes (Item 3) -->
+<div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4" id="freight-batch-modal">
+  <div class="bg-white w-full max-w-xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col">
+    <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+      <div class="flex items-center space-x-2.5">
+        <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-800 flex items-center justify-center font-bold">
+          <i class="w-4 h-4" data-lucide="upload-cloud"></i>
+        </div>
+        <div>
+          <h3 class="text-base font-bold text-slate-900">Importação em Lote de Fretes Contratados</h3>
+          <p class="text-xs text-slate-500">Cole uma lista no formato JSON para cadastro em lote.</p>
+        </div>
+      </div>
+      <button aria-label="Fechar janela" class="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-200 transition" onclick="closeFreightBatchModal()" type="button">
+        <i class="w-5 h-5" data-lucide="x"></i>
+      </button>
+    </div>
+    <div class="p-6 space-y-4 text-xs">
+      <div>
+        <div class="flex items-center justify-between mb-1">
+          <label class="block font-semibold text-slate-600" for="fc-batch-json">JSON de Contratos</label>
+          <button type="button" onclick="fillFreightBatchTemplate()" class="text-emerald-700 hover:text-emerald-800 font-semibold text-[11px] underline">Preencher Exemplo</button>
+        </div>
+        <textarea id="fc-batch-json" rows="8" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-3 font-mono text-[11px] text-slate-800 focus:bg-white" placeholder='[&#10;  {&#10;    "origin_id": "sorriso_mt",&#10;    "destination_id": "STS",&#10;    "carrier_name": "TransGrãos",&#10;    "contract_code": "CT-2026-001",&#10;    "freight_brl_ton": 390.0,&#10;    "volume_contracted_tons": 50000.0&#10;  }&#10;]'></textarea>
+      </div>
+      <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 text-slate-600 text-[11px]">
+        Campos suportados por item: <code>origin_id</code>, <code>destination_id</code>, <code>carrier_name</code>, <code>contract_code</code>, <code>freight_brl_ton</code>, <code>volume_contracted_tons</code>, <code>valid_from</code>, <code>valid_until</code>.
+      </div>
+      <div class="pt-2 flex justify-end gap-2">
+        <button type="button" onclick="closeFreightBatchModal()" class="px-4 py-2 border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-100 transition font-medium">Cancelar</button>
+        <button type="button" onclick="saveCompanyFreightBatch()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm transition font-semibold">Processar Importação</button>
+      </div>
     </div>
   </div>
 </div>

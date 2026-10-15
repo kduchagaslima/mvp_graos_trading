@@ -36,6 +36,7 @@ EXPECTED_ACCESS_TIERS = {
         ("GET", "/api/freight/routes"),
         ("GET", "/api/freight/history"),
         ("GET", "/api/freight/arbitrage"),
+        ("GET", "/api/freight/antt-floor"),
     ],
     # 3. MOTORES DE CÁLCULO (Cálculos de negócio com parâmetros do usuário)
     "CLIENT_ENGINES": [
@@ -67,6 +68,10 @@ EXPECTED_ACCESS_TIERS = {
         ("POST", "/api/organizations/{org_id}/cost-profiles"),
         ("GET", "/api/organizations/{org_id}/cost-profiles/{profile_id}"),
         ("PUT", "/api/organizations/{org_id}/cost-profiles/{profile_id}"),
+        ("GET", "/api/organizations/{org_id}/freight-contracts"),
+        ("POST", "/api/organizations/{org_id}/freight-contracts"),
+        ("POST", "/api/organizations/{org_id}/freight-contracts/batch"),
+        ("DELETE", "/api/organizations/{org_id}/freight-contracts/{contract_id}"),
         ("GET", "/api/organizations/{org_id}/members"),
         ("DELETE", "/api/organizations/{org_id}/members/{user_id}"),
         ("POST", "/api/organizations/{org_id}/invitations"),
