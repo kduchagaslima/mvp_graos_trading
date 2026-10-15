@@ -1,30 +1,33 @@
 # Manual Operacional do Trader de Grãos — AgriTrading
 
-**Versão:** 2.0 (Alinhada com a Política de Transparência de Dados ADR-004 e W3C PROV)  
-**Data:** 12/10/2026  
-**Público-alvo:** Traders de Mesa, Analistas de Originação, Operadores Comerciais e Compliance  
+**Versão:** 2.1 (Alinhada com Conformidade Regulatória ANTT Lei 13.703/2018, Contratos Privados de Frete, Boletas Formais Trade Ticket e W3C PROV)  
+**Data:** 15/10/2026  
+**Público-alvo:** Traders de Mesa, Analistas de Originação, Operadores Comerciais, Risco e Compliance  
 **Classificação:** Uso Interno / Governança Operacional  
 
 ---
 
 ## 1. Visão Geral & Princípios de Negócio
 
-O objetivo do AgriTrading é fornecer precisão matemática, velocidade e governança na formação de preços de compra no interior e exportação de commodities agrícolas (**Soja** e **Milho**).
+O objetivo do AgriTrading é fornecer precisão matemática, velocidade analítica e governança institucional na formação de preços de compra no interior e exportação de commodities agrícolas (**Soja** e **Milho**).
 
-### Princípio Fundamental de Rastreabilidade
-> *Nenhum valor usado ou exibido como decisão de mercado pode aparecer sem identificação de origem, atualidade, unidade, timestamp, fonte e cadeia de derivação.*
+### Princípio Fundamental de Rastreabilidade e Decisão
+> *Nenhum valor usado ou exibido como decisão de mercado pode aparecer sem identificação de origem, atualidade, unidade, timestamp, fonte oficial e cadeia de derivação matemática.*
 
 ---
 
-## 2. Passo a Passo Operacional do Trader
+## 2. Fluxo Operacional da Mesa de Operações
 
-```
-+---------------------------------------------------------------------------------------------------+
-|                                 FLUXO OPERACIONAL DA MESA                                         |
-|                                                                                                   |
-|  [1. Paridade FAS/FOB] -> [2. Corretagem] -> [3. Matriz Regional] -> [4. Carry] -> [5. Checklist] |
-|        (Cálculo Base)       (Alocação)        (Decisão Compra)      (Tempo)       (Validação Final)|
-+---------------------------------------------------------------------------------------------------+
+```text
++-------------------------------------------------------------------------------------------------------------------------------------------------+
+|                                                           FLUXO OPERACIONAL DA MESA                                                              |
+|                                                                                                                                                 |
+|  [1. Paridade FAS/FOB] -> [2. Corretagem] -> [3. Matriz Regional] -> [4. Piso ANTT & Fretes] -> [5. Comparador Bids]                             |
+|        (Cálculo Base)       (Alocação)        (Decisão Compra)      (Conformidade Legal)       (Arbitragem Lote)                                |
+|                                                                                                                                                 |
+|  --------> [6. Carry Trade] -> [7. Transparência PROV] -> [8. Emissão da Boleta & Excel] -> [Checklist 7 Validações]                            |
+|                 (Tempo)            (Auditoria)                   (Formalização)                   (Fechamento)                                  |
++-------------------------------------------------------------------------------------------------------------------------------------------------+
 ```
 
 ---
@@ -53,12 +56,12 @@ Para encontrar o preço teto que a trading pode pagar no balcão da fazenda ou a
 5. **(-) Frete Rodoviário Origem-Porto:** Custo de frete por tonelada até o porto de destino.
 6. **(-) Margem da Trading:** Margem comercial mínima requerida pela empresa (padrão de mercado: USD 2,00 a 3,00/t).
 7. **(-) Despesa de Corretagem:** Conforme modelo acordado com o intermediador (R$ 0,25 a R$ 0,70/sc).
-8. **(-) Fundo Tributário Estadual:** Retenção obrigatória (ex: FETHAB no MT: R$ 2,85/sc na soja; FUNDEINFRA em GO: R$ 1,65/sc).
+8. **(-) Fundo Tributário Estadual:** Retenção obrigatória (ex: FETHAB no MT: R$ 2,85/sc na soja; FUNDEINFRA em GO: R$ 1,65/sc; PRODEAGRO na BA: R$ 0,60/sc; Isento no PR e RS).
 9. **(-) Quebra Técnica & Umidade:** Dedução de 0,20% a 0,30% sobre o valor após tributos.
 10. **(-) Funrural:** Contribuição previdenciária de 1,5% retida na comercialização.
 11. **(=) Paridade Líquida Balcão Interior (R$/sc):** **Preço Teto da Trading.**
 
-> **Regra de Ouro:** A Paridade Líquida Balcão é o preço de indiferença da trading. Comprar acima desse teto significa exportar com prejuízo na margem da mesa.
+> **Regra de Ouro do Trader:** A Paridade Líquida Balcão é o preço de indiferença da trading. Comprar acima desse teto significa exportar com prejuízo na margem da mesa.
 
 ---
 
@@ -99,14 +102,54 @@ $$\text{Spread da Mesa (R\$/sc)} = \text{Paridade Líquida Balcão} - \text{Pre�
 
 ---
 
-### Passo 4: Arbitragem Temporal e Custo de Carrego (Carry Trade)
+### Passo 4: Conformidade com Piso Mínimo Regulatório ANTT & Contratos Privados de Frete
 
-#### 4.1 Equação do Carry Líquido
+O frete rodoviário é a maior despesa logística na originação de grãos no Brasil e está sujeito a regulação federal estrita.
+
+#### 4.1 Legislação e Piso Mínimo ANTT (Lei nº 13.703/2018 / Resolução nº 5.867/2020)
+- A ANTT fixa semestralmente a **Política Nacional de Pisos Mínimos do Transporte Rodoviário de Cargas (PNPM-TRC)** para carga lotação de granel sólido.
+- **Veículos Típicos:**
+  - **Bitrem 7 Eixos (37 toneladas úteis):** Coeficiente de deslocamento $CCD = \text{R\$} 4,9232/\text{km}$ e carga/descarga $CC = \text{R\$} 382,15$.
+  - **Rodotrem 9 Eixos (49 toneladas úteis):** Coeficiente de deslocamento $CCD = \text{R\$} 5,8410/\text{km}$ e carga/descarga $CC = \text{R\$} 435,50$.
+- **Fórmula do Piso por Tonelada:**
+  $$\text{Piso Mínimo (R\$/ton)} = \frac{(\text{Distância (km)} \times CCD) + CC}{\text{Capacidade Útil (ton)}}$$
+
+> ⚠️ **ALERTA DE RISCO JURÍDICO (Art. 5º da Lei nº 13.703/2018):**  
+> O contratante (embarcador/trading) que pagar frete inferior ao piso mínimo responderá pelo pagamento de **indenização equivalente ao dobro da diferença do valor que seria devido**.  
+> O sistema exibe o status legal por corredor:  
+> - `ABOVE_FLOOR`: Frete de mercado ou contrato acima do piso (**Conforme e autorizada contratação**).  
+> - `BELOW_FLOOR`: Frete abaixo do piso legal (**Alerta crítico de passivo trabalhista/regulatório**).
+
+#### 4.2 Contratos Privados de Frete da Trading
+- Quando a trading possui contratos de longo prazo com transportadoras ou frotistas próprios, as tarifas contratadas podem ser cadastradas na aba **"Minha Empresa"** (individualmente ou via importação JSON em lote).
+- **Regra de Precedência:** Havendo contrato ativo para a rota (ex: Sorriso ➔ Santos), a tarifa contratada **substitui automaticamente** a cotação pública de mercado nas calculadoras e matrizes da organização.
+
+---
+
+### Passo 5: Comparador de Propostas de Venda & Arbitragem de Bids
+
+No dia a dia comercial, o originador recebe simultaneamente propostas de diferentes tradings/compradores e precisa decidir onde alocar o lote de grãos.
+
+#### 5.1 Parâmetros do Lote
+- O operador informa o **Volume do Lote** (ex: 10.000 sacas = 600 toneladas) e cadastra até 3 propostas simultâneas com comprador, porto de destino, CBOT, prêmio FOB, frete e tributos.
+
+#### 5.2 Regra de Decisão do Comparador
+$$\text{Receita Total do Lote (R\$)} = \text{Volume (sacas)} \times \text{Paridade Líquida Balcão da Proposta (R\$/sc)}$$
+$$\text{Vantagem Financeira no Lote (R\$)} = \text{Receita Proposta Vencedora} - \text{Receita Segunda Colocada}$$
+
+- O sistema elege a **Proposta Vencedora** (maior rentabilidade líquida na fazenda) e calcula o diferencial total em Reais.
+- A partir do comparador, o trader pode emitir diretamente a **Boleta Formal de Compra** da proposta vencedora.
+
+---
+
+### Passo 6: Arbitragem Temporal e Custo de Carrego (Carry Trade)
+
+#### 6.1 Equação do Carry Líquido
 $$\text{Spread Bruto Forward} = \text{Preço Futuro} - \text{Preço Spot}$$
 $$\text{Custo Total de Carrego} = \text{Custo de Capital (CDI)} + \text{Armazenagem} + \text{Quebra}$$
 $$\text{Carry Líquido} = \text{Spread Bruto Forward} - \text{Custo Total de Carrego}$$
 
-#### 4.2 Critérios de Ação da Mesa (3 Níveis)
+#### 6.2 Critérios de Ação da Mesa (3 Níveis de Decisão)
 1. **Carry Líquido > +R$ 0,75/sc: CARREGAR A POSIÇÃO**  
    O prêmio da curva futura cobre juros e armazenagem com margem atrativa.  
    *Ação:* Comprar no spot, travar a venda futura na B3/Exportação e estocar em armazém credenciado.
@@ -119,7 +162,7 @@ $$\text{Carry Líquido} = \text{Spread Bruto Forward} - \text{Custo Total de Car
 
 ---
 
-### Passo 5: Política de Transparência de Dados e Rastreabilidade (ADR-004 / W3C PROV)
+### Passo 7: Política de Transparência de Dados e Rastreabilidade (ADR-004 / W3C PROV)
 
 Todo cálculo gerado pela plataforma possui rastreabilidade em dois eixos independentes:
 
@@ -141,29 +184,58 @@ Todo cálculo gerado pela plataforma possui rastreabilidade em dois eixos indepe
 
 ---
 
-### Passo 6: Checklist Obrigatório Antes de Bater o Martelo
+### Passo 8: Formalização Operacional: Emissão da Boleta de Compra & Exportação Excel
+
+Após validar os cálculos e chegar a um acordo comercial com o produtor ou corretor, o trader formaliza a operação.
+
+#### 8.1 Emissão da Boleta Formal de Compra (Trade Ticket)
+- **Acesso:** Clicar em **"Emitir Boleta"** na Calculadora de Paridade ou no Comparador de Propostas.
+- **Campos Obrigatórios:** Nome/Razão Social do Vendedor, CPF/CNPJ, Fazenda de Origem, Volume em Sacas (auto-calcula toneladas), Preço Fechado R$/sc (auto-calcula Total em R$), Safra, Condições de Pagamento e Prazo de Entrega.
+- **Padrão de Qualidade:** Padrão Exportação ANEC (Umidade máx 14%, Impureza máx 1%, Avariados máx 8%).
+- **Numeração Auditável:** O sistema gera automaticamente um código único sequencial: `BOL-YYYYMMDD-XXXXXX`.
+- **Amarração de Auditoria:** O documento grava o carimbo `DECISION_READY`, o identificador `parity_run_id` W3C PROV e as referências de CBOT, Câmbio PTAX e Frete travadas no momento exato do fechamento.
+- **Ações Disponíveis:**
+  - 🖨️ **Imprimir / Salvar PDF (A4):** Renderização formal com papel timbrado da trading e campos formais para assinatura.
+  - 📱 **Copiar Boleta (WhatsApp):** Cópia rápida com formatação profissional pronta para envio ao produtor.
+  - 💾 **Salvar no Histórico:** Armazena a boleta na base da empresa para consulta e auditoria na aba **"Minha Empresa"**.
+
+#### 8.2 Exportação de Relatórios para Excel (.csv)
+- Os botões **"Exportar Excel"** geram planilhas formatadas em UTF-8 com BOM e delimitador `;`, abrindo nativamente no Microsoft Excel ou Google Sheets sem distorção:
+  - **Paridade:** Memória de cálculo completa (FOB, FAS, Frete, ANTT, Tributos e Margens).
+  - **Comparador:** Quadro comparativo de todas as propostas analisadas com receitas totais do lote.
+  - **Matriz de Sensibilidade:** Grade regional de praças com fretes e margens líquidas.
+
+---
+
+### 3. Checklist Obrigatório de Mesa: As 7 Validações Mandatórias
+
+Antes de confirmar qualquer compra e emitir a boleta no balcão da trading, o operador deve validar rigorosamente os 7 itens abaixo:
 
 ```text
 ================================================================================
-          CHECKLIST DE MESA: 6 VALIDAÇÕES MANDATÓRIAS ANTES DO FECHAMENTO
+          CHECKLIST DE MESA: 7 VALIDAÇÕES MANDATÓRIAS ANTES DO FECHAMENTO
 ================================================================================
 [ ] 1. STATUS DECISION_READY ATIVO
        A cotação possui origin_axis=OBSERVED e freshness_axis=CURRENT?
        (Proibido executar compras reais com dados em DEMO, UNVERIFIED ou STALE sem autorização).
 
-[ ] 2. REGISTRO DE LINHAGEM E IDENTIFICADOR ÚNICO
-       O parity_run_id foi gerado e registrado no terminal para auditoria de proveniência (W3C PROV)?
+[ ] 2. REGISTRO DE LINHAGEM E IDENTIFICADOR ÚNICO (W3C PROV)
+       O parity_run_id foi gerado e registrado para comprovação formal de procedência e auditoria?
 
 [ ] 3. TRAVA SIMULTÂNEA DE FUTUROS E CÂMBIO (HEDGE)
-       A perna CBOT/B3 e o Câmbio Pronto / NDF foram travados imediatamente para eliminar risco de mercado?
+       A perna de commodity (CBOT ou B3) e o Câmbio Pronto / NDF foram travados imediatamente para eliminar risco de mercado?
 
-[ ] 4. JANELA PORTUÁRIA & FRETE RODOVIÁRIO CONFIRMADOS
-       A tarifa de frete está formalizada com a transportadora e a janela de entrega bate com o line-up do navio?
+[ ] 4. CONFORMIDADE COM PISO MÍNIMO ANTT (LEI Nº 13.703/2018)
+       A tarifa de frete da rota foi verificada e apresenta status ABOVE_FLOOR?
+       (Evitar risco de autuação e indenização em dobro por infração ao piso regulatório).
 
-[ ] 5. CONFORMIDADE FISCAL E FUNDOS ESTADUAIS
-       Produtor está regular na SEFAZ e os recolhimentos de FETHAB, FUNDEINFRA ou Funrural estão calculados?
+[ ] 5. JANELA PORTUÁRIA & FRETE RODOVIÁRIO CONFIRMADOS
+       A transportadora confirmou o agendamento de caminhões e o prazo coincide com o line-up do navio no porto?
 
-[ ] 6. MARGEM MÍNIMA DA TRADING PRESERVADA
-       A margem comercial da empresa (mínimo USD 2,00/t no perfil padrão) e o modelo de corretagem estão resguardados?
+[ ] 6. FUNDOS TRIBUTÁRIOS ESTADUAIS & MARGEM DA TRADING
+       Produtor está regular na SEFAZ, o fundo estadual (FETHAB/FUNDEINFRA/PRODEAGRO) e a margem mínima da empresa (mín. USD 2,00/t) foram garantidos?
+
+[ ] 7. EMISSÃO E ARQUIVAMENTO DA BOLETA FORMAL (TRADE TICKET)
+       A Boleta BOL-YYYYMMDD foi gerada com dados completos das partes, especificação ANEC, enviada ao vendedor e salva no histórico da empresa?
 ================================================================================
 ```

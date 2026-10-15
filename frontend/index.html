@@ -3567,43 +3567,55 @@ th[aria-sort="descending"] .ux-sort-button::after { content:'↓'; margin-left:5
 </div>
 </div>
 </div>
-<!-- Quick Nav Grid (6 Passos) -->
-<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-<a class="p-3.5 bg-white border border-slate-200 rounded-xl hover:border-emerald-500 hover:shadow-sm transition block group" href="#manual-parity">
-<span class="text-xs font-bold text-slate-500 group-hover:text-emerald-700 flex items-center gap-1.5">
-<i class="w-4 h-4 text-emerald-600" data-lucide="calculator"></i> Passo 1
+<!-- Quick Nav Grid (8 Passos + Checklist) -->
+<div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5">
+<a class="p-3 bg-white border border-slate-200 rounded-xl hover:border-emerald-500 hover:shadow-sm transition block group" href="#manual-parity">
+<span class="text-[11px] font-bold text-slate-500 group-hover:text-emerald-700 flex items-center gap-1">
+<i class="w-3.5 h-3.5 text-emerald-600" data-lucide="calculator"></i> Passo 1
 </span>
-<span class="text-sm font-bold text-slate-800 block mt-1">Paridade FAS/FOB</span>
+<span class="text-xs font-bold text-slate-800 block mt-1 truncate">Paridade FAS/FOB</span>
 </a>
-<a class="p-3.5 bg-white border border-slate-200 rounded-xl hover:border-blue-500 hover:shadow-sm transition block group" href="#manual-broker">
-<span class="text-xs font-bold text-slate-500 group-hover:text-blue-700 flex items-center gap-1.5">
-<i class="w-4 h-4 text-blue-600" data-lucide="handshake"></i> Passo 2
+<a class="p-3 bg-white border border-slate-200 rounded-xl hover:border-blue-500 hover:shadow-sm transition block group" href="#manual-broker">
+<span class="text-[11px] font-bold text-slate-500 group-hover:text-blue-700 flex items-center gap-1">
+<i class="w-3.5 h-3.5 text-blue-600" data-lucide="handshake"></i> Passo 2
 </span>
-<span class="text-sm font-bold text-slate-800 block mt-1">Corretagem</span>
+<span class="text-xs font-bold text-slate-800 block mt-1 truncate">Corretagem</span>
 </a>
-<a class="p-3.5 bg-white border border-slate-200 rounded-xl hover:border-green-500 hover:shadow-sm transition block group" href="#manual-matrix">
-<span class="text-xs font-bold text-slate-500 group-hover:text-green-700 flex items-center gap-1.5">
-<i class="w-4 h-4 text-green-600" data-lucide="map-pin"></i> Passo 3
+<a class="p-3 bg-white border border-slate-200 rounded-xl hover:border-green-500 hover:shadow-sm transition block group" href="#manual-matrix">
+<span class="text-[11px] font-bold text-slate-500 group-hover:text-green-700 flex items-center gap-1">
+<i class="w-3.5 h-3.5 text-green-600" data-lucide="map-pin"></i> Passo 3
 </span>
-<span class="text-sm font-bold text-slate-800 block mt-1">Matriz Regional</span>
+<span class="text-xs font-bold text-slate-800 block mt-1 truncate">Matriz Praças</span>
 </a>
-<a class="p-3.5 bg-white border border-slate-200 rounded-xl hover:border-amber-500 hover:shadow-sm transition block group" href="#manual-carry">
-<span class="text-xs font-bold text-slate-500 group-hover:text-amber-700 flex items-center gap-1.5">
-<i class="w-4 h-4 text-amber-600" data-lucide="trending-up"></i> Passo 4
+<a class="p-3 bg-white border border-slate-200 rounded-xl hover:border-indigo-500 hover:shadow-sm transition block group" href="#manual-antt">
+<span class="text-[11px] font-bold text-slate-500 group-hover:text-indigo-700 flex items-center gap-1">
+<i class="w-3.5 h-3.5 text-indigo-600" data-lucide="shield-check"></i> Passo 4
 </span>
-<span class="text-sm font-bold text-slate-800 block mt-1">Carry Trade</span>
+<span class="text-xs font-bold text-slate-800 block mt-1 truncate">Piso ANTT</span>
 </a>
-<a class="p-3.5 bg-white border border-slate-200 rounded-xl hover:border-teal-500 hover:shadow-sm transition block group" href="#manual-transparency">
-<span class="text-xs font-bold text-slate-500 group-hover:text-teal-700 flex items-center gap-1.5">
-<i class="w-4 h-4 text-teal-600" data-lucide="shield-check"></i> Passo 5
+<a class="p-3 bg-white border border-slate-200 rounded-xl hover:border-teal-500 hover:shadow-sm transition block group" href="#manual-compare">
+<span class="text-[11px] font-bold text-slate-500 group-hover:text-teal-700 flex items-center gap-1">
+<i class="w-3.5 h-3.5 text-teal-600" data-lucide="scale"></i> Passo 5
 </span>
-<span class="text-sm font-bold text-slate-800 block mt-1">Transparência</span>
+<span class="text-xs font-bold text-slate-800 block mt-1 truncate">Bids Compra</span>
 </a>
-<a class="p-3.5 bg-white border border-slate-200 rounded-xl hover:border-purple-500 hover:shadow-sm transition block group" href="#manual-checklist">
-<span class="text-xs font-bold text-slate-500 group-hover:text-purple-700 flex items-center gap-1.5">
-<i class="w-4 h-4 text-purple-600" data-lucide="check-circle"></i> Passo 6
+<a class="p-3 bg-white border border-slate-200 rounded-xl hover:border-amber-500 hover:shadow-sm transition block group" href="#manual-carry">
+<span class="text-[11px] font-bold text-slate-500 group-hover:text-amber-700 flex items-center gap-1">
+<i class="w-3.5 h-3.5 text-amber-600" data-lucide="trending-up"></i> Passo 6
 </span>
-<span class="text-sm font-bold text-slate-800 block mt-1">Checklist Mesa</span>
+<span class="text-xs font-bold text-slate-800 block mt-1 truncate">Carry Trade</span>
+</a>
+<a class="p-3 bg-white border border-slate-200 rounded-xl hover:border-cyan-500 hover:shadow-sm transition block group" href="#manual-transparency">
+<span class="text-[11px] font-bold text-slate-500 group-hover:text-cyan-700 flex items-center gap-1">
+<i class="w-3.5 h-3.5 text-cyan-600" data-lucide="file-check-2"></i> Passo 7
+</span>
+<span class="text-xs font-bold text-slate-800 block mt-1 truncate">W3C PROV</span>
+</a>
+<a class="p-3 bg-white border border-slate-200 rounded-xl hover:border-emerald-500 hover:shadow-sm transition block group" href="#manual-ticket">
+<span class="text-[11px] font-bold text-slate-500 group-hover:text-emerald-700 flex items-center gap-1">
+<i class="w-3.5 h-3.5 text-emerald-600" data-lucide="file-check"></i> Passo 8
+</span>
+<span class="text-xs font-bold text-slate-800 block mt-1 truncate">Boleta &amp; Excel</span>
 </a>
 </div>
 <!-- SEÇÃO 1: FORMAÇÃO DE PREÇO E PARIDADE FAS/FOB -->
@@ -3811,191 +3823,405 @@ th[aria-sort="descending"] .ux-sort-button::after { content:'↓'; margin-left:5
 </div>
 </div>
 </div>
-<!-- SEÇÃO 4: DECISÃO DE CARRY TRADE & CURVA FORWARD -->
-<div class="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6" id="manual-carry">
-<div class="flex items-center space-x-3 pb-4 border-b border-slate-100">
-<div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-lg">4</div>
-<div>
-<h3 class="text-lg font-bold text-slate-900">Arbitragem Temporal, Curva Forward &amp; Custo de Carrego</h3>
-<p class="text-xs text-slate-500">Como analisar a estrutura a termo da safra e decidir entre vender no spot ou estocar para entrega futura.</p>
-</div>
-</div>
-<div class="space-y-6 text-sm text-slate-700">
-<!-- Conceito e Equação Fundamental -->
-<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-<div class="space-y-3 text-xs leading-relaxed">
-<p>
-                Ao originar grãos na colheita (ex: Março), o operador enfrenta o dilema: <strong>vender imediatamente no spot ou armazenar para entregar em contratos futuros (Maio, Julho, Agosto, Setembro)?</strong>
-</p>
-<div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
-<span class="font-bold text-slate-900 uppercase">Equação do Carry Líquido da Mesa</span>
-<div class="font-mono text-xs bg-white p-2.5 rounded border border-slate-200 text-slate-800 leading-relaxed">
-                  Spread Bruto Forward = Preço Forward - Preço Spot<br/>
-                  Custo Total Carrego = Custo Capital (CDI) + Armazenagem + Quebra<br/>
-                  Carry Líquido = Spread Bruto - Custo Total Carrego
+<!-- SEÇÃO 4: CONFORMIDADE COM PISO MÍNIMO ANTT & CONTRATOS PRIVADOS -->
+        <div class="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6" id="manual-antt">
+          <div class="flex items-center space-x-3 pb-4 border-b border-slate-100">
+            <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-800 flex items-center justify-center font-bold text-lg">4</div>
+            <div>
+              <h3 class="text-lg font-bold text-slate-900">Conformidade com Piso Regulatório ANTT &amp; Contratos Privados</h3>
+              <p class="text-xs text-slate-500">Gestão do risco jurídico do frete rodoviário (Lei 13.703/2018) e tarifas negociadas da trading.</p>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-slate-700">
+            <div class="space-y-3">
+              <h4 class="font-bold text-slate-900 text-xs uppercase tracking-wide flex items-center gap-1.5">
+                <i class="w-4 h-4 text-indigo-600" data-lucide="calculator"></i>
+                1. Fórmula do Piso Mínimo ANTT (Resolução nº 5.867/2020)
+              </h4>
+              <p class="text-xs text-slate-600 leading-relaxed">
+                A ANTT atualiza semestralmente a Política Nacional de Pisos Mínimos do Transporte Rodoviário de Cargas (PNPM-TRC) para carga lotação de granel sólido:
+              </p>
+              <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                <span class="font-bold text-slate-900 text-xs uppercase">Fórmula do Piso por Tonelada (R$/ton)</span>
+                <div class="font-mono text-xs bg-white p-2.5 rounded border border-slate-200 text-slate-800 leading-relaxed">
+                  Piso Mínimo (R$/ton) = [ (Distância em km × CCD) + CC ] / Capacidade Útil (ton)
                 </div>
-<ul class="text-[11px] text-slate-600 space-y-1 pt-1">
-<li>• <strong>Custo de Capital (CDI):</strong> \( P_{spot} \times ((1 + i_{mensal})^m - 1) \) — juros compostos sobre o capital empatado.</li>
-<li>• <strong>Armazenagem Física:</strong> \( Tarifa_{mês} \times m \) — cobrança em R$/saca/mês de armazém geral.</li>
-<li>• <strong>Quebra Técnica &amp; Seguro:</strong> Dedução de 0,20% a 0,30% por perdas de umidade e movimentação.</li>
-</ul>
-</div>
-</div>
-<!-- Critérios de Decisão de Mesa com 3 Limiares -->
-<div class="space-y-3 text-xs">
-<h4 class="font-bold text-slate-900 uppercase tracking-wide">Diretrizes de Ação da Mesa (3 Níveis de Recomendação):</h4>
-<div class="p-3 bg-green-50 rounded-xl border border-green-200 text-green-900 space-y-1">
-<div class="font-bold flex items-center gap-1.5">
-<i class="w-4 h-4 text-green-600" data-lucide="check-circle"></i>
-<span>SE Carry Líquido &gt; +R$ 0,75/sc: CARREGAR A POSIÇÃO</span>
-</div>
-<p class="text-[11px] leading-relaxed">
-                  O prêmio da curva futura cobre juros e armazém e gera rentabilidade líquida adicional com folga de segurança. <strong>Ação:</strong> Comprar no spot, travar a venda futura na B3/Exportação e alugar armazém credenciado.
+                <ul class="text-[11px] text-slate-600 space-y-1 pt-1">
+                  <li>• <strong>Bitrem 7 Eixos (37 ton úteis):</strong> CCD = R$ 4,9232/km | Custo Carga/Descarga (CC) = R$ 382,15</li>
+                  <li>• <strong>Rodotrem 9 Eixos (49 ton úteis):</strong> CCD = R$ 5,8410/km | Custo Carga/Descarga (CC) = R$ 435,50</li>
+                </ul>
+              </div>
+              <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-amber-950 space-y-1 text-xs">
+                <div class="font-bold flex items-center gap-1.5 text-amber-900">
+                  <i class="w-4 h-4 text-amber-600" data-lucide="alert-triangle"></i>
+                  <span>Alerta de Risco Jurídico (Art. 5º da Lei nº 13.703/2018):</span>
+                </div>
+                <p class="text-[11px] leading-relaxed">
+                  O contratante (trading/embarcador) que pagar frete inferior ao piso mínimo responderá pelo pagamento de <strong>indenização equivalente ao dobro da diferença devida</strong>.
                 </p>
-</div>
-<div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-amber-900 space-y-1">
-<div class="font-bold flex items-center gap-1.5">
-<i class="w-4 h-4 text-amber-600" data-lucide="help-circle"></i>
-<span>SE -R$ 0,75 ≤ Carry Líquido ≤ +R$ 0,75/sc: NEUTRO / INDIFERENTE</span>
-</div>
-<p class="text-[11px] leading-relaxed">
-                  O spread futuro empata rigorosamente com os custos financeiros e operacionais. <strong>Ação:</strong> Avaliar disponibilidade de capacidade estática do armazém e oportunidades logísticas antes de imobilizar capital.
+              </div>
+            </div>
+            <div class="space-y-3">
+              <h4 class="font-bold text-slate-900 text-xs uppercase tracking-wide flex items-center gap-1.5">
+                <i class="w-4 h-4 text-indigo-600" data-lucide="shield-check"></i>
+                2. Status Regulatório &amp; Contratos Privados de Frete
+              </h4>
+              <div class="space-y-2 text-xs">
+                <div class="p-2.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-900">
+                  <strong>ABOVE_FLOOR (Conforme):</strong> Frete contratado é superior ao piso legal. Contratação 100% segura sem risco de passivo trabalhista ou autuação ANTT.
+                </div>
+                <div class="p-2.5 rounded bg-red-50 border border-red-200 text-red-900">
+                  <strong>BELOW_FLOOR (Alerta Crítico):</strong> Tarifa abaixo do piso ANTT. O sistema emite alerta ostensivo e exige revisão antes da emissão da boleta.
+                </div>
+              </div>
+              <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2 text-xs">
+                <div class="font-bold text-slate-900 flex items-center gap-1.5">
+                  <i class="w-4 h-4 text-indigo-600" data-lucide="briefcase"></i>
+                  <span>Precedência dos Contratos Privados da Trading</span>
+                </div>
+                <p class="text-[11px] text-slate-600 leading-relaxed">
+                  Na aba <strong>"Minha Empresa"</strong>, a trading pode cadastrar contratos de longo prazo com transportadoras ou frotas parceiras (individualmente ou via JSON). Havendo contrato ativo para a rota (ex: Sorriso ➔ Santos), a tarifa contratada <strong>substitui automaticamente a cotação pública de mercado</strong> em todos os cálculos.
                 </p>
-</div>
-<div class="p-3 bg-red-50 rounded-xl border border-red-200 text-red-900 space-y-1">
-<div class="font-bold flex items-center gap-1.5">
-<i class="w-4 h-4 text-red-600" data-lucide="x-circle"></i>
-<span>SE Carry Líquido &lt; -R$ 0,75/sc: VENDER SPOT IMEDIATAMENTE</span>
-</div>
-<p class="text-[11px] leading-relaxed">
-                  Mercado em inversão (backwardation) ou com spread insuficiente. Estocar causa queima de caixa e prejuízo real. <strong>Ação:</strong> Liquidar o grão à vista no balcão e girar o estoque.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SEÇÃO 5: COMPARADOR DE PROPOSTAS DE VENDA & ARBITRAGEM DE BIDS -->
+        <div class="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6" id="manual-compare">
+          <div class="flex items-center space-x-3 pb-4 border-b border-slate-100">
+            <div class="w-10 h-10 rounded-xl bg-teal-100 text-teal-800 flex items-center justify-center font-bold text-lg">5</div>
+            <div>
+              <h3 class="text-lg font-bold text-slate-900">Comparador de Propostas de Venda &amp; Arbitragem de Bids</h3>
+              <p class="text-xs text-slate-500">Simulação de até 3 compradores simultâneos para maximizar a rentabilidade do lote do produtor.</p>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-slate-700">
+            <div class="space-y-3">
+              <h4 class="font-bold text-slate-900 text-xs uppercase tracking-wide flex items-center gap-1.5">
+                <i class="w-4 h-4 text-teal-600" data-lucide="scale"></i>
+                1. Dinâmica de Bids Múltiplos e Receita do Lote
+              </h4>
+              <p class="text-xs text-slate-600 leading-relaxed">
+                Ao receber propostas de múltiplos destinos ou tradings para o mesmo lote, o trader insere o volume total (ex: 10.000 sacas = 600 t) e compara os bids lado a lado:
+              </p>
+              <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                <span class="font-bold text-slate-900 text-xs uppercase">Equação de Decisão do Lote</span>
+                <div class="font-mono text-xs bg-white p-2.5 rounded border border-slate-200 text-slate-800 leading-relaxed">
+                  Receita Total do Lote (R$) = Volume (sacas) × Paridade Líquida Balcão (R$/sc)<br/>
+                  Vantagem Financeira no Lote = Receita Proposta Vencedora - Receita 2ª Colocada
+                </div>
+                <p class="text-[11px] text-slate-500">
+                  Pequenas diferenças de R$ 0,50 a R$ 1,50 por saca multiplicadas pelo lote representam dezenas de milhares de reais de ganho líquido imediato na originação.
                 </p>
-</div>
-</div>
-</div>
-<!-- Guia de Análise Visual e Estrutura a Termo -->
-<div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3 text-xs">
-<h4 class="font-bold text-slate-900 uppercase tracking-wide flex items-center space-x-2">
-<i class="w-4 h-4 text-blue-600" data-lucide="line-chart"></i>
-<span>Como Utilizar as Ferramentas da Plataforma na Prática</span>
-</h4>
-<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-<div class="bg-white p-3.5 rounded-lg border border-slate-200 space-y-1.5">
-<strong class="text-slate-900 font-bold block">1. Gráfico da Curva Temporal &amp; Ponto de Breakeven</strong>
-<p class="text-slate-600 leading-relaxed">
-                  No alternador <strong> Curva Temporal</strong>, observe o cruzamento da linha vermelha (Custo Total Acumulado) com a linha pontilhada verde (Spread Forward Travado):
+              </div>
+            </div>
+            <div class="space-y-3">
+              <h4 class="font-bold text-slate-900 text-xs uppercase tracking-wide flex items-center gap-1.5">
+                <i class="w-4 h-4 text-teal-600" data-lucide="award"></i>
+                2. Eleição da Vencedora &amp; Emissão da Boleta
+              </h4>
+              <div class="space-y-2 text-xs">
+                <div class="p-3 rounded-lg border border-emerald-200 bg-emerald-50/50 space-y-1.5">
+                  <div class="font-bold text-emerald-900 flex items-center gap-1.5">
+                    <i class="w-4 h-4 text-emerald-600" data-lucide="award"></i>
+                    <span>Destaque Automático da Proposta Vencedora</span>
+                  </div>
+                  <p class="text-[11px] text-emerald-800 leading-relaxed">
+                    O motor elege a proposta que entrega o maior valor líquido na fazenda (R$/saca e R$ Total do lote), detalhando o ganho incremental frente aos concorrentes.
+                  </p>
+                </div>
+                <div class="p-3 rounded-lg border border-slate-200 bg-slate-50 space-y-1.5">
+                  <div class="font-bold text-slate-900 flex items-center gap-1.5">
+                    <i class="w-4 h-4 text-blue-600" data-lucide="file-check"></i>
+                    <span>Emissão Direta da Boleta Formal</span>
+                  </div>
+                  <p class="text-[11px] text-slate-600 leading-relaxed">
+                    Ao clicar em <strong>"Emitir Boleta da Vencedora"</strong>, o operador transfere os dados exatos (volume, preço, frete, praça e porto) diretamente para a Boleta de Compra ANEC.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SEÇÃO 6: DECISÃO DE CARRY TRADE & CURVA FORWARD -->
+        <div class="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6" id="manual-carry">
+          <div class="flex items-center space-x-3 pb-4 border-b border-slate-100">
+            <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-lg">6</div>
+            <div>
+              <h3 class="text-lg font-bold text-slate-900">Arbitragem Temporal, Curva Forward &amp; Custo de Carrego</h3>
+              <p class="text-xs text-slate-500">Como analisar a estrutura a termo da safra e decidir entre vender no spot ou estocar para entrega futura.</p>
+            </div>
+          </div>
+          <div class="space-y-6 text-sm text-slate-700">
+            <!-- Conceito e Equação Fundamental -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="space-y-3 text-xs leading-relaxed">
+                <p>
+                  Ao originar grãos na colheita (ex: Março), o operador enfrenta o dilema: <strong>vender imediatamente no spot ou armazenar para entregar em contratos futuros (Maio, Julho, Agosto, Setembro)?</strong>
                 </p>
-<ul class="list-disc list-inside text-slate-500 space-y-0.5 pt-1">
-<li><strong>À esquerda do cruzamento:</strong> O carrego é superavitário (lucro por antecipação).</li>
-<li><strong>Ponto de Cruzamento:</strong> Número máximo de meses em que o estoque se paga (breakeven temporal).</li>
-<li><strong>À direita do cruzamento:</strong> Os juros compostos do CDI superam o ganho travado no forward.</li>
-</ul>
-</div>
-<div class="bg-white p-3.5 rounded-lg border border-slate-200 space-y-1.5">
-<strong class="text-slate-900 font-bold block">2. Tabela de Estrutura a Termo Multi-Contratos</strong>
-<p class="text-slate-600 leading-relaxed">
-                  Consulte a tabela inferior para comparar simultaneamente os contratos da safra (<strong>Maio, Julho, Agosto, Setembro</strong>):
-                </p>
-<ul class="list-disc list-inside text-slate-500 space-y-0.5 pt-1">
-<li>Identifique qual vencimento oferece o maior <strong>Carry Líquido em R$/sc</strong>.</li>
-<li>Avalie a <strong>Rentabilidade Anualizada (% a.a.)</strong> para garantir que a operação supera a taxa livre de risco (Selic/CDI) com prêmio atrativo.</li>
-</ul>
-</div>
-</div>
-</div>
-</div>
-</div>
-<!-- SEÇÃO 5: POLÍTICA DE TRANSPARÊNCIA E RASTREABILIDADE (ADR-004 / W3C PROV) -->
-<div class="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6" id="manual-transparency">
-<div class="flex items-center space-x-3 pb-4 border-b border-slate-100">
-<div class="w-10 h-10 rounded-xl bg-teal-100 text-teal-800 flex items-center justify-center font-bold text-lg">5</div>
-<div>
-<h3 class="text-lg font-bold text-slate-900">Política de Transparência de Dados e Dois Eixos (ADR-004 / W3C PROV)</h3>
-<p class="text-xs text-slate-500">Governança obrigatória de procedência, frescor temporal e linhagem auditável de cotações.</p>
-</div>
-</div>
-<div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-slate-700">
-<div class="space-y-3">
-<h4 class="font-bold text-slate-900 text-xs uppercase tracking-wide flex items-center gap-1.5">
-<i class="w-4 h-4 text-teal-600" data-lucide="shield"></i> Eixo 1: Origem dos Dados (origin_axis)
-</h4>
-<div class="space-y-2 text-xs">
-<div class="p-2.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-900">
-<strong>OBSERVED (Apto p/ Decisão):</strong> Coletado diretamente de fonte oficial (BACEN PTAX, CME/CBOT, B3, CEPEA).
-</div>
-<div class="p-2.5 rounded bg-blue-50 border border-blue-200 text-blue-900">
-<strong>MANUAL / ESTIMATED:</strong> Ajustado por operador autorizado ou estimado por premissa matemática. Herda classificação no resultado.
-</div>
-<div class="p-2.5 rounded bg-red-50 border border-red-200 text-red-900">
-<strong>DEMO / UNVERIFIED (BLOQUEADO):</strong> Cotações de demonstração ou sem evidência auditável. <em>O motor de cálculo bloqueia a formação de preço real automaticamente.</em>
-</div>
-</div>
-</div>
-<div class="space-y-3">
-<h4 class="font-bold text-slate-900 text-xs uppercase tracking-wide flex items-center gap-1.5">
-<i class="w-4 h-4 text-teal-600" data-lucide="clock"></i> Eixo 2: Frescor Temporal Dinâmico (freshness_axis)
-</h4>
-<div class="space-y-2 text-xs">
-<div class="p-2.5 rounded bg-slate-50 border border-slate-200">
-<strong class="text-slate-900">CBOT / CME (20 min):</strong> Tolerância estrita de 20 minutos durante pregão ativo (ou até próxima abertura).
-</div>
-<div class="p-2.5 rounded bg-slate-50 border border-slate-200">
-<strong class="text-slate-900">PTAX BCB:</strong> Válido até o próximo boletim oficial divulgado pelo Banco Central.
-</div>
-<div class="p-2.5 rounded bg-slate-50 border border-slate-200">
-<strong class="text-slate-900">CEPEA &amp; Frete:</strong> Tolerância de 24 horas úteis (CEPEA) e 72 horas úteis (Tabelas de frete rodoviário).
-</div>
-</div>
-</div>
-</div>
-<div class="p-3.5 bg-teal-50 border border-teal-200 rounded-xl text-teal-950 text-xs flex items-center gap-2.5">
-<i class="w-5 h-5 text-teal-700 shrink-0" data-lucide="info"></i>
-<span><strong>Selo DECISION_READY:</strong> Concedido pelo motor exclusivamente quando <code>origin_axis = OBSERVED</code> e <code>freshness_axis = CURRENT</code>. Dados STALE exigem autorização explícita e não recebem o selo.</span>
-</div>
-</div>
-<!-- SEÇÃO 6: CHECKLIST OPERACIONAL -->
-<div class="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6" id="manual-checklist">
-<div class="flex items-center space-x-3 pb-4 border-b border-slate-100">
-<div class="w-10 h-10 rounded-xl bg-purple-100 text-purple-800 flex items-center justify-center font-bold text-lg">6</div>
-<div>
-<h3 class="text-lg font-bold text-slate-900">Checklist Operacional DECISION_READY: Antes de Bater o Martelo</h3>
-<p class="text-xs text-slate-500">6 validações obrigatórias para o operador de mesa antes de emitir a confirmação de compra.</p>
-</div>
-</div>
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 text-xs">
-<div class="p-4 bg-teal-50/70 rounded-xl border border-teal-200 space-y-2">
-<span class="w-6 h-6 rounded-full bg-teal-800 text-white flex items-center justify-center font-bold text-xs">1</span>
-<h5 class="font-bold text-slate-900">DECISION_READY</h5>
-<p class="text-slate-600 text-[11px]">Garantir origin=OBSERVED e freshness=CURRENT. Proibido fechar com DEMO/UNVERIFIED.</p>
-</div>
-<div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
-<span class="w-6 h-6 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs">2</span>
-<h5 class="font-bold text-slate-900">ID de Linhagem</h5>
-<p class="text-slate-500 text-[11px]">Verificar se o <code>parity_run_id</code> foi gerado e registrado para conformidade W3C PROV.</p>
-</div>
-<div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
-<span class="w-6 h-6 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs">3</span>
-<h5 class="font-bold text-slate-900">Futuros &amp; Câmbio</h5>
-<p class="text-slate-500 text-[11px]">Trava imediata de futuros na CBOT/B3 e NDF ou Câmbio Pronto para eliminar risco de mercado.</p>
-</div>
-<div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
-<span class="w-6 h-6 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs">4</span>
-<h5 class="font-bold text-slate-900">Frete &amp; Janela</h5>
-<p class="text-slate-500 text-[11px]">Verificar se o valor do frete rodoviário está travado e compatível com a janela portuária.</p>
-</div>
-<div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
-<span class="w-6 h-6 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs">5</span>
-<h5 class="font-bold text-slate-900">Fundo Estadual</h5>
-<p class="text-slate-500 text-[11px]">Confirmar regularidade do produtor na SEFAZ e recolhimento de FETHAB / FUNDEINFRA.</p>
-</div>
-<div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
-<span class="w-6 h-6 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs">6</span>
-<h5 class="font-bold text-slate-900">Margem da Mesa</h5>
-<p class="text-slate-500 text-[11px]">Garantir que a margem comercial mínima da trading (mínimo USD 2,00/t) foi preservada.</p>
-</div>
-</div>
-</div>
-</section>
+                <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                  <span class="font-bold text-slate-900 uppercase">Equação do Carry Líquido da Mesa</span>
+                  <div class="font-mono text-xs bg-white p-2.5 rounded border border-slate-200 text-slate-800 leading-relaxed">
+                    Spread Bruto Forward = Preço Forward - Preço Spot<br/>
+                    Custo Total Carrego = Custo Capital (CDI) + Armazenagem + Quebra<br/>
+                    Carry Líquido = Spread Bruto - Custo Total Carrego
+                  </div>
+                  <ul class="text-[11px] text-slate-600 space-y-1 pt-1">
+                    <li>• <strong>Custo de Capital (CDI):</strong> \( P_{spot} \times ((1 + i_{mensal})^m - 1) \) — juros compostos sobre o capital empatado.</li>
+                    <li>• <strong>Armazenagem Física:</strong> \( Tarifa_{mês} \times m \) — cobrança em R$/saca/mês de armazém geral.</li>
+                    <li>• <strong>Quebra Técnica &amp; Seguro:</strong> Dedução de 0,20% a 0,30% por perdas de umidade e movimentação.</li>
+                  </ul>
+                </div>
+              </div>
+              <!-- Critérios de Decisão de Mesa com 3 Limiares -->
+              <div class="space-y-3 text-xs">
+                <h4 class="font-bold text-slate-900 uppercase tracking-wide">Diretrizes de Ação da Mesa (3 Níveis de Recomendação):</h4>
+                <div class="p-3 bg-green-50 rounded-xl border border-green-200 text-green-900 space-y-1">
+                  <div class="font-bold flex items-center gap-1.5">
+                    <i class="w-4 h-4 text-green-600" data-lucide="check-circle"></i>
+                    <span>SE Carry Líquido &gt; +R$ 0,75/sc: CARREGAR A POSIÇÃO</span>
+                  </div>
+                  <p class="text-[11px] leading-relaxed">
+                    O prêmio da curva futura cobre juros e armazém e gera rentabilidade líquida adicional com folga de segurança. <strong>Ação:</strong> Comprar no spot, travar a venda futura na B3/Exportação e alugar armazém credenciado.
+                  </p>
+                </div>
+                <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-amber-900 space-y-1">
+                  <div class="font-bold flex items-center gap-1.5">
+                    <i class="w-4 h-4 text-amber-600" data-lucide="help-circle"></i>
+                    <span>SE -R$ 0,75 ≤ Carry Líquido ≤ +R$ 0,75/sc: NEUTRO / INDIFERENTE</span>
+                  </div>
+                  <p class="text-[11px] leading-relaxed">
+                    O spread futuro empata rigorosamente com os custos financeiros e operacionais. <strong>Ação:</strong> Avaliar disponibilidade de capacidade estática do armazém e oportunidades logísticas antes de imobilizar capital.
+                  </p>
+                </div>
+                <div class="p-3 bg-red-50 rounded-xl border border-red-200 text-red-900 space-y-1">
+                  <div class="font-bold flex items-center gap-1.5">
+                    <i class="w-4 h-4 text-red-600" data-lucide="x-circle"></i>
+                    <span>SE Carry Líquido &lt; -R$ 0,75/sc: VENDER SPOT IMEDIATAMENTE</span>
+                  </div>
+                  <p class="text-[11px] leading-relaxed">
+                    Mercado em inversão (backwardation) ou com spread insuficiente. Estocar causa queima de caixa e prejuízo real. <strong>Ação:</strong> Liquidar o grão à vista no balcão e girar o estoque.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <!-- Guia de Análise Visual e Estrutura a Termo -->
+            <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3 text-xs">
+              <h4 class="font-bold text-slate-900 uppercase tracking-wide flex items-center space-x-2">
+                <i class="w-4 h-4 text-blue-600" data-lucide="line-chart"></i>
+                <span>Como Utilizar as Ferramentas da Plataforma na Prática</span>
+              </h4>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-white p-3.5 rounded-lg border border-slate-200 space-y-1.5">
+                  <strong class="text-slate-900 font-bold block">1. Gráfico da Curva Temporal &amp; Ponto de Breakeven</strong>
+                  <p class="text-slate-600 leading-relaxed">
+                    No alternador <strong> Curva Temporal</strong>, observe o cruzamento da linha vermelha (Custo Total Acumulado) com a linha pontilhada verde (Spread Forward Travado):
+                  </p>
+                  <ul class="list-disc list-inside text-slate-500 space-y-0.5 pt-1">
+                    <li><strong>À esquerda do cruzamento:</strong> O carrego é superavitário (lucro por antecipação).</li>
+                    <li><strong>Ponto de Cruzamento:</strong> Número máximo de meses em que o estoque se paga (breakeven temporal).</li>
+                    <li><strong>À direita do cruzamento:</strong> Os juros compostos do CDI superam o ganho travado no forward.</li>
+                  </ul>
+                </div>
+                <div class="bg-white p-3.5 rounded-lg border border-slate-200 space-y-1.5">
+                  <strong class="text-slate-900 font-bold block">2. Tabela de Estrutura a Termo Multi-Contratos</strong>
+                  <p class="text-slate-600 leading-relaxed">
+                    Consulte a tabela inferior para comparar simultaneamente os contratos da safra (<strong>Maio, Julho, Agosto, Setembro</strong>):
+                  </p>
+                  <ul class="list-disc list-inside text-slate-500 space-y-0.5 pt-1">
+                    <li>Identifique qual vencimento oferece o maior <strong>Carry Líquido em R$/sc</strong>.</li>
+                    <li>Avalie a <strong>Rentabilidade Anualizada (% a.a.)</strong> para garantir que a operação supera a taxa livre de risco (Selic/CDI) com prêmio atrativo.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SEÇÃO 7: POLÍTICA DE TRANSPARÊNCIA E RASTREABILIDADE (ADR-004 / W3C PROV) -->
+        <div class="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6" id="manual-transparency">
+          <div class="flex items-center space-x-3 pb-4 border-b border-slate-100">
+            <div class="w-10 h-10 rounded-xl bg-cyan-100 text-cyan-800 flex items-center justify-center font-bold text-lg">7</div>
+            <div>
+              <h3 class="text-lg font-bold text-slate-900">Política de Transparência de Dados e Dois Eixos (ADR-004 / W3C PROV)</h3>
+              <p class="text-xs text-slate-500">Governança obrigatória de procedência, frescor temporal e linhagem auditável de cotações.</p>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-slate-700">
+            <div class="space-y-3">
+              <h4 class="font-bold text-slate-900 text-xs uppercase tracking-wide flex items-center gap-1.5">
+                <i class="w-4 h-4 text-cyan-600" data-lucide="shield"></i> Eixo 1: Origem dos Dados (origin_axis)
+              </h4>
+              <div class="space-y-2 text-xs">
+                <div class="p-2.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-900">
+                  <strong>OBSERVED (Apto p/ Decisão):</strong> Coletado diretamente de fonte oficial (BACEN PTAX, CME/CBOT, B3, CEPEA).
+                </div>
+                <div class="p-2.5 rounded bg-blue-50 border border-blue-200 text-blue-900">
+                  <strong>MANUAL / ESTIMATED:</strong> Ajustado por operador autorizado ou estimado por premissa matemática. Herda classificação no resultado.
+                </div>
+                <div class="p-2.5 rounded bg-red-50 border border-red-200 text-red-900">
+                  <strong>DEMO / UNVERIFIED (BLOQUEADO):</strong> Cotações de demonstração ou sem evidência auditável. <em>O motor de cálculo bloqueia a formação de preço real automaticamente.</em>
+                </div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <h4 class="font-bold text-slate-900 text-xs uppercase tracking-wide flex items-center gap-1.5">
+                <i class="w-4 h-4 text-cyan-600" data-lucide="clock"></i> Eixo 2: Frescor Temporal Dinâmico (freshness_axis)
+              </h4>
+              <div class="space-y-2 text-xs">
+                <div class="p-2.5 rounded bg-slate-50 border border-slate-200">
+                  <strong class="text-slate-900">CBOT / CME (20 min):</strong> Tolerância estrita de 20 minutos durante pregão ativo (ou até próxima abertura).
+                </div>
+                <div class="p-2.5 rounded bg-slate-50 border border-slate-200">
+                  <strong class="text-slate-900">PTAX BCB:</strong> Válido até o próximo boletim oficial divulgado pelo Banco Central.
+                </div>
+                <div class="p-2.5 rounded bg-slate-50 border border-slate-200">
+                  <strong class="text-slate-900">CEPEA &amp; Frete:</strong> Tolerância de 24 horas úteis (CEPEA) e 72 horas úteis (Tabelas de frete rodoviário).
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="p-3.5 bg-cyan-50 border border-cyan-200 rounded-xl text-cyan-950 text-xs flex items-center gap-2.5">
+            <i class="w-5 h-5 text-cyan-700 shrink-0" data-lucide="info"></i>
+            <span><strong>Selo DECISION_READY:</strong> Concedido pelo motor exclusivamente quando <code>origin_axis = OBSERVED</code> e <code>freshness_axis = CURRENT</code>. Dados STALE exigem autorização explícita e não recebem o selo.</span>
+          </div>
+        </div>
+
+        <!-- SEÇÃO 8: FORMALIZAÇÃO OPERACIONAL: BOLETA DE COMPRA & EXPORTAÇÃO EXCEL -->
+        <div class="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6" id="manual-ticket">
+          <div class="flex items-center space-x-3 pb-4 border-b border-slate-100">
+            <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-lg">8</div>
+            <div>
+              <h3 class="text-lg font-bold text-slate-900">Formalização Operacional: Emissão da Boleta &amp; Exportadores Excel</h3>
+              <p class="text-xs text-slate-500">Padrão ANEC, numeração sequencial auditável BOL-YYYYMMDD, impressão A4 print-ready e relatórios .csv.</p>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-slate-700">
+            <div class="space-y-3">
+              <h4 class="font-bold text-slate-900 text-xs uppercase tracking-wide flex items-center gap-1.5">
+                <i class="w-4 h-4 text-emerald-600" data-lucide="file-check"></i>
+                1. Emissão da Boleta Formal de Compra (Trade Ticket)
+              </h4>
+              <p class="text-xs text-slate-600 leading-relaxed">
+                Após fechar as condições no balcão da calculadora ou do comparador, o operador clica em <strong>"Emitir Boleta"</strong> para registrar a negociação:
+              </p>
+              <div class="space-y-2 text-xs">
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5">
+                  <strong class="text-slate-900 block font-bold">Padrão Contratual ANEC &amp; Qualidade</strong>
+                  <p class="text-slate-600 text-[11px] leading-relaxed">
+                    Especificação técnica de grãos padrão exportação: Umidade máxima 14,0%, Impurezas máximas 1,0%, Grãos Avariados máximos 8,0% (Queimados máx 0,5%).
+                  </p>
+                </div>
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5">
+                  <strong class="text-slate-900 block font-bold">Numeração Auditável: BOL-YYYYMMDD-XXXXXX</strong>
+                  <p class="text-slate-600 text-[11px] leading-relaxed">
+                    Cada boleta grava o <code>parity_run_id</code> W3C PROV, referências de CBOT, Dólar PTAX, Frete, Selo DECISION_READY e dados completos do produtor/corretor.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <h4 class="font-bold text-slate-900 text-xs uppercase tracking-wide flex items-center gap-1.5">
+                <i class="w-4 h-4 text-emerald-600" data-lucide="share-2"></i>
+                2. Canais de Formalização e Exportação Excel
+              </h4>
+              <div class="space-y-2 text-xs">
+                <div class="p-2.5 rounded bg-blue-50 border border-blue-200 text-blue-900 flex items-start gap-2">
+                  <i class="w-4 h-4 text-blue-600 mt-0.5 shrink-0" data-lucide="printer"></i>
+                  <div>
+                    <strong>Impressão / PDF A4 Print-Ready:</strong> Estilo de impressão dedicado isola o formulário com papel timbrado, logotipo e linhas de assinatura das partes.
+                  </div>
+                </div>
+                <div class="p-2.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-900 flex items-start gap-2">
+                  <i class="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" data-lucide="message-square"></i>
+                  <div>
+                    <strong>Cópia WhatsApp Formatada:</strong> Formata e copia o texto da boleta com um clique para envio rápido ao vendedor ou corretor.
+                  </div>
+                </div>
+                <div class="p-2.5 rounded bg-slate-50 border border-slate-200 text-slate-800 flex items-start gap-2">
+                  <i class="w-4 h-4 text-slate-600 mt-0.5 shrink-0" data-lucide="file-spreadsheet"></i>
+                  <div>
+                    <strong>Exportadores Excel (.csv UTF-8 com BOM):</strong> Botões dedicados nas abas Paridade, Comparador e Matriz exportam memórias de cálculo completas abertas nativamente no Excel sem falhas de acentuação.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SEÇÃO CHECKLIST: AS 7 VALIDAÇÕES MANDATÓRIAS -->
+        <div class="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6" id="manual-checklist">
+          <div class="flex items-center space-x-3 pb-4 border-b border-slate-100">
+            <div class="w-10 h-10 rounded-xl bg-purple-100 text-purple-800 flex items-center justify-center font-bold text-lg">
+              <i class="w-5 h-5 text-purple-700" data-lucide="check-square"></i>
+            </div>
+            <div>
+              <h3 class="text-lg font-bold text-slate-900">Checklist Operacional DECISION_READY: As 7 Validações Mandatórias</h3>
+              <p class="text-xs text-slate-500">7 validações obrigatórias para o operador de mesa antes de emitir a confirmação de compra e a boleta.</p>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3 text-xs">
+            <div class="p-3.5 bg-teal-50/70 rounded-xl border border-teal-200 space-y-1.5 flex flex-col justify-between">
+              <div>
+                <span class="w-6 h-6 rounded-full bg-teal-800 text-white flex items-center justify-center font-bold text-xs mb-1">1</span>
+                <h5 class="font-bold text-slate-900">DECISION_READY</h5>
+                <p class="text-slate-600 text-[11px] leading-relaxed mt-1">origin=OBSERVED e freshness=CURRENT. Proibido fechar com DEMO/UNVERIFIED.</p>
+              </div>
+              <span class="text-[10px] font-bold text-teal-800 uppercase tracking-wide">Dados Confiáveis</span>
+            </div>
+            <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5 flex flex-col justify-between">
+              <div>
+                <span class="w-6 h-6 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs mb-1">2</span>
+                <h5 class="font-bold text-slate-900">ID de Linhagem</h5>
+                <p class="text-slate-500 text-[11px] leading-relaxed mt-1">Verificar se o <code>parity_run_id</code> foi registrado para conformidade W3C PROV.</p>
+              </div>
+              <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Rastreabilidade</span>
+            </div>
+            <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5 flex flex-col justify-between">
+              <div>
+                <span class="w-6 h-6 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs mb-1">3</span>
+                <h5 class="font-bold text-slate-900">Hedge e Câmbio</h5>
+                <p class="text-slate-500 text-[11px] leading-relaxed mt-1">Trava simultânea na CBOT/B3 e Câmbio Pronto/NDF para zerar risco de mercado.</p>
+              </div>
+              <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Mercado</span>
+            </div>
+            <div class="p-3.5 bg-indigo-50/70 rounded-xl border border-indigo-200 space-y-1.5 flex flex-col justify-between">
+              <div>
+                <span class="w-6 h-6 rounded-full bg-indigo-800 text-white flex items-center justify-center font-bold text-xs mb-1">4</span>
+                <h5 class="font-bold text-slate-900">Piso ANTT</h5>
+                <p class="text-slate-600 text-[11px] leading-relaxed mt-1">Frete em status ABOVE_FLOOR (Lei 13.703/18) para evitar risco de indenização em dobro.</p>
+              </div>
+              <span class="text-[10px] font-bold text-indigo-800 uppercase tracking-wide">Regulatório</span>
+            </div>
+            <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5 flex flex-col justify-between">
+              <div>
+                <span class="w-6 h-6 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs mb-1">5</span>
+                <h5 class="font-bold text-slate-900">Frete &amp; Janela</h5>
+                <p class="text-slate-500 text-[11px] leading-relaxed mt-1">Transportadora confirmada e agendamento compatível com o line-up do navio no porto.</p>
+              </div>
+              <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Logística</span>
+            </div>
+            <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5 flex flex-col justify-between">
+              <div>
+                <span class="w-6 h-6 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs mb-1">6</span>
+                <h5 class="font-bold text-slate-900">Fundos &amp; Margem</h5>
+                <p class="text-slate-500 text-[11px] leading-relaxed mt-1">Produtor regular na SEFAZ (FETHAB/FUNDEINFRA) e margem mín. da trading preservada.</p>
+              </div>
+              <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Fiscal &amp; Mesa</span>
+            </div>
+            <div class="p-3.5 bg-emerald-50/70 rounded-xl border border-emerald-200 space-y-1.5 flex flex-col justify-between">
+              <div>
+                <span class="w-6 h-6 rounded-full bg-emerald-800 text-white flex items-center justify-center font-bold text-xs mb-1">7</span>
+                <h5 class="font-bold text-slate-900">Trade Ticket</h5>
+                <p class="text-slate-600 text-[11px] leading-relaxed mt-1">Boleta BOL-YYYYMMDD emitida com padrão ANEC, enviada ao vendedor e arquivada.</p>
+              </div>
+              <span class="text-[10px] font-bold text-emerald-800 uppercase tracking-wide">Formalização</span>
+            </div>
+          </div>
+        </div>
+      </section>
 <!-- MODAL: MATRIZ COMPARATIVA DE CUSTOS PORTUÁRIOS -->
 <!-- MODAL: MATRIZ DE FUNDOS TRIBUTÁRIOS ESTADUAIS -->
 <!-- MODAL: SALVAR CENÁRIO DE PARIDADE (TICKET U03) -->
