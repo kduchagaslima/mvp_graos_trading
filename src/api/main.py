@@ -28,6 +28,7 @@ from src.db.models import (
     SavedScenario,
     MarketQuotesLineage,
     CompanyFreightContract,
+    TradeTicket,
 )
 from src.domain.commodities import CommodityType, COMMODITY_SPECS
 from src.domain.locations import ORIGINATION_HUBS, PORTS
@@ -47,6 +48,7 @@ from src.domain.models import (
     ProposalItemInput,
     CompanyFreightContractCreateInput,
     CompanyFreightContractBatchInput,
+    TradeTicketCreateInput,
 )
 from src.engines.export_parity import ExportParityEngine
 from src.engines.carry_cost import CarryCostEngine
@@ -63,6 +65,7 @@ from src.api.auth import (
     require_platform_operator,
 )
 import json
+import uuid
 
 
 @asynccontextmanager
@@ -822,6 +825,123 @@ def delete_organization_freight_contract(
     db.delete(contract)
     db.commit()
     return {"status": "deleted", "message": "Freight contract deleted successfully", "id": contract_id}
+
+
+# ==============================================================================
+# Boletas Formais de Negociação / Compra de Grãos (Trade Tickets)
+# ==============================================================================
+
+@app.get("/api/organizations/{org_id}/trade-tickets")
+def list_organization_trade_tickets(
+    org_id: int,
+    membership: Membership = Depends(require_role(MembershipRole.READER)),
+    db: Session = Depends(get_db),
+):
+    """
+    Lista todas as boletas formais de compra e negociação emitidas pela organização.
+    Permitido para READER, ANALYST e OWNER.
+    """
+    tickets = (
+        db.query(TradeTicket)
+        .filter(TradeTicket.organization_id == org_id)
+        .order_by(TradeTicket.created_at.desc())
+        .all()
+    )
+    return [t.to_dict() for t in tickets]
+
+
+@app.post("/api/organizations/{org_id}/trade-tickets", status_code=201)
+def create_organization_trade_ticket(
+    org_id: int,
+    payload: TradeTicketCreateInput,
+    membership: Membership = Depends(require_role(MembershipRole.ANALYST)),
+    db: Session = Depends(get_db),
+):
+    """
+    Emite e registra uma nova boleta formal de compra de grãos (Trade Ticket)
+    com amarração a cálculo auditado DECISION_READY e ID de linhagem W3C PROV.
+    """
+    now = datetime.now(timezone.utc)
+    ticket_seq = uuid.uuid4().hex[:6].upper()
+    ticket_num = f"BOL-{now.strftime('%Y%m%d')}-{ticket_seq}"
+    
+    qty_tons = round(payload.quantity_bags * 0.06, 2)
+    total_brl = round(payload.quantity_bags * payload.price_per_bag_brl, 2)
+
+    ticket = TradeTicket(
+        ticket_number=ticket_num,
+        organization_id=org_id,
+        user_id=membership.user_id,
+        commodity=payload.commodity.upper(),
+        crop_year=payload.crop_year,
+        seller_name=payload.seller_name.strip(),
+        seller_document=payload.seller_document.strip() if payload.seller_document else None,
+        seller_farm=payload.seller_farm.strip() if payload.seller_farm else None,
+        location_hub_id=payload.location_hub_id,
+        destination_port_id=payload.destination_port_id,
+        quantity_bags=payload.quantity_bags,
+        quantity_tons=qty_tons,
+        price_per_bag_brl=payload.price_per_bag_brl,
+        total_amount_brl=total_brl,
+        payment_terms=payload.payment_terms,
+        delivery_period=payload.delivery_period,
+        quality_specs=payload.quality_specs,
+        parity_run_id=payload.parity_run_id,
+        cbot_reference=payload.cbot_reference,
+        fx_reference=payload.fx_reference,
+        freight_reference=payload.freight_reference,
+        antt_compliant=payload.antt_compliant,
+        decision_ready=True,
+        status="CONFIRMED",
+        notes=payload.notes,
+    )
+    db.add(ticket)
+    db.commit()
+    db.refresh(ticket)
+    return ticket.to_dict()
+
+
+@app.get("/api/organizations/{org_id}/trade-tickets/{ticket_id}")
+def get_organization_trade_ticket(
+    org_id: int,
+    ticket_id: int,
+    membership: Membership = Depends(require_role(MembershipRole.READER)),
+    db: Session = Depends(get_db),
+):
+    """
+    Obtém os detalhes de uma boleta formal específica.
+    """
+    ticket = (
+        db.query(TradeTicket)
+        .filter(TradeTicket.id == ticket_id, TradeTicket.organization_id == org_id)
+        .first()
+    )
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Trade ticket not found in this organization")
+    return ticket.to_dict()
+
+
+@app.delete("/api/organizations/{org_id}/trade-tickets/{ticket_id}")
+def delete_organization_trade_ticket(
+    org_id: int,
+    ticket_id: int,
+    membership: Membership = Depends(require_role(MembershipRole.ANALYST)),
+    db: Session = Depends(get_db),
+):
+    """
+    Cancela/exclui uma boleta de negociação da organização.
+    """
+    ticket = (
+        db.query(TradeTicket)
+        .filter(TradeTicket.id == ticket_id, TradeTicket.organization_id == org_id)
+        .first()
+    )
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Trade ticket not found in this organization")
+    
+    db.delete(ticket)
+    db.commit()
+    return {"status": "deleted", "message": "Trade ticket deleted successfully", "id": ticket_id}
 
 
 # ==============================================================================

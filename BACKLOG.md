@@ -15,7 +15,10 @@
 - [x] **Conectores Oficiais Gratuitos (BACEN, CBOT, B3 MDS, CEPEA/ESALQ):** Ingestão de cotações reais das fontes oficiais com classificação `OBSERVED`, preservando resiliência offline e sementes como fallback.
 - [x] **Tabela de Piso Mínimo Regulatório ANTT (Lei nº 13.703/2018 / Resolução nº 5.867/2020):** Cálculo oficial dos custos mínimos para granel sólido (Bitrem 7 eixos 37t e Rodotrem 9 eixos 49t), matriz de conformidade regulatória por corredor (`ABOVE_FLOOR` vs `BELOW_FLOOR`), endpoint `GET /api/freight/antt-floor`, KPI e modal explicativo no frontend.
 - [x] **Contratos Privados de Frete Rodoviário da Trading (Multi-tenant):** Tabela e migração versionada `007_company_freight_contracts.sql`, endpoints CRUD e batch em `/api/organizations/{org_id}/freight-contracts`, precedência da tabela privada sobre cotações públicas da mesa e UI completa em "Minha Empresa" (cadastro individual e importação em lote).
+- [x] **Boleta Formal de Negociação de Compra de Grãos (Trade Ticket):** Tabela e migração versionada `008_trade_tickets.sql`, endpoints REST em `/api/organizations/{org_id}/trade-tickets` (CRUD completo, RBAC e isolamento multi-tenant), amarração à linhagem W3C PROV e selo `DECISION_READY`, modal interativo com espelho A4 print-ready (`@media print`), cópia formal para WhatsApp e histórico auditável da mesa na aba "Minha Empresa".
+- [x] **Exportação de Relatórios e Memória de Cálculo para Excel (.csv):** Geração client-side em UTF-8 com BOM e delimitador `;` para abertura nativa e sem distorção no Microsoft Excel/Google Sheets nas abas de Paridade de Exportação, Comparador de Propostas e Matriz de Sensibilidade.
 
 ## Próximos Passos (Fase 3 - Futuro)
 - **Conectores Proprietários Pagos / Streaming Intraday:** Ingestão de dados de alta frequência via Webhook/WebSocket comercial (ex: Cedro, Barchart, CME FIX).
 - **Alarmes e Observabilidade:** Alertas no CloudWatch se cotações críticas ficarem STALE em horário comercial.
+- **Módulo Mercado Interno (Indústria/ICMS):** Alternância entre Paridade de Exportação e Consumo Doméstico com tratamento de créditos de ICMS.

@@ -233,3 +233,24 @@ class CompanyFreightContractBatchInput(BaseModel):
     contracts: List[CompanyFreightContractCreateInput] = Field(..., description="Lista de contratos de frete para importação em lote")
 
 
+class TradeTicketCreateInput(BaseModel):
+    commodity: str = Field(default="SOJA", description="Commodity (SOJA ou MILHO)")
+    crop_year: str = Field(default="2025/2026", description="Ano safra")
+    seller_name: str = Field(..., min_length=2, max_length=128, description="Nome do produtor / cooperativa / vendedor")
+    seller_document: Optional[str] = Field(default=None, description="CPF ou CNPJ do vendedor")
+    seller_farm: Optional[str] = Field(default=None, description="Nome da fazenda ou armazém de origem")
+    location_hub_id: str = Field(..., description="Hub de originação (ex: sorriso_mt)")
+    destination_port_id: str = Field(..., description="Porto ou terminal de destino (ex: STS, BCR)")
+    quantity_bags: float = Field(..., gt=0.0, description="Quantidade negociada em sacas de 60kg")
+    price_per_bag_brl: float = Field(..., gt=0.0, description="Preço fechado por saca em R$")
+    payment_terms: Optional[str] = Field(default="À vista contra entrega e classificação", description="Condição de pagamento")
+    delivery_period: Optional[str] = Field(default="Safra Corrente / Imediato", description="Período de entrega ou embarque")
+    quality_specs: Optional[str] = Field(default="Padrão Exportação ANEC: Umidade máx 14%, Impureza máx 1%, Avariados máx 8%", description="Especificações de qualidade")
+    parity_run_id: Optional[str] = Field(default=None, description="ID de rastreabilidade W3C PROV da paridade")
+    cbot_reference: Optional[float] = Field(default=None, description="Cotação CBOT de referência no momento")
+    fx_reference: Optional[float] = Field(default=None, description="Dólar PTAX de referência no momento")
+    freight_reference: Optional[float] = Field(default=None, description="Frete de referência R$/ton")
+    antt_compliant: bool = Field(default=True, description="Se cumpre o piso mínimo regulatório ANTT")
+    notes: Optional[str] = Field(default=None, description="Observações comerciais adicionais")
+
+

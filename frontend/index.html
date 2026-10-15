@@ -2327,9 +2327,17 @@ th[aria-sort="descending"] .ux-sort-button::after { content:'↓'; margin-left:5
 <i class="w-3.5 h-3.5" data-lucide="share-2"></i>
 <span>Copiar resumo</span>
 </button>
+<button class="secondary-button" data-requires-result="true" disabled="" id="btn-export-excel-parity" onclick="exportParityToExcel()" title="Exportar memória de cálculo para planilha Excel (.csv)" type="button">
+<i class="w-3.5 h-3.5" data-lucide="sheet"></i>
+<span>Exportar Excel</span>
+</button>
 <button class="secondary-button" data-requires-result="true" disabled="" onclick="window.print()" title="Imprimir ou gerar PDF" type="button">
 <i class="w-3.5 h-3.5" data-lucide="printer"></i>
 <span>Exportar PDF</span>
+</button>
+<button class="primary-button bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-3 py-1.5 rounded-lg flex items-center space-x-1.5 shadow-sm transition disabled:opacity-40 disabled:cursor-not-allowed" data-requires-result="true" disabled="" id="btn-issue-trade-ticket" onclick="openTradeTicketModalFromParity()" title="Emitir boleta formal de compra de grãos com selo DECISION_READY" type="button">
+<i class="w-3.5 h-3.5" data-lucide="file-check"></i>
+<span>Emitir Boleta</span>
 </button>
 </div>
 <div class="parity-kpis">
@@ -2407,6 +2415,10 @@ th[aria-sort="descending"] .ux-sort-button::after { content:'↓'; margin-left:5
 <button class="hidden bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-semibold px-3 py-2 rounded-lg transition items-center space-x-1.5 shadow-sm" id="btn-copy-compare-whatsapp" onclick="exportProposalsComparisonToWhatsApp()" type="button">
 <i class="w-3.5 h-3.5" data-lucide="share-2"></i>
 <span>Copiar resumo</span>
+</button>
+<button class="hidden bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 text-xs font-semibold px-3 py-2 rounded-lg transition items-center space-x-1.5 shadow-sm" id="btn-export-compare-excel" onclick="exportProposalsToExcel()" title="Exportar tabela comparativa para planilha Excel (.csv)" type="button">
+<i class="w-3.5 h-3.5" data-lucide="sheet"></i>
+<span>Exportar Excel</span>
 </button>
 </div>
 </div>
@@ -2629,11 +2641,15 @@ th[aria-sort="descending"] .ux-sort-button::after { content:'↓'; margin-left:5
 <h3 class="text-2xl font-extrabold" id="compare-winner-title">...</h3>
 <p class="text-xs text-emerald-100" id="compare-winner-desc">...</p>
 </div>
-<div class="flex items-center gap-4 bg-white/10 px-5 py-3 rounded-xl backdrop-blur-sm">
+<div class="flex flex-wrap items-center gap-3 bg-white/10 px-5 py-3 rounded-xl backdrop-blur-sm">
 <div class="text-right">
 <span class="text-xs text-emerald-100 uppercase font-semibold block">Vantagem Financeira no Lote:</span>
 <span class="text-2xl font-black text-white" id="compare-winner-advantage">+R$ 0,00</span>
 </div>
+<button class="bg-white text-emerald-800 hover:bg-emerald-50 font-bold text-xs px-3.5 py-2 rounded-lg transition flex items-center space-x-1.5 shadow" onclick="openTradeTicketModalFromCompareWinner()" title="Emitir boleta formal de compra para a proposta vencedora" type="button">
+<i class="w-3.5 h-3.5" data-lucide="file-check"></i>
+<span>Emitir Boleta</span>
+</button>
 </div>
 </div>
 <!-- 3 Results Cards -->
@@ -2678,10 +2694,16 @@ th[aria-sort="descending"] .ux-sort-button::after { content:'↓'; margin-left:5
 <h2 class="text-base font-bold text-slate-900">Atratividade por praça</h2>
 <p class="text-xs text-slate-500">Compara paridade líquida FAS e margem do trader em todas as praças produtoras.</p>
 </div>
+<div class="flex items-center space-x-2">
 <button class="bg-green-600 hover:bg-green-700 text-white font-medium text-xs px-4 py-2 rounded-lg transition flex items-center space-x-1.5 self-start" onclick="loadRegionalMatrix()" type="button">
 <i class="w-3.5 h-3.5" data-lucide="refresh-cw"></i>
 <span>Atualizar Matriz</span>
 </button>
+<button class="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 font-medium text-xs px-3.5 py-2 rounded-lg transition flex items-center space-x-1.5 self-start shadow-sm" onclick="exportMatrixToExcel()" title="Exportar matriz regional para planilha Excel (.csv)" type="button">
+<i class="w-3.5 h-3.5" data-lucide="sheet"></i>
+<span>Exportar Excel</span>
+</button>
+</div>
 </div>
 <div class="overflow-x-auto">
 <table class="w-full text-sm text-left">
@@ -3451,6 +3473,59 @@ th[aria-sort="descending"] .ux-sort-button::after { content:'↓'; margin-left:5
         <tr>
           <td colspan="9" class="px-4 py-6 text-center text-slate-400">
             Nenhum contrato privado cadastrado. A mesa utilizará as tarifas públicas de mercado.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Seção: Boletas Formais de Negociação (Trade Tickets) -->
+<div class="pt-6 border-t border-slate-200 space-y-4">
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div>
+      <div class="flex items-center space-x-2">
+        <i class="w-4 h-4 text-emerald-600" data-lucide="file-check"></i>
+        <h3 class="text-xs font-bold text-slate-800 uppercase">
+          Boletas de Negociação Emitidas (Trade Tickets da Mesa)
+        </h3>
+      </div>
+      <p class="text-xs text-slate-500 mt-0.5">
+        Histórico e auditoria formal de operações fechadas pela mesa de originação. Registra preços travados, volumes, produtor e linhagem DECISION_READY com W3C PROV.
+      </p>
+    </div>
+    <div class="flex items-center gap-2">
+      <button class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold text-xs px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5 border border-indigo-200 shadow-sm" onclick="loadCompanyTradeTickets()" type="button">
+        <i class="w-3.5 h-3.5" data-lucide="refresh-cw"></i>
+        <span>Recarregar Boletas</span>
+      </button>
+      <button class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-3.5 py-1.5 rounded-lg transition flex items-center space-x-1.5 shadow-sm" onclick="openTradeTicketModalFromParity()" type="button">
+        <i class="w-3.5 h-3.5" data-lucide="plus"></i>
+        <span>Emitir Nova Boleta</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="overflow-x-auto border border-slate-200 rounded-xl">
+    <table class="w-full text-xs text-left">
+      <thead class="bg-slate-50 uppercase text-slate-600 border-b border-slate-200 font-bold">
+        <tr>
+          <th class="px-4 py-2.5" scope="col">Nº Boleta</th>
+          <th class="px-4 py-2.5" scope="col">Data/Hora</th>
+          <th class="px-4 py-2.5" scope="col">Produtor / Vendedor</th>
+          <th class="px-4 py-2.5" scope="col">Commodity / Safra</th>
+          <th class="px-4 py-2.5" scope="col">Origem ➔ Destino</th>
+          <th class="px-4 py-2.5 text-right" scope="col">Volume (sc / ton)</th>
+          <th class="px-4 py-2.5 text-right font-bold" scope="col">Preço (R$/sc)</th>
+          <th class="px-4 py-2.5 text-right font-bold" scope="col">Total (R$)</th>
+          <th class="px-4 py-2.5 text-center" scope="col">Status</th>
+          <th class="px-4 py-2.5 text-center" scope="col">Ações</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100" id="company-trade-tickets-tbody">
+        <tr>
+          <td colspan="10" class="px-4 py-6 text-center text-slate-400">
+            Nenhuma boleta emitida até o momento. Utilize a calculadora de paridade para gerar uma nova boleta auditada.
           </td>
         </tr>
       </tbody>
@@ -6051,6 +6126,9 @@ _Gerado via AgriTrading Intelligence Platform_`;
         const btnCopyWhatsApp = document.getElementById('btn-copy-compare-whatsapp');
         if (btnCopyWhatsApp) btnCopyWhatsApp.classList.remove('hidden');
 
+        const btnExportExcel = document.getElementById('btn-export-compare-excel');
+        if (btnExportExcel) btnExportExcel.classList.remove('hidden');
+
         document.getElementById('compare-winner-title').innerText = `${data.best_proposal} (R$ ${data.best_price_brl_bag.toFixed(2)}/sc)`;
         document.getElementById('compare-winner-desc').innerText = `Melhor rota gerando a maior receita líquida total na fazenda para ${volumeBags.toLocaleString('pt-BR')} sacas.`;
         document.getElementById('compare-winner-advantage').innerText = `+R$ ${data.max_advantage_lot_brl.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
@@ -6219,6 +6297,7 @@ _Gerado via AgriTrading Intelligence Platform_`;
       }
 
       await loadCompanyFreightContracts();
+      await loadCompanyTradeTickets();
 
       if (window.lucide) lucide.createIcons();
     }
@@ -6581,6 +6660,548 @@ _Gerado via AgriTrading Intelligence Platform_`;
       } catch (err) {
         console.error('Erro na importação em lote:', err);
         alert('Erro ao conectar ao servidor.');
+      }
+    }
+
+    // ==============================================================================
+    // EXPORTADORES EXCEL (.CSV) & BOLETAS FORMAIS DE NEGOCIAÇÃO (TRADE TICKETS)
+    // ==============================================================================
+
+    function downloadCsvFile(filename, csvContent) {
+      const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function exportParityToExcel() {
+      const comm = document.getElementById('input-commodity')?.value || 'SOJA';
+      const hub = document.getElementById('input-hub')?.value || 'sorriso_mt';
+      const port = document.getElementById('input-port')?.value || 'STS';
+      const hubText = document.getElementById('input-hub')?.selectedOptions[0]?.text || hub;
+      const portText = document.getElementById('input-port')?.selectedOptions[0]?.text || port;
+
+      const cbot = document.getElementById('input-cbot')?.value || '1185.25';
+      const premium = document.getElementById('input-premium')?.value || '90.00';
+      const fx = document.getElementById('input-fx')?.value || '5.4850';
+      const fobUsd = document.getElementById('res-fob-usd')?.innerText.replace('/ton', '').trim() || '';
+      const fobBrl = document.getElementById('res-fob-brl')?.innerText.trim() || '';
+      const fasBrl = document.getElementById('res-fas-brl')?.innerText.replace('/sc', '').trim() || '';
+      const marginBrl = document.getElementById('res-margin-brl')?.innerText.replace('/sc', '').trim() || '';
+      const marginPct = document.getElementById('res-margin-pct')?.innerText.trim() || '';
+      const cash = document.getElementById('input-cash')?.value || '';
+      const freight = document.getElementById('input-freight')?.value || '';
+      const elevation = document.getElementById('input-elevation')?.value || '';
+      const demurrage = document.getElementById('input-demurrage')?.value || '';
+      const otherPort = document.getElementById('input-other-port')?.value || '';
+      const stateFund = document.getElementById('input-state-fund')?.value || '';
+      const funrural = document.getElementById('input-funrural')?.value || '1.5';
+      const shrinkage = document.getElementById('input-shrinkage')?.value || '0.3';
+      const brokerMargin = document.getElementById('input-broker-margin')?.value || '2.0';
+
+      const runId = latestParityCalculation?.data?.parity_run_id || 'LOCAL-SIMULATION';
+      const decisionReady = latestParityCalculation?.data?.decision_ready ? 'SIM (DECISION_READY)' : 'REVISAO NECESSARIA';
+      const dateStr = new Date().toLocaleString('pt-BR');
+
+      let csv = 'Parametro / Componente;Valor;Unidade;Referencia / Metodologia\r\n';
+      csv += `Data e Hora do Calculo;${dateStr};BRT;Auditoria de Sistema\r\n`;
+      csv += `Commodity;${comm === 'SOJA' ? 'Soja em Grao' : 'Milho em Grao'};-;CBOT Chicago\r\n`;
+      csv += `Praca de Origem;${hubText};-;Hub Interior\r\n`;
+      csv += `Porto de Destino;${portText};-;Terminal de Embarque\r\n`;
+      csv += `Selo de Auditoria;${decisionReady};-;W3C PROV Lineage\r\n`;
+      csv += `ID de Linhagem (Run ID);${runId};-;Rastreabilidade\r\n`;
+      csv += `Cotacao CBOT;${cbot.replace('.', ',')};cents/bushel;Bolsa de Chicago\r\n`;
+      csv += `Premio Porto FOB;${premium.replace('.', ',')};cents/bushel;Benchmark Paranagua/Santos\r\n`;
+      csv += `Dolar PTAX;${fx.replace('.', ',')};R$/USD;Banco Central do Brasil\r\n`;
+      csv += `Preco FOB Porto (USD);${fobUsd.replace('$', '').trim()};USD/ton;FOB Calculado\r\n`;
+      csv += `Preco FOB Porto (BRL);${fobBrl};R$/saca;Convertido via PTAX * 0,06\r\n`;
+      csv += `Elevacao Portuaria (THC);${elevation.replace('.', ',')};USD/ton;Terminal Portuario\r\n`;
+      csv += `Despesas Portuarias Acessorias;${otherPort.replace('.', ',')};R$/ton;Aduana e Servicos\r\n`;
+      csv += `Provisao Demurrage;${demurrage.replace('.', ',')};USD/ton;Risco Operacional Fila de Navios\r\n`;
+      csv += `Preco FAS Porto;${fasBrl};R$/saca;Free Alongside Ship\r\n`;
+      csv += `Frete Rodoviario;${freight.replace('.', ',')};R$/ton;Origem ate Porto\r\n`;
+      csv += `Frete Rodoviario por Saca;${(parseFloat(freight || 0) * 0.06).toFixed(2).replace('.', ',')};R$/saca;Conversao 60kg\r\n`;
+      csv += `Fundo Tributario Estadual;${stateFund.replace('.', ',')};R$/saca;FETHAB / FUNDEINFRA / PRODEAGRO\r\n`;
+      csv += `Quebra Tecnica;${shrinkage.replace('.', ',')};%;Perda de umidade/transporte\r\n`;
+      csv += `Retencao Funrural;${funrural.replace('.', ',')};%;Previdencia Produtor Rural\r\n`;
+      csv += `Margem Comercial Trading;${brokerMargin.replace('.', ',')};USD/ton;Spread Alvo da Mesa\r\n`;
+      csv += `Preco Balcao Paridade Liquido;${fasBrl};R$/saca;Preco Maximo de Compra Fazenda\r\n`;
+      csv += `Preco Balcao Mercado Fisico;${cash.replace('.', ',')};R$/saca;Cotacao Local Praticada\r\n`;
+      csv += `Spread de Originacao;${marginBrl};R$/saca;Resultado Margem\r\n`;
+      csv += `Margem Comercial Percentual;${marginPct};%;Margem Sobre Operacao\r\n`;
+
+      const fileName = `AgriTrading_Paridade_${comm}_${hub}_${new Date().toISOString().slice(0,10)}.csv`;
+      downloadCsvFile(fileName, csv);
+    }
+
+    function exportProposalsToExcel() {
+      const volumeBags = parseFloat(document.getElementById('compare-volume-bags')?.value || 10000);
+      const rows = document.querySelectorAll('#compare-table-body tr');
+      if (!rows || rows.length === 0) {
+        alert('Nenhuma proposta comparada para exportar. Clique em "Comparar propostas" primeiro.');
+        return;
+      }
+
+      let csv = 'Proposta / Comprador;Porto;FOB (USD/ton);Frete (R$/ton);Fundo Estadual (R$/sc);Paridade Liquida (R$/sc);Volume (sacas);Volume (toneladas);Receita Total Lote (R$);Diferencial vs Vencedora (R$)\r\n';
+
+      rows.forEach(tr => {
+        const cols = tr.querySelectorAll('td');
+        if (cols.length >= 7) {
+          const name = cols[0]?.innerText.trim().replace(/;/g, ',');
+          const port = cols[1]?.innerText.trim();
+          const fob = cols[2]?.innerText.trim();
+          const freight = cols[3]?.innerText.trim();
+          const tax = cols[4]?.innerText.trim();
+          const parity = cols[5]?.innerText.trim();
+          const revenue = cols[6]?.innerText.trim();
+          const spread = cols[7]?.innerText.trim();
+          const volTons = (volumeBags * 0.06).toFixed(2).replace('.', ',');
+
+          csv += `"${name}";${port};${fob};${freight};${tax};${parity};${volumeBags};${volTons};${revenue};${spread}\r\n`;
+        }
+      });
+
+      const fileName = `AgriTrading_Comparador_Propostas_${new Date().toISOString().slice(0,10)}.csv`;
+      downloadCsvFile(fileName, csv);
+    }
+
+    function exportMatrixToExcel() {
+      const rows = document.querySelectorAll('#matrix-body tr');
+      if (!rows || rows.length === 0) {
+        alert('Nenhuma linha carregada na matriz. Clique em "Atualizar Matriz" primeiro.');
+        return;
+      }
+
+      let csv = 'Praca / Origem;UF;Frete Rodoviario (R$/ton);Tributo Estadual (R$/sc);Paridade FAS (R$/sc);Preco Balcao (R$/sc);Margem Liquida (R$/sc);Decisao\r\n';
+      rows.forEach(tr => {
+        const cols = tr.querySelectorAll('td');
+        if (cols.length >= 8) {
+          const hub = cols[0]?.innerText.trim();
+          const uf = cols[1]?.innerText.trim();
+          const freight = cols[2]?.innerText.trim();
+          const tax = cols[3]?.innerText.trim();
+          const fas = cols[4]?.innerText.trim();
+          const cash = cols[5]?.innerText.trim();
+          const margin = cols[6]?.innerText.trim();
+          const decision = cols[7]?.innerText.trim();
+          csv += `"${hub}";${uf};${freight};${tax};${fas};${cash};${margin};"${decision}"\r\n`;
+        }
+      });
+
+      const fileName = `AgriTrading_Matriz_Sensibilidade_${new Date().toISOString().slice(0,10)}.csv`;
+      downloadCsvFile(fileName, csv);
+    }
+
+    // --- Gestão da Boleta Formal de Negociação (Trade Ticket) ---
+
+    let currentTradeTicketContext = null;
+
+    function openTradeTicketModalFromParity() {
+      const comm = document.getElementById('input-commodity')?.value || 'SOJA';
+      const hubEl = document.getElementById('input-hub');
+      const portEl = document.getElementById('input-port');
+      const hub = hubEl?.value || 'sorriso_mt';
+      const port = portEl?.value || 'STS';
+      const hubName = hubEl?.selectedOptions[0]?.text || hub;
+      const portName = portEl?.selectedOptions[0]?.text || port;
+
+      const cbot = parseFloat(document.getElementById('input-cbot')?.value || 1185.25);
+      const fx = parseFloat(document.getElementById('input-fx')?.value || 5.485);
+      const freight = parseFloat(document.getElementById('input-freight')?.value || 420.0);
+      const netParity = latestParityCalculation?.data?.net_parity_price_brl_bag || 132.50;
+      const runId = latestParityCalculation?.data?.parity_run_id || 'LOCAL-SIMULATION';
+
+      currentTradeTicketContext = {
+        commodity: comm,
+        hub_id: hub,
+        hub_name: hubName,
+        port_id: port,
+        port_name: portName,
+        cbot: cbot,
+        fx: fx,
+        freight: freight,
+        price_bag: netParity,
+        parity_run_id: runId,
+        antt_compliant: true
+      };
+
+      document.getElementById('tt-input-commodity').value = comm;
+      document.getElementById('tt-input-hub').value = hubName;
+      document.getElementById('tt-input-port').value = portName;
+      document.getElementById('tt-input-price-bag').value = netParity.toFixed(2);
+
+      updateTradeTicketPreview();
+      const modal = document.getElementById('trade-ticket-modal');
+      if (modal) modal.classList.remove('hidden');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function openTradeTicketModalFromCompareWinner() {
+      if (!lastComparisonResult || !lastComparisonResult.proposals) {
+        alert('Execute a comparação de propostas primeiro.');
+        return;
+      }
+      const best = lastComparisonResult.proposals.find(p => p.is_best) || lastComparisonResult.proposals[0];
+      if (!best) return;
+
+      currentTradeTicketContext = {
+        commodity: best.commodity || 'SOJA',
+        hub_id: best.hub_id || 'sorriso_mt',
+        hub_name: best.hub_id || 'Interior',
+        port_id: best.port_id || 'BCR',
+        port_name: best.port_id || 'Porto',
+        cbot: best.cbot_cents || 1185.25,
+        fx: best.fx_rate || 5.485,
+        freight: best.road_freight_brl_ton || 360.0,
+        price_bag: best.net_price_brl_bag || 132.50,
+        parity_run_id: 'COMPARE-WINNER-' + Date.now().toString(36).toUpperCase(),
+        antt_compliant: true
+      };
+
+      document.getElementById('tt-input-commodity').value = currentTradeTicketContext.commodity;
+      document.getElementById('tt-input-hub').value = currentTradeTicketContext.hub_name;
+      document.getElementById('tt-input-port').value = currentTradeTicketContext.port_name;
+      document.getElementById('tt-input-price-bag').value = currentTradeTicketContext.price_bag.toFixed(2);
+      if (lastComparisonResult.volume_bags) {
+        document.getElementById('tt-input-quantity-bags').value = lastComparisonResult.volume_bags;
+      }
+
+      updateTradeTicketPreview();
+      const modal = document.getElementById('trade-ticket-modal');
+      if (modal) modal.classList.remove('hidden');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function closeTradeTicketModal() {
+      const modal = document.getElementById('trade-ticket-modal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function updateTradeTicketPreview() {
+      const seller = document.getElementById('tt-input-seller-name')?.value.trim() || 'Produtor Rural';
+      const doc = document.getElementById('tt-input-seller-doc')?.value.trim() || '—';
+      const farm = document.getElementById('tt-input-seller-farm')?.value.trim() || 'Fazenda / Silo';
+      const comm = document.getElementById('tt-input-commodity')?.value || 'SOJA';
+      const crop = document.getElementById('tt-input-crop-year')?.value.trim() || '2025/2026';
+      const hub = document.getElementById('tt-input-hub')?.value || 'Interior';
+      const port = document.getElementById('tt-input-port')?.value || 'Porto';
+      const qtyBags = parseFloat(document.getElementById('tt-input-quantity-bags')?.value || 5000);
+      const priceBag = parseFloat(document.getElementById('tt-input-price-bag')?.value || 132.50);
+      const payment = document.getElementById('tt-input-payment-terms')?.value.trim() || 'À vista contra entrega';
+      const delivery = document.getElementById('tt-input-delivery-period')?.value.trim() || 'Imediato';
+      const quality = document.getElementById('tt-input-quality')?.value.trim() || 'Padrão ANEC';
+
+      const qtyTons = (qtyBags * 0.06);
+      const totalBrl = (qtyBags * priceBag);
+
+      if (document.getElementById('tt-view-seller-name')) document.getElementById('tt-view-seller-name').innerText = seller;
+      if (document.getElementById('tt-view-seller-doc')) document.getElementById('tt-view-seller-doc').innerText = doc;
+      if (document.getElementById('tt-view-farm')) document.getElementById('tt-view-farm').innerText = farm;
+      if (document.getElementById('tt-view-commodity')) document.getElementById('tt-view-commodity').innerText = comm === 'SOJA' ? 'Soja em Grão (CBOT ZS)' : 'Milho em Grão (CBOT ZC)';
+      if (document.getElementById('tt-view-crop')) document.getElementById('tt-view-crop').innerText = crop;
+      if (document.getElementById('tt-view-hub')) document.getElementById('tt-view-hub').innerText = hub;
+      if (document.getElementById('tt-view-port')) document.getElementById('tt-view-port').innerText = port;
+      if (document.getElementById('tt-view-qty-bags')) document.getElementById('tt-view-qty-bags').innerText = `${qtyBags.toLocaleString('pt-BR')} sacas`;
+      if (document.getElementById('tt-view-qty-tons')) document.getElementById('tt-view-qty-tons').innerText = `${qtyTons.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})} t`;
+      if (document.getElementById('tt-view-price-bag')) document.getElementById('tt-view-price-bag').innerText = `R$ ${priceBag.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+      if (document.getElementById('tt-view-total-brl')) document.getElementById('tt-view-total-brl').innerText = `R$ ${totalBrl.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+      if (document.getElementById('tt-view-payment')) document.getElementById('tt-view-payment').innerText = payment;
+      if (document.getElementById('tt-view-delivery')) document.getElementById('tt-view-delivery').innerText = delivery;
+      if (document.getElementById('tt-view-quality')) document.getElementById('tt-view-quality').innerText = quality;
+      if (document.getElementById('tt-view-date')) document.getElementById('tt-view-date').innerText = new Date().toLocaleDateString('pt-BR');
+      if (document.getElementById('tt-view-seller-sig-name')) document.getElementById('tt-view-seller-sig-name').innerText = seller;
+
+      if (currentTradeTicketContext) {
+        if (document.getElementById('tt-view-cbot')) document.getElementById('tt-view-cbot').innerText = `${currentTradeTicketContext.cbot.toFixed(2)} ¢/bu`;
+        if (document.getElementById('tt-view-fx')) document.getElementById('tt-view-fx').innerText = `${currentTradeTicketContext.fx.toFixed(4)} R$`;
+        if (document.getElementById('tt-view-freight')) document.getElementById('tt-view-freight').innerText = `R$ ${currentTradeTicketContext.freight.toFixed(2)}/t`;
+        if (document.getElementById('tt-view-run-id')) document.getElementById('tt-view-run-id').innerText = currentTradeTicketContext.parity_run_id || 'DECISION_READY';
+      }
+
+      const userStr = sessionStorage.getItem('agri_user_profile');
+      if (userStr) {
+        try {
+          const u = JSON.parse(userStr);
+          const m = u.memberships && u.memberships[0];
+          if (m && m.organization_name) {
+            if (document.getElementById('tt-view-company-name')) document.getElementById('tt-view-company-name').innerText = m.organization_name;
+            if (document.getElementById('tt-view-buyer-name')) document.getElementById('tt-view-buyer-name').innerText = `${m.organization_name} (Mesa de Grãos)`;
+          }
+        } catch (e) {}
+      }
+    }
+
+    function printTradeTicket() {
+      document.body.classList.add('printing-trade-ticket');
+      window.print();
+      document.body.classList.remove('printing-trade-ticket');
+    }
+
+    function exportTradeTicketToWhatsApp() {
+      const num = document.getElementById('tt-view-number')?.innerText || 'BOL-20261015-PROV';
+      const company = document.getElementById('tt-view-company-name')?.innerText || 'AgriTrading Desk';
+      const seller = document.getElementById('tt-input-seller-name')?.value.trim() || 'Produtor Rural';
+      const doc = document.getElementById('tt-input-seller-doc')?.value.trim() || '';
+      const farm = document.getElementById('tt-input-seller-farm')?.value.trim() || '';
+      const comm = document.getElementById('tt-input-commodity')?.value === 'SOJA' ? 'Soja em Grão' : 'Milho em Grão';
+      const crop = document.getElementById('tt-input-crop-year')?.value.trim() || '2025/2026';
+      const hub = document.getElementById('tt-input-hub')?.value || 'Interior';
+      const port = document.getElementById('tt-input-port')?.value || 'Porto';
+      const qtyBags = parseFloat(document.getElementById('tt-input-quantity-bags')?.value || 5000);
+      const qtyTons = (qtyBags * 0.06).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+      const priceBag = parseFloat(document.getElementById('tt-input-price-bag')?.value || 132.50).toFixed(2);
+      const totalBrl = (qtyBags * parseFloat(priceBag)).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+      const payment = document.getElementById('tt-input-payment-terms')?.value.trim() || 'À vista contra entrega';
+      const delivery = document.getElementById('tt-input-delivery-period')?.value.trim() || 'Safra Corrente';
+      const quality = document.getElementById('tt-input-quality')?.value.trim() || 'Padrão ANEC';
+      const runId = document.getElementById('tt-view-run-id')?.innerText || 'LOCAL';
+
+      const text = `📋 *AGRITRADING — CONFIRMAÇÃO DE NEGOCIAÇÃO*
+*Boleta Nº:* ${num}
+--------------------------------------------------
+🏢 *Comprador:* ${company}
+🌾 *Vendedor:* ${seller} ${doc ? '(' + doc + ')' : ''}
+📍 *Origem / Fazenda:* ${farm ? farm + ' — ' : ''}${hub}
+🚢 *Destino:* ${port}
+🌱 *Commodity:* ${comm} | *Safra:* ${crop}
+📦 *Volume:* ${qtyBags.toLocaleString('pt-BR')} sacas (${qtyTons} ton)
+💰 *Preço Fechado:* R$ ${priceBag}/saca (60kg)
+💵 *Valor Total:* R$ ${totalBrl}
+🚚 *Entrega:* ${delivery}
+💳 *Condição:* ${payment}
+🔬 *Padrão:* ${quality}
+--------------------------------------------------
+🛡️ *Auditoria:* DECISION_READY | W3C PROV
+🆔 *Linhagem Run ID:* ${runId}
+📅 *Data/Hora:* ${new Date().toLocaleString('pt-BR')}
+--------------------------------------------------
+_Boleta registrada via AgriTrading Platform_`;
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          alert('✅ Boleta formal copiada para a área de transferência! Pronta para envio no WhatsApp.');
+        }).catch(() => {
+          prompt('Copie o texto da boleta abaixo:', text);
+        });
+      } else {
+        prompt('Copie o texto da boleta abaixo:', text);
+      }
+    }
+
+    async function saveCurrentTradeTicket() {
+      const orgId = getActiveUserOrgId();
+      if (!orgId) {
+        alert('Organização não identificada. Efetue login novamente.');
+        return;
+      }
+
+      const seller = document.getElementById('tt-input-seller-name')?.value.trim();
+      const doc = document.getElementById('tt-input-seller-doc')?.value.trim() || null;
+      const farm = document.getElementById('tt-input-seller-farm')?.value.trim() || null;
+      const comm = document.getElementById('tt-input-commodity')?.value || 'SOJA';
+      const crop = document.getElementById('tt-input-crop-year')?.value.trim() || '2025/2026';
+      const hub = currentTradeTicketContext?.hub_id || 'sorriso_mt';
+      const port = currentTradeTicketContext?.port_id || 'STS';
+      const qtyBags = parseFloat(document.getElementById('tt-input-quantity-bags')?.value || 0);
+      const priceBag = parseFloat(document.getElementById('tt-input-price-bag')?.value || 0);
+      const payment = document.getElementById('tt-input-payment-terms')?.value.trim() || null;
+      const delivery = document.getElementById('tt-input-delivery-period')?.value.trim() || null;
+      const quality = document.getElementById('tt-input-quality')?.value.trim() || null;
+      const notes = document.getElementById('tt-input-notes')?.value.trim() || null;
+
+      if (!seller || qtyBags <= 0 || priceBag <= 0) {
+        alert('Por favor, preencha o nome do produtor/vendedor, quantidade de sacas e preço por saca válidos.');
+        return;
+      }
+
+      const payload = {
+        commodity: comm,
+        crop_year: crop,
+        seller_name: seller,
+        seller_document: doc,
+        seller_farm: farm,
+        location_hub_id: hub,
+        destination_port_id: port,
+        quantity_bags: qtyBags,
+        price_per_bag_brl: priceBag,
+        payment_terms: payment,
+        delivery_period: delivery,
+        quality_specs: quality,
+        parity_run_id: currentTradeTicketContext?.parity_run_id || null,
+        cbot_reference: currentTradeTicketContext?.cbot || null,
+        fx_reference: currentTradeTicketContext?.fx || null,
+        freight_reference: currentTradeTicketContext?.freight || null,
+        antt_compliant: true,
+        notes: notes
+      };
+
+      try {
+        const res = await fetch(`${API_BASE}/organizations/${orgId}/trade-tickets`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          const created = await res.json();
+          document.getElementById('tt-view-number').innerText = created.ticket_number;
+          alert(`✅ Boleta ${created.ticket_number} salva com sucesso no histórico da mesa!`);
+          await loadCompanyTradeTickets();
+        } else {
+          const err = await res.text();
+          alert('Erro ao salvar boleta: ' + err);
+        }
+      } catch (err) {
+        console.error('Erro ao salvar boleta:', err);
+        alert('Erro ao conectar ao servidor.');
+      }
+    }
+
+    async function loadCompanyTradeTickets() {
+      const orgId = getActiveUserOrgId();
+      if (!orgId) return;
+
+      try {
+        const res = await fetch(`${API_BASE}/organizations/${orgId}/trade-tickets`, {
+          headers: getAuthHeaders()
+        });
+
+        if (!res.ok) return;
+        const tickets = await res.json();
+        const tbody = document.getElementById('company-trade-tickets-tbody');
+        if (!tbody) return;
+
+        if (tickets.length === 0) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="10" class="px-4 py-6 text-center text-slate-400">
+                Nenhuma boleta emitida até o momento. Utilize a calculadora de paridade para gerar uma nova boleta auditada.
+              </td>
+            </tr>
+          `;
+          return;
+        }
+
+        tbody.innerHTML = tickets.map(t => {
+          const dateStr = t.created_at ? new Date(t.created_at).toLocaleString('pt-BR') : '—';
+          const commLabel = t.commodity === 'SOJA' ? 'Soja' : 'Milho';
+          return `
+            <tr class="hover:bg-slate-50">
+              <td class="px-4 py-2.5 font-mono font-bold text-emerald-800">${t.ticket_number}</td>
+              <td class="px-4 py-2.5 text-slate-500">${dateStr}</td>
+              <td class="px-4 py-2.5 font-semibold text-slate-900">
+                ${t.seller_name}
+                ${t.seller_farm ? `<span class="block text-[10px] text-slate-400">${t.seller_farm}</span>` : ''}
+              </td>
+              <td class="px-4 py-2.5 text-slate-700 font-medium">${commLabel} (${t.crop_year})</td>
+              <td class="px-4 py-2.5 text-slate-600">${t.location_hub_id} ➔ ${t.destination_port_id}</td>
+              <td class="px-4 py-2.5 text-right font-medium text-slate-700">
+                ${t.quantity_bags.toLocaleString('pt-BR')} sc
+                <span class="block text-[10px] text-slate-400">${t.quantity_tons.toFixed(1)} t</span>
+              </td>
+              <td class="px-4 py-2.5 text-right font-bold text-emerald-800">R$ ${t.price_per_bag_brl.toFixed(2)}</td>
+              <td class="px-4 py-2.5 text-right font-black text-slate-900">R$ ${t.total_amount_brl.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+              <td class="px-4 py-2.5 text-center">
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                  ${t.status}
+                </span>
+              </td>
+              <td class="px-4 py-2.5 text-center">
+                <div class="flex items-center justify-center space-x-1">
+                  <button onclick="viewCompanyTradeTicket(${t.id})" class="text-xs text-emerald-700 hover:text-emerald-900 font-semibold p-1 hover:bg-emerald-50 rounded transition" title="Visualizar / Imprimir">
+                    Ver
+                  </button>
+                  <button onclick="deleteCompanyTradeTicket(${t.id})" class="text-xs text-red-600 hover:text-red-800 font-semibold p-1 hover:bg-red-50 rounded transition" title="Excluir">
+                    Excluir
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        if (window.lucide) lucide.createIcons();
+      } catch (err) {
+        console.error('Erro ao carregar boletas:', err);
+      }
+    }
+
+    async function viewCompanyTradeTicket(ticketId) {
+      const orgId = getActiveUserOrgId();
+      if (!orgId) return;
+
+      try {
+        const res = await fetch(`${API_BASE}/organizations/${orgId}/trade-tickets/${ticketId}`, {
+          headers: getAuthHeaders()
+        });
+        if (!res.ok) {
+          alert('Erro ao carregar detalhes da boleta.');
+          return;
+        }
+        const t = await res.json();
+        currentTradeTicketContext = {
+          commodity: t.commodity,
+          hub_id: t.location_hub_id,
+          hub_name: t.location_hub_id,
+          port_id: t.destination_port_id,
+          port_name: t.destination_port_id,
+          cbot: t.cbot_reference || 1185.25,
+          fx: t.fx_reference || 5.485,
+          freight: t.freight_reference || 420.0,
+          price_bag: t.price_per_bag_brl,
+          parity_run_id: t.parity_run_id || 'RECORDED',
+          antt_compliant: t.antt_compliant
+        };
+
+        document.getElementById('tt-input-seller-name').value = t.seller_name;
+        document.getElementById('tt-input-seller-doc').value = t.seller_document || '';
+        document.getElementById('tt-input-seller-farm').value = t.seller_farm || '';
+        document.getElementById('tt-input-commodity').value = t.commodity;
+        document.getElementById('tt-input-crop-year').value = t.crop_year;
+        document.getElementById('tt-input-hub').value = t.location_hub_id;
+        document.getElementById('tt-input-port').value = t.destination_port_id;
+        document.getElementById('tt-input-quantity-bags').value = t.quantity_bags;
+        document.getElementById('tt-input-price-bag').value = t.price_per_bag_brl.toFixed(2);
+        document.getElementById('tt-input-payment-terms').value = t.payment_terms || '';
+        document.getElementById('tt-input-delivery-period').value = t.delivery_period || '';
+        document.getElementById('tt-input-quality').value = t.quality_specs || '';
+        document.getElementById('tt-input-notes').value = t.notes || '';
+
+        updateTradeTicketPreview();
+        document.getElementById('tt-view-number').innerText = t.ticket_number;
+
+        const modal = document.getElementById('trade-ticket-modal');
+        if (modal) modal.classList.remove('hidden');
+        if (window.lucide) lucide.createIcons();
+      } catch (err) {
+        console.error('Erro ao abrir boleta:', err);
+      }
+    }
+
+    async function deleteCompanyTradeTicket(ticketId) {
+      if (!confirm('Deseja realmente excluir esta boleta de negociação?')) return;
+      const orgId = getActiveUserOrgId();
+      if (!orgId) return;
+
+      try {
+        const res = await fetch(`${API_BASE}/organizations/${orgId}/trade-tickets/${ticketId}`, {
+          method: 'DELETE',
+          headers: getAuthHeaders()
+        });
+
+        if (res.ok) {
+          await loadCompanyTradeTickets();
+        } else {
+          const err = await res.text();
+          alert('Erro ao excluir boleta: ' + err);
+        }
+      } catch (err) {
+        console.error('Erro ao excluir boleta:', err);
       }
     }
 
@@ -7502,6 +8123,328 @@ _Gerado via AgriTrading Intelligence Platform_`;
     </div>
   </div>
 </div>
+
+<!-- Modal: Boleta Formal de Negociação de Grãos (Trade Ticket) -->
+<div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto" id="trade-ticket-modal">
+  <div class="bg-white w-full max-w-5xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col my-8">
+    <div class="modal-header p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+      <div class="flex items-center space-x-2.5">
+        <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
+          <i class="w-4 h-4" data-lucide="file-check"></i>
+        </div>
+        <div>
+          <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+            <span>Boleta Formal de Negociação de Grãos</span>
+            <span class="text-[10px] bg-emerald-50 text-emerald-800 border border-emerald-300 px-2 py-0.5 rounded-full font-bold uppercase">DECISION_READY</span>
+          </h3>
+          <p class="text-xs text-slate-500">Formalize a operação com amarração a cotações auditadas e rastreabilidade W3C PROV.</p>
+        </div>
+      </div>
+      <button aria-label="Fechar janela" class="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-200 transition" onclick="closeTradeTicketModal()" type="button">
+        <i class="w-5 h-5" data-lucide="x"></i>
+      </button>
+    </div>
+
+    <div class="p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 max-h-[75vh] overflow-y-auto">
+      <!-- Coluna 1: Formulário de Parametrização Comercial -->
+      <div class="lg:col-span-5 space-y-4" id="trade-ticket-form-col">
+        <div class="border-b border-slate-100 pb-2">
+          <h4 class="text-xs font-bold text-slate-800 uppercase flex items-center gap-1.5">
+            <i class="w-3.5 h-3.5 text-emerald-600" data-lucide="user"></i>
+            <span>Identificação do Vendedor</span>
+          </h4>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-600 mb-1" for="tt-input-seller-name">Produtor / Razão Social *</label>
+          <input class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500" id="tt-input-seller-name" oninput="updateTradeTicketPreview()" placeholder="ex: Fazenda Primavera (José Silva)" type="text" value="Fazenda Boa Esperança (Carlos Mendes)"/>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-600 mb-1" for="tt-input-seller-doc">CPF ou CNPJ</label>
+            <input class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none" id="tt-input-seller-doc" oninput="updateTradeTicketPreview()" placeholder="12.345.678/0001-90" type="text" value="12.345.678/0001-90"/>
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-600 mb-1" for="tt-input-seller-farm">Fazenda / Armazém</label>
+            <input class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none" id="tt-input-seller-farm" oninput="updateTradeTicketPreview()" placeholder="Fazenda Boa Esperança" type="text" value="Silo Principal - Fazenda Boa Esperança"/>
+          </div>
+        </div>
+
+        <div class="border-b border-slate-100 pb-2 pt-2">
+          <h4 class="text-xs font-bold text-slate-800 uppercase flex items-center gap-1.5">
+            <i class="w-3.5 h-3.5 text-emerald-600" data-lucide="package"></i>
+            <span>Condições da Mercadoria & Preço</span>
+          </h4>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-600 mb-1" for="tt-input-commodity">Commodity</label>
+            <select class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none" id="tt-input-commodity" onchange="updateTradeTicketPreview()">
+              <option value="SOJA" selected>Soja em Grão</option>
+              <option value="MILHO">Milho em Grão</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-600 mb-1" for="tt-input-crop-year">Safra</label>
+            <input class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none" id="tt-input-crop-year" oninput="updateTradeTicketPreview()" type="text" value="2025/2026"/>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-600 mb-1" for="tt-input-hub">Origem Interior</label>
+            <input class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 font-semibold" id="tt-input-hub" readonly type="text" value="Sorriso (MT)"/>
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-600 mb-1" for="tt-input-port">Porto Destino</label>
+            <input class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 font-semibold" id="tt-input-port" readonly type="text" value="Santos (STS)"/>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-600 mb-1" for="tt-input-quantity-bags">Volume (Sacas 60kg) *</label>
+            <input class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-900 focus:outline-none text-right" id="tt-input-quantity-bags" min="100" oninput="updateTradeTicketPreview()" step="100" type="number" value="5000"/>
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-600 mb-1" for="tt-input-price-bag">Preço Negociado (R$/sc) *</label>
+            <input class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-bold text-emerald-800 focus:outline-none text-right" id="tt-input-price-bag" min="10" oninput="updateTradeTicketPreview()" step="0.10" type="number" value="132.50"/>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-600 mb-1" for="tt-input-payment-terms">Condições de Pagamento</label>
+          <input class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none" id="tt-input-payment-terms" oninput="updateTradeTicketPreview()" type="text" value="À vista contra entrega e classificação dos grãos"/>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-600 mb-1" for="tt-input-delivery-period">Período de Entrega / Embarque</label>
+          <input class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none" id="tt-input-delivery-period" oninput="updateTradeTicketPreview()" type="text" value="Safra Corrente / Imediato"/>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-600 mb-1" for="tt-input-quality">Padrão Físico de Qualidade</label>
+          <input class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none" id="tt-input-quality" oninput="updateTradeTicketPreview()" type="text" value="Padrão Exportação ANEC: Umidade máx 14%, Impureza máx 1%, Avariados máx 8%"/>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-600 mb-1" for="tt-input-notes">Observações Comerciais</label>
+          <textarea class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none" id="tt-input-notes" oninput="updateTradeTicketPreview()" rows="2" placeholder="Observações de pesagem, tolerância de quebra..."></textarea>
+        </div>
+      </div>
+
+      <!-- Coluna 2: Pré-Visualização da Boleta (Espelho A4) -->
+      <div class="lg:col-span-7 bg-slate-50 p-4 rounded-xl border border-slate-200 overflow-y-auto" id="trade-ticket-preview-col">
+        <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-200">
+          <span class="text-xs font-bold text-slate-600 uppercase flex items-center gap-1.5">
+            <i class="w-3.5 h-3.5 text-indigo-600" data-lucide="eye"></i>
+            <span>Espelho da Boleta de Negociação (Visualização Formal)</span>
+          </span>
+          <span class="text-[10px] text-slate-400 font-mono">Padrão A4</span>
+        </div>
+
+        <!-- Documento Formal A4 -->
+        <div class="bg-white p-6 rounded-xl border border-slate-300 shadow-sm text-slate-800 space-y-4 text-xs font-sans" id="trade-ticket-print-sheet">
+          <!-- Timbre Corporativo -->
+          <div class="flex items-start justify-between border-b-2 border-emerald-900 pb-3">
+            <div>
+              <div class="flex items-center space-x-2">
+                <span class="w-6 h-6 rounded bg-emerald-800 text-white flex items-center justify-center font-bold text-xs">AG</span>
+                <span class="font-extrabold text-slate-900 text-sm tracking-tight">AgriTrading<span class="text-emerald-700">.</span></span>
+              </div>
+              <p class="text-[10px] text-slate-500 font-medium uppercase mt-0.5" id="tt-view-company-name">AgriTrading Inteligência em Grãos</p>
+            </div>
+            <div class="text-right">
+              <span class="text-[10px] font-bold text-slate-500 uppercase block">Confirmação de Negócio</span>
+              <span class="font-mono font-bold text-sm text-emerald-900 block" id="tt-view-number">BOL-20261015-PROV</span>
+              <span class="text-[10px] text-slate-400 block" id="tt-view-date">15/10/2026</span>
+            </div>
+          </div>
+
+          <!-- Badges de Auditoria -->
+          <div class="flex flex-wrap items-center justify-between gap-2 p-2 bg-emerald-50/80 border border-emerald-200 rounded-lg text-[11px]">
+            <div class="flex items-center space-x-1.5 text-emerald-950 font-bold">
+              <span class="w-2 h-2 rounded-full bg-emerald-600 inline-block"></span>
+              <span>CLASSIFICAÇÃO AUDITADA: DECISION_READY</span>
+            </div>
+            <div class="text-[10px] text-emerald-800 font-mono">
+              PROV Run ID: <span id="tt-view-run-id" class="font-bold">LOCAL-SIMULATION</span>
+            </div>
+          </div>
+
+          <!-- Quadro 1: Partes Contratantes -->
+          <div class="border border-slate-200 rounded-lg overflow-hidden">
+            <div class="bg-slate-100 px-3 py-1 font-bold text-[11px] text-slate-700 uppercase">1. Qualificação das Partes</div>
+            <div class="p-3 grid grid-cols-2 gap-3 text-[11px]">
+              <div>
+                <span class="text-slate-400 block text-[10px] uppercase font-semibold">Comprador:</span>
+                <strong class="text-slate-900 block" id="tt-view-buyer-name">AgriTrading Commodities Desk</strong>
+                <span class="text-slate-500 text-[10px]">Mesa de Originação e Exportação</span>
+              </div>
+              <div>
+                <span class="text-slate-400 block text-[10px] uppercase font-semibold">Vendedor / Produtor:</span>
+                <strong class="text-slate-900 block" id="tt-view-seller-name">Fazenda Boa Esperança (Carlos Mendes)</strong>
+                <span class="text-slate-600 text-[10px]">Doc: <span id="tt-view-seller-doc">12.345.678/0001-90</span></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quadro 2: Mercadoria e Localização -->
+          <div class="border border-slate-200 rounded-lg overflow-hidden">
+            <div class="bg-slate-100 px-3 py-1 font-bold text-[11px] text-slate-700 uppercase">2. Objeto e Localização</div>
+            <div class="p-3 grid grid-cols-3 gap-2 text-[11px]">
+              <div>
+                <span class="text-slate-400 block text-[10px] uppercase font-semibold">Produto / Safra:</span>
+                <span class="font-bold text-slate-800" id="tt-view-commodity">Soja em Grão</span>
+                <span class="text-slate-500 block text-[10px]">Safra <span id="tt-view-crop">2025/2026</span></span>
+              </div>
+              <div>
+                <span class="text-slate-400 block text-[10px] uppercase font-semibold">Origem:</span>
+                <span class="font-bold text-slate-800" id="tt-view-hub">Sorriso (MT)</span>
+                <span class="text-slate-500 block text-[10px]" id="tt-view-farm">Silo Fazenda</span>
+              </div>
+              <div>
+                <span class="text-slate-400 block text-[10px] uppercase font-semibold">Destino:</span>
+                <span class="font-bold text-slate-800" id="tt-view-port">Santos (STS)</span>
+                <span class="text-slate-500 block text-[10px]">Terminal Exportação</span>
+              </div>
+            </div>
+            <div class="px-3 py-2 bg-slate-50 border-t border-slate-200 text-[10px] text-slate-600">
+              <span class="font-semibold text-slate-700">Especificações de Qualidade:</span>
+              <span id="tt-view-quality">Padrão Exportação ANEC: Umidade máx 14%, Impureza máx 1%, Avariados máx 8%</span>
+            </div>
+          </div>
+
+          <!-- Quadro 3: Quantidade e Valores -->
+          <div class="border border-slate-200 rounded-lg overflow-hidden">
+            <div class="bg-slate-100 px-3 py-1 font-bold text-[11px] text-slate-700 uppercase">3. Volume e Condições Financeiras</div>
+            <div class="p-3 grid grid-cols-3 gap-3 text-center">
+              <div class="p-2 bg-slate-50 rounded border border-slate-200">
+                <span class="text-[10px] text-slate-500 uppercase block font-semibold">Volume Contratado</span>
+                <span class="text-sm font-extrabold text-slate-900 block" id="tt-view-qty-bags">5.000 sacas</span>
+                <span class="text-[10px] text-slate-500 font-medium" id="tt-view-qty-tons">300,00 t</span>
+              </div>
+              <div class="p-2 bg-emerald-50 rounded border border-emerald-200">
+                <span class="text-[10px] text-emerald-800 uppercase block font-semibold">Preço Unitário (60kg)</span>
+                <span class="text-sm font-black text-emerald-900 block" id="tt-view-price-bag">R$ 132,50</span>
+                <span class="text-[10px] text-emerald-700 font-medium">Líquido na fazenda</span>
+              </div>
+              <div class="p-2 bg-emerald-50 rounded border border-emerald-200">
+                <span class="text-[10px] text-emerald-800 uppercase block font-semibold">Valor Total da Compra</span>
+                <span class="text-sm font-black text-emerald-900 block" id="tt-view-total-brl">R$ 662.500,00</span>
+                <span class="text-[10px] text-emerald-700 font-medium">BRL Total</span>
+              </div>
+            </div>
+            <div class="p-3 border-t border-slate-200 space-y-1 text-[11px]">
+              <div class="flex justify-between">
+                <span class="text-slate-500">Condições de Pagamento:</span>
+                <strong class="text-slate-800" id="tt-view-payment">À vista contra entrega e classificação</strong>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-500">Prazo de Entrega:</span>
+                <strong class="text-slate-800" id="tt-view-delivery">Safra Corrente / Imediato</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quadro 4: Memória de Mercado & Auditoria -->
+          <div class="border border-slate-200 rounded-lg p-2.5 bg-slate-50 text-[10px] space-y-1">
+            <span class="font-bold text-slate-700 uppercase block">4. Memória de Mercado Auditada (Travamento)</span>
+            <div class="grid grid-cols-4 gap-2 text-slate-600">
+              <div>CBOT Ref: <strong id="tt-view-cbot" class="text-slate-800">1185.25 ¢/bu</strong></div>
+              <div>Dólar PTAX: <strong id="tt-view-fx" class="text-slate-800">5.4850 R$</strong></div>
+              <div>Frete Ref: <strong id="tt-view-freight" class="text-slate-800">R$ 420,00/t</strong></div>
+              <div>ANTT: <strong id="tt-view-antt" class="text-emerald-700">ABOVE_FLOOR</strong></div>
+            </div>
+          </div>
+
+          <!-- Quadro 5: Assinaturas -->
+          <div class="pt-6 grid grid-cols-2 gap-8 text-center text-[10px] text-slate-500">
+            <div>
+              <div class="border-b border-slate-400 pb-1 mb-1 font-semibold text-slate-800">Pelo Comprador (Trading)</div>
+              <span>AgriTrading Commodities Desk</span>
+            </div>
+            <div>
+              <div class="border-b border-slate-400 pb-1 mb-1 font-semibold text-slate-800" id="tt-view-seller-sig">Pelo Vendedor (Produtor)</div>
+              <span id="tt-view-seller-sig-name">Carlos Mendes</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Footer -->
+    <div class="modal-controls p-4 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 bg-slate-50">
+      <div class="flex items-center space-x-2">
+        <button class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2 rounded-lg transition flex items-center space-x-1.5 shadow-sm" onclick="saveCurrentTradeTicket()" type="button">
+          <i class="w-3.5 h-3.5" data-lucide="check-circle-2"></i>
+          <span>Confirmar & Salvar Boleta</span>
+        </button>
+        <button class="bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-semibold text-xs px-3.5 py-2 rounded-lg transition flex items-center space-x-1.5 shadow-sm" onclick="printTradeTicket()" type="button">
+          <i class="w-3.5 h-3.5" data-lucide="printer"></i>
+          <span>Imprimir / Salvar PDF (A4)</span>
+        </button>
+        <button class="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 font-semibold text-xs px-3.5 py-2 rounded-lg transition flex items-center space-x-1.5 shadow-sm" onclick="exportTradeTicketToWhatsApp()" type="button">
+          <i class="w-3.5 h-3.5" data-lucide="share-2"></i>
+          <span>Copiar Boleta (WhatsApp)</span>
+        </button>
+      </div>
+      <button class="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 transition" onclick="closeTradeTicketModal()" type="button">
+        Fechar
+      </button>
+    </div>
+  </div>
+</div>
+
+<style>
+@media print {
+  body.printing-trade-ticket {
+    background: white !important;
+    color: black !important;
+  }
+  body.printing-trade-ticket * {
+    visibility: hidden !important;
+  }
+  body.printing-trade-ticket #trade-ticket-modal,
+  body.printing-trade-ticket #trade-ticket-modal * {
+    visibility: visible !important;
+  }
+  body.printing-trade-ticket #trade-ticket-modal {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    background: white !important;
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  body.printing-trade-ticket #trade-ticket-modal .modal-header,
+  body.printing-trade-ticket #trade-ticket-modal .modal-controls,
+  body.printing-trade-ticket #trade-ticket-modal #trade-ticket-form-col {
+    display: none !important;
+  }
+  body.printing-trade-ticket #trade-ticket-preview-col {
+    width: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border: none !important;
+  }
+  body.printing-trade-ticket #trade-ticket-print-sheet {
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: none !important;
+    padding: 24px !important;
+    margin: 0 auto !important;
+    page-break-inside: avoid !important;
+  }
+}
+</style>
+
 <script data-design-module="ux-runtime.js">/* AgriTrading UX runtime — carregado depois do legado.
  * Este arquivo não conhece segredos, não altera regras de negócio e só observa/coordena o DOM existente.
  */

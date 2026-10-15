@@ -19,7 +19,7 @@ IS_LAMBDA = bool(os.getenv("AWS_LAMBDA_FUNCTION_NAME") or os.getenv("LAMBDA_TASK
 
 if IS_LAMBDA:
     DEFAULT_DATA_DIR = Path("/tmp/data")
-elif Path("/app").exists():
+elif Path("/app").exists() and os.access("/app", os.W_OK):
     DEFAULT_DATA_DIR = Path("/app/data")
 else:
     DEFAULT_DATA_DIR = Path("./data")

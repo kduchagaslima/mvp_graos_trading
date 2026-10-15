@@ -257,6 +257,7 @@ class Organization(Base):
     memberships = relationship("Membership", back_populates="organization", cascade="all, delete-orphan")
     cost_profiles = relationship("CostProfile", back_populates="organization", cascade="all, delete-orphan")
     freight_contracts = relationship("CompanyFreightContract", back_populates="organization", cascade="all, delete-orphan")
+    trade_tickets = relationship("TradeTicket", back_populates="organization", cascade="all, delete-orphan")
 
     def to_dict(self):
         return {
@@ -514,6 +515,85 @@ class CompanyFreightContract(Base):
             "valid_from": self.valid_from.isoformat() if self.valid_from else None,
             "valid_until": self.valid_until.isoformat() if self.valid_until else None,
             "is_active": self.is_active,
+            "notes": self.notes,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class TradeTicket(Base):
+    """
+    Boleta Formal de Negociação de Compra de Grãos (Trade Ticket).
+    Formaliza a operação de compra originada com amarração à linhagem DECISION_READY (W3C PROV).
+    """
+    __tablename__ = "trade_tickets"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    ticket_number = Column(String(64), unique=True, nullable=False, index=True)
+    organization_id = Column(Integer, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    commodity = Column(String(16), nullable=False)
+    crop_year = Column(String(16), nullable=False, default="2025/2026")
+    seller_name = Column(String(128), nullable=False)
+    seller_document = Column(String(32), nullable=True)
+    seller_farm = Column(String(128), nullable=True)
+    location_hub_id = Column(String(32), nullable=False)
+    destination_port_id = Column(String(16), nullable=False)
+    quantity_bags = Column(Float, nullable=False)
+    quantity_tons = Column(Float, nullable=False)
+    price_per_bag_brl = Column(Float, nullable=False)
+    total_amount_brl = Column(Float, nullable=False)
+    payment_terms = Column(String(128), nullable=True)
+    delivery_period = Column(String(128), nullable=True)
+    quality_specs = Column(Text, nullable=True)
+    parity_run_id = Column(String(64), nullable=True)
+    cbot_reference = Column(Float, nullable=True)
+    fx_reference = Column(Float, nullable=True)
+    freight_reference = Column(Float, nullable=True)
+    antt_compliant = Column(Boolean, nullable=False, default=True)
+    decision_ready = Column(Boolean, nullable=False, default=True)
+    status = Column(String(32), nullable=False, default="CONFIRMED")
+    notes = Column(Text, nullable=True)
+    created_at = Column(UTCDateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(UTCDateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+
+    organization = relationship("Organization", back_populates="trade_tickets")
+    user = relationship("User")
+
+    __table_args__ = (
+        Index("idx_trade_tickets_org_id", "organization_id"),
+        Index("idx_trade_tickets_status", "organization_id", "status"),
+        Index("idx_trade_tickets_created_at", "organization_id", "created_at"),
+    )
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "ticket_number": self.ticket_number,
+            "organization_id": self.organization_id,
+            "user_id": self.user_id,
+            "user_name": self.user.name if self.user else None,
+            "commodity": self.commodity,
+            "crop_year": self.crop_year,
+            "seller_name": self.seller_name,
+            "seller_document": self.seller_document,
+            "seller_farm": self.seller_farm,
+            "location_hub_id": self.location_hub_id,
+            "destination_port_id": self.destination_port_id,
+            "quantity_bags": self.quantity_bags,
+            "quantity_tons": self.quantity_tons,
+            "price_per_bag_brl": self.price_per_bag_brl,
+            "total_amount_brl": self.total_amount_brl,
+            "payment_terms": self.payment_terms,
+            "delivery_period": self.delivery_period,
+            "quality_specs": self.quality_specs,
+            "parity_run_id": self.parity_run_id,
+            "cbot_reference": self.cbot_reference,
+            "fx_reference": self.fx_reference,
+            "freight_reference": self.freight_reference,
+            "antt_compliant": self.antt_compliant,
+            "decision_ready": self.decision_ready,
+            "status": self.status,
             "notes": self.notes,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
