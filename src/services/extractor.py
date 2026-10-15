@@ -168,6 +168,32 @@ class MarketDataExtractor:
             except Exception:
                 pass
 
+            # Se yfinance não estiver disponível, tenta consulta direta via HTTP na API pública de mercado
+            if price_extracted is None:
+                import socket
+                if getattr(socket.getaddrinfo, "__name__", "") != "reject_network":
+                    try:
+                        headers = {
+                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                            "Accept": "application/json",
+                        }
+                        chart_url = f"https://query1.finance.yahoo.com/v8/finance/chart/{meta['symbol']}?interval=1d&range=5d"
+                        resp = requests.get(chart_url, headers=headers, timeout=4.0)
+                        if resp.status_code == 200:
+                            payload_data = resp.json()
+                            chart_result = payload_data.get("chart", {}).get("result", [])
+                            if chart_result:
+                                market_meta = chart_result[0].get("meta", {})
+                                last_p = market_meta.get("regularMarketPrice")
+                                if last_p is not None:
+                                    price_extracted = float(last_p)
+                                    source_name = "CME_YAHOO_HTTP"
+                                    source_vendor = "CME_GROUP"
+                                    source_ref = meta["symbol"]
+                                    data_kind = DataKind.OBSERVED.value
+                    except Exception as err:
+                        logger.debug(f"Falha ao consultar cotação HTTP para {meta['symbol']}: {err}")
+
             # Fallback seguro caso mercado fechado ou sem internet
             if price_extracted is None:
                 price_extracted = float(DEFAULT_MARKET_SEEDS["cbot_prices"][commodity]["last_price_cents"])

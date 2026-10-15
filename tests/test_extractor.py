@@ -200,3 +200,33 @@ def test_extract_and_persist_pipeline(memory_db, offline_providers, fallback):
     assert second["status"] == "SUCCESS"
     assert second["total_persisted"] == len(rows)
     assert memory_db.query(MarketQuote).count() == len(rows)
+
+
+def test_cbot_http_direct_mocked_extraction(monkeypatch):
+    """Valida extração direta via HTTP de CBOT quando yfinance falha e HTTP responde."""
+    import sys
+    monkeypatch.setitem(sys.modules, "yfinance", None)
+    monkeypatch.setattr("socket.getaddrinfo", lambda *a, **kw: [])
+
+    fake_resp = Mock(status_code=200)
+    fake_resp.json.return_value = {
+        "chart": {
+            "result": [
+                {
+                    "meta": {
+                        "regularMarketPrice": 1277.5
+                    }
+                }
+            ]
+        }
+    }
+    # Permite chamada mockada a requests.get
+    monkeypatch.setattr(extractor.requests, "get", Mock(return_value=fake_resp))
+
+    quotes = MarketDataExtractor.extract_cbot_futures(TARGET_DATE)
+    assert len(quotes) >= 2
+    for q in quotes:
+        assert q["price"] == 1277.5
+        assert q["data_kind"] == DataKind.OBSERVED.value
+        assert q["source"] == "CME_YAHOO_HTTP"
+

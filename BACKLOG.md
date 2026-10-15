@@ -12,7 +12,8 @@
 - [x] **Motor de TTL Dinâmico:** Regras de expiração por fonte (CBOT 20min pregão, PTAX boletim, CEPEA 24h, Frete 72h).
 - [x] **Migração Versionada 006 (`006_market_quotes_lineage.sql`):** Adicionado script SQL em `src/db/migrations/` e validada idempotência no `run_migrations()`.
 - [x] **Endpoint de Auditoria de Linhagem (`GET /api/parity/lineage/{parity_run_id}`):** Persistência automática das execuções de paridade e rota de consulta de linhagem W3C PROV.
+- [x] **Conectores Oficiais Gratuitos (BACEN, CBOT, B3 MDS, CEPEA/ESALQ):** Ingestão de cotações reais das fontes oficiais com classificação `OBSERVED`, preservando resiliência offline e sementes como fallback.
 
 ## Próximos Passos (Fase 3 - Futuro)
-- **Conectores Reais em Streaming / Webhook:** Ingestão de cotações B3/CBOT via feeds de mercado em tempo real.
+- **Conectores Proprietários Pagos / Streaming Intraday:** Ingestão de dados de alta frequência via Webhook/WebSocket comercial (ex: Cedro, Barchart, CME FIX).
 - **Alarmes e Observabilidade:** Alertas no CloudWatch se cotações críticas ficarem STALE em horário comercial.

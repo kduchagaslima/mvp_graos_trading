@@ -157,3 +157,46 @@ def test_api_b3_and_scheduler_endpoints(client, memory_db):
     quotes_data = res_quotes.json()
     assert len(quotes_data) >= 9
     assert any(q["symbol"].startswith("B3_CCM") for q in quotes_data)
+
+
+def test_b3_and_cepea_live_mocked_extraction(monkeypatch):
+    """Valida a ingestão oficial B3 MDS e CEPEA quando os endpoints ao vivo respondem."""
+    from src.db.models import DataKind
+
+    def fake_fetch_b3(code):
+        if code == "CCM":
+            return {"CCMH27": 75.30, "CCMK27": 74.19}
+        if code == "SJC":
+            return {"SJCH27": 28.64}
+        return {}
+
+    def fake_fetch_cepea(url):
+        if "milho" in url:
+            return 65.43
+        if "soja" in url:
+            return 154.29
+        return None
+
+    monkeypatch.setattr(B3DataExtractor, "_fetch_b3_mds_quotes", fake_fetch_b3)
+    monkeypatch.setattr(B3DataExtractor, "_fetch_cepea_indicator", fake_fetch_cepea)
+
+    quotes = B3DataExtractor.extract_b3_derivatives()
+
+    # Verifica que CCMH27 foi marcado como OBSERVED com preço de 75.30
+    ccmh27 = next(q for q in quotes if "CCMH27" in q["symbol"])
+    assert ccmh27["price"] == 75.30
+    assert ccmh27["data_kind"] == DataKind.OBSERVED.value
+    assert ccmh27["source"] == "B3_MDS_OFFICIAL"
+
+    # Verifica que SJCH27 foi marcado como OBSERVED
+    sjch27 = next(q for q in quotes if "SJCH27" in q["symbol"])
+    assert sjch27["price"] == 28.64
+    assert sjch27["data_kind"] == DataKind.OBSERVED.value
+    assert sjch27["source"] == "B3_MDS_OFFICIAL"
+
+    # Verifica que indicador Cepea Soja Paranaguá foi extraído como OBSERVED
+    cepea_soja = next(q for q in quotes if "PARANAGUA" in q["symbol"])
+    assert cepea_soja["price"] == 154.29
+    assert cepea_soja["data_kind"] == DataKind.OBSERVED.value
+    assert cepea_soja["source"] == "CEPEA_ESALQ_OFFICIAL"
+
