@@ -29,9 +29,10 @@ from src.db.models import (
     MarketQuotesLineage,
     CompanyFreightContract,
     TradeTicket,
+    MarketAlert,
 )
 from src.domain.commodities import CommodityType, COMMODITY_SPECS
-from src.domain.locations import ORIGINATION_HUBS, PORTS
+from src.domain.locations import ORIGINATION_HUBS, PORTS, DOMESTIC_INDUSTRIES
 from src.domain.models import (
     ParityCalculationInput,
     ParityCalculationResult,
@@ -49,6 +50,9 @@ from src.domain.models import (
     CompanyFreightContractCreateInput,
     CompanyFreightContractBatchInput,
     TradeTicketCreateInput,
+    MarketAlertCreateInput,
+    MarketAlertUpdateInput,
+    MarketAlertEvaluateInput,
 )
 from src.engines.export_parity import ExportParityEngine
 from src.engines.carry_cost import CarryCostEngine
@@ -349,6 +353,28 @@ def get_tax_funds_summary():
     return STATE_TAX_FUNDS
 
 
+@app.get("/api/industries/summary")
+def get_industries_summary():
+    """
+    Retorna o catálogo de indústrias domésticas consumidoras (esmagadoras de soja,
+    usinas de etanol de milho e fábricas de ração animal).
+    """
+    return [
+        {
+            "id": ind.id,
+            "name": ind.name,
+            "state": ind.state,
+            "city": ind.city,
+            "industry_type": ind.industry_type,
+            "commodity_handled": ind.commodity_handled,
+            "typical_freight_from_hub": ind.typical_freight_from_hub,
+            "icms_internal_rate": ind.icms_internal_rate,
+            "icms_interstate_rate": ind.icms_interstate_rate,
+        }
+        for ind in DOMESTIC_INDUSTRIES.values()
+    ]
+
+
 # ==============================================================================
 # ENDPOINTS DE LOGÍSTICA E FRETE RODOVIÁRIO
 # ==============================================================================
@@ -566,6 +592,270 @@ def get_my_profile(
     }
 
 
+def seed_organization_demo_data(db: Session, org_id: int, user_id: int) -> Dict[str, Any]:
+    """
+    Pré-popula a organização com um portfólio completo de dados de demonstração (Trial de 14 dias):
+    - 4 Contratos de Frete Rodoviário negociados (rotas exportação e consumo interno)
+    - 3 Cenários de Paridade salvos (Soja Exportação, Milho Safrinha, Soja Indústria Doméstica)
+    - 2 Boletas Formais de Negociação (Trade Tickets) auditadas
+    - 4 Alertas de Mercado e Metas de Preço (Watchlist do trader)
+    """
+    now = datetime.now(timezone.utc)
+    today = date.today()
+
+    # 1. Contratos de Frete Privados
+    contracts = [
+        CompanyFreightContract(
+            organization_id=org_id,
+            origin_id="sorriso_mt",
+            destination_id="STS",
+            carrier_name="Expresso Rondonópolis Grãos",
+            contract_code=f"CTR-DEMO-{org_id}-01",
+            freight_brl_ton=385.0,
+            volume_contracted_tons=25000.0,
+            valid_from=today,
+            valid_until=today + timedelta(days=180),
+            is_active=True,
+            notes="Tarifa contratada com desconto de frota dedicada Sorriso -> Santos",
+        ),
+        CompanyFreightContract(
+            organization_id=org_id,
+            origin_id="rio_verde_go",
+            destination_id="STS",
+            carrier_name="TransCerrado Logística Integrada",
+            contract_code=f"CTR-DEMO-{org_id}-02",
+            freight_brl_ton=260.0,
+            volume_contracted_tons=15000.0,
+            valid_from=today,
+            valid_until=today + timedelta(days=180),
+            is_active=True,
+            notes="Frete contratado para escoamento safrinha Rio Verde -> Santos",
+        ),
+        CompanyFreightContract(
+            organization_id=org_id,
+            origin_id="sorriso_mt",
+            destination_id="IND_LRV_FS",
+            carrier_name="TransNorte MT",
+            contract_code=f"CTR-DEMO-{org_id}-03",
+            freight_brl_ton=42.0,
+            volume_contracted_tons=30000.0,
+            valid_from=today,
+            valid_until=today + timedelta(days=180),
+            is_active=True,
+            notes="Rota curta de transferência para Usina de Etanol FS em Lucas do Rio Verde",
+        ),
+        CompanyFreightContract(
+            organization_id=org_id,
+            origin_id="rondonopolis_mt",
+            destination_id="IND_ROO_BUNGE",
+            carrier_name="RodoGrãos MT",
+            contract_code=f"CTR-DEMO-{org_id}-04",
+            freight_brl_ton=35.0,
+            volume_contracted_tons=20000.0,
+            valid_from=today,
+            valid_until=today + timedelta(days=180),
+            is_active=True,
+            notes="Entrega local para polo industrial esmagador em Rondonópolis",
+        ),
+    ]
+    for c in contracts:
+        db.add(c)
+
+    # 2. Cenários Salvos
+    scenarios = [
+        SavedScenario(
+            organization_id=org_id,
+            user_id=user_id,
+            name="Soja Safra 2026 Sorriso x Santos (Exportação Base)",
+            commodity="SOJA",
+            hub_id="sorriso_mt",
+            port_id="STS",
+            cbot_price_cents=1045.5,
+            port_premium_cents=65.0,
+            usd_brl_fx=5.65,
+            freight_cost_brl_ton=385.0,
+            elevation_cost_usd_ton=10.5,
+            demurrage_risk_usd_ton=2.5,
+            other_port_costs_usd_ton=15.0,
+            tax_fund_brl_bag=0.0,
+            net_parity_brl_bag=124.80,
+            net_parity_brl_ton=2080.00,
+            fob_usd_ton=408.03,
+            notes="Cenário base da mesa para travar compras na fazenda em Sorriso/MT.",
+        ),
+        SavedScenario(
+            organization_id=org_id,
+            user_id=user_id,
+            name="Milho Safrinha Rio Verde x Santos (Exportação)",
+            commodity="MILHO",
+            hub_id="rio_verde_go",
+            port_id="STS",
+            cbot_price_cents=435.0,
+            port_premium_cents=45.0,
+            usd_brl_fx=5.65,
+            freight_cost_brl_ton=260.0,
+            elevation_cost_usd_ton=9.5,
+            demurrage_risk_usd_ton=2.0,
+            other_port_costs_usd_ton=12.0,
+            tax_fund_brl_bag=0.0,
+            net_parity_brl_bag=54.20,
+            net_parity_brl_ton=903.33,
+            fob_usd_ton=188.97,
+            notes="Simulação comercial de originação milho safrinha sudoeste goiano.",
+        ),
+        SavedScenario(
+            organization_id=org_id,
+            user_id=user_id,
+            name="Soja Mercado Interno - Esmagamento Bunge Rondonópolis",
+            commodity="SOJA",
+            hub_id="rondonopolis_mt",
+            port_id="IND_ROO_BUNGE",
+            cbot_price_cents=1045.5,
+            port_premium_cents=0.0,
+            usd_brl_fx=5.65,
+            freight_cost_brl_ton=35.0,
+            elevation_cost_usd_ton=0.0,
+            demurrage_risk_usd_ton=0.0,
+            other_port_costs_usd_ton=0.0,
+            tax_fund_brl_bag=0.0,
+            net_parity_brl_bag=128.50,
+            net_parity_brl_ton=2141.67,
+            fob_usd_ton=408.03,
+            notes="Entrega mercado doméstico MT com isenção/diferimento de ICMS e sem taxas portuárias.",
+        ),
+    ]
+    for s in scenarios:
+        db.add(s)
+
+    # 3. Boletas Formais (Trade Tickets)
+    tickets = [
+        TradeTicket(
+            ticket_number=f"BOL-{org_id}-DEMO-001",
+            organization_id=org_id,
+            user_id=user_id,
+            commodity="SOJA",
+            crop_year="2025/2026",
+            seller_name="Agropecuária Terra Santa Ltda",
+            seller_document="12.345.678/0001-90",
+            seller_farm="Fazenda Boa Esperança - Sorriso/MT",
+            location_hub_id="sorriso_mt",
+            destination_port_id="STS",
+            quantity_bags=50000.0,
+            quantity_tons=3000.0,
+            price_per_bag_brl=126.50,
+            total_amount_brl=6325000.0,
+            payment_terms="30 dias após emissão da NF de entrega e classificação",
+            delivery_period="Março/2026",
+            quality_specs="Padrão Exportação ANEC 41 (Umidade máx 14%, Impureza máx 1%, Avariados máx 8%)",
+            parity_run_id=f"RUN-DEMO-{org_id}-SOJA",
+            cbot_reference=1045.5,
+            fx_reference=5.65,
+            freight_reference=385.0,
+            antt_compliant=True,
+            decision_ready=True,
+            status="CONFIRMED",
+            notes="Boleta fechada com margem travada no porto de Santos via contrato dedilhado.",
+        ),
+        TradeTicket(
+            ticket_number=f"BOL-{org_id}-DEMO-002",
+            organization_id=org_id,
+            user_id=user_id,
+            commodity="MILHO",
+            crop_year="2025/2026",
+            seller_name="Cooperativa Agrícola Regional de Rio Verde",
+            seller_document="98.765.432/0001-10",
+            seller_farm="Silos Armazém Central - Rio Verde/GO",
+            location_hub_id="rio_verde_go",
+            destination_port_id="STS",
+            quantity_bags=30000.0,
+            quantity_tons=1800.0,
+            price_per_bag_brl=53.50,
+            total_amount_brl=1605000.0,
+            payment_terms="À vista contra apresentação do ticket de balança do armazém",
+            delivery_period="Julho/2026",
+            quality_specs="Padrão ANEC 43 (Umidade máx 14.5%, Impureza máx 1.5%, Quebrados máx 5%)",
+            parity_run_id=f"RUN-DEMO-{org_id}-MILHO",
+            cbot_reference=435.0,
+            fx_reference=5.65,
+            freight_reference=260.0,
+            antt_compliant=True,
+            decision_ready=True,
+            status="CONFIRMED",
+            notes="Lote de milho safrinha destinado a programa exportador de julho.",
+        ),
+    ]
+    for t in tickets:
+        db.add(t)
+
+    # 4. Alertas de Mercado (Watchlist)
+    alerts = [
+        MarketAlert(
+            organization_id=org_id,
+            user_id=user_id,
+            name="Meta Paridade Soja Sorriso > R$ 130,00/sc",
+            alert_type="PARITY_ABOVE",
+            commodity="SOJA",
+            hub_id="sorriso_mt",
+            port_id="STS",
+            target_value=130.0,
+            current_value=124.8,
+            is_triggered=False,
+            notification_channel="IN_APP",
+            notes="Gatilho de originação para disparar ofertas de compra aos cooperados.",
+        ),
+        MarketAlert(
+            organization_id=org_id,
+            user_id=user_id,
+            name="Dólar Comercial PTAX Acima de R$ 5,80",
+            alert_type="FX_CHANGE_PCT",
+            commodity="SOJA",
+            target_value=5.80,
+            current_value=5.65,
+            is_triggered=False,
+            notification_channel="IN_APP",
+            notes="Alerta para travamento cambial via NDF / trava de balcão.",
+        ),
+        MarketAlert(
+            organization_id=org_id,
+            user_id=user_id,
+            name="CBOT Soja Acima de 1.080 ¢/bu",
+            alert_type="CBOT_ABOVE",
+            commodity="SOJA",
+            target_value=1080.0,
+            current_value=1045.5,
+            is_triggered=False,
+            notification_channel="IN_APP",
+            notes="Rompimento técnico de média móvel na Bolsa de Chicago.",
+        ),
+        MarketAlert(
+            organization_id=org_id,
+            user_id=user_id,
+            name="Oportunidade Esmagadora MT > R$ 127,00/sc",
+            alert_type="PARITY_ABOVE",
+            commodity="SOJA",
+            hub_id="rondonopolis_mt",
+            port_id="IND_ROO_BUNGE",
+            target_value=127.0,
+            current_value=128.5,
+            is_triggered=True,
+            triggered_at=now,
+            trigger_count=1,
+            notification_channel="IN_APP",
+            notes="Indústria em Rondonópolis pagando acima da paridade de exportação líquida!",
+        ),
+    ]
+    for a in alerts:
+        db.add(a)
+
+    db.commit()
+    return {
+        "freight_contracts_count": len(contracts),
+        "scenarios_count": len(scenarios),
+        "trade_tickets_count": len(tickets),
+        "market_alerts_count": len(alerts),
+    }
+
+
 @app.post("/api/organizations")
 def create_organization(
     payload: OrganizationCreateInput,
@@ -575,6 +865,7 @@ def create_organization(
     """
     Cria uma nova organização (empresa) e associa o usuário atual como OWNER.
     Gera automaticamente o perfil de custos padrão para a organização.
+    Opcionalmente pré-popula dados demonstrativos (fretes, cenários, boletas e alertas).
     """
     slug = payload.slug
     if not slug:
@@ -615,10 +906,16 @@ def create_organization(
     db.commit()
     db.refresh(membership)
 
+    demo_summary = None
+    if payload.seed_demo_data:
+        demo_summary = seed_organization_demo_data(db=db, org_id=org.id, user_id=current_user.id)
+
     return {
         "status": "created",
         "organization": org.to_dict(),
         "membership": membership.to_dict(),
+        "demo_seeded": bool(payload.seed_demo_data),
+        "demo_summary": demo_summary,
     }
 
 
@@ -1220,6 +1517,248 @@ def delete_organization_scenario(
     db.delete(scen)
     db.commit()
     return {"status": "deleted", "scenario_id": scenario_id}
+
+
+# ==============================================================================
+# Alertas de Mercado e Metas de Preço - Watchlist do Trader (Atividade 1)
+# ==============================================================================
+
+@app.get("/api/organizations/{org_id}/alerts")
+def list_organization_alerts(
+    org_id: int,
+    active_only: bool = False,
+    triggered_only: bool = False,
+    membership: Membership = Depends(require_role(MembershipRole.READER)),
+    db: Session = Depends(get_db),
+):
+    """
+    Lista todos os alertas de mercado e metas de preço cadastrados na watchlist da organização.
+    """
+    query = db.query(MarketAlert).filter(MarketAlert.organization_id == org_id)
+    if active_only:
+        query = query.filter(MarketAlert.is_active == True)
+    if triggered_only:
+        query = query.filter(MarketAlert.is_triggered == True)
+    
+    alerts = query.order_by(MarketAlert.is_triggered.desc(), MarketAlert.id.desc()).all()
+    return [a.to_dict() for a in alerts]
+
+
+@app.post("/api/organizations/{org_id}/alerts", status_code=201)
+def create_organization_alert(
+    org_id: int,
+    payload: MarketAlertCreateInput,
+    membership: Membership = Depends(require_role(MembershipRole.ANALYST)),
+    db: Session = Depends(get_db),
+):
+    """
+    Cria uma nova regra ou meta de preço na watchlist de monitoramento de mercado.
+    """
+    alert = MarketAlert(
+        organization_id=org_id,
+        user_id=membership.user_id,
+        name=payload.name.strip(),
+        alert_type=payload.alert_type.strip().upper(),
+        commodity=payload.commodity.strip().upper(),
+        hub_id=payload.hub_id,
+        port_id=payload.port_id,
+        target_value=payload.target_value,
+        notification_channel=payload.notification_channel,
+        notes=payload.notes,
+        is_active=True,
+        is_triggered=False,
+        trigger_count=0,
+    )
+    db.add(alert)
+    db.commit()
+    db.refresh(alert)
+    return alert.to_dict()
+
+
+@app.put("/api/organizations/{org_id}/alerts/{alert_id}")
+def update_organization_alert(
+    alert_id: int,
+    payload: MarketAlertUpdateInput,
+    org_id: int,
+    membership: Membership = Depends(require_role(MembershipRole.ANALYST)),
+    db: Session = Depends(get_db),
+):
+    """
+    Atualiza meta de preço, status ativo/inativo ou notas de um alerta da watchlist.
+    """
+    alert = (
+        db.query(MarketAlert)
+        .filter(MarketAlert.id == alert_id, MarketAlert.organization_id == org_id)
+        .first()
+    )
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alerta de mercado não encontrado")
+
+    if payload.name is not None:
+        alert.name = payload.name.strip()
+    if payload.target_value is not None:
+        alert.target_value = payload.target_value
+    if payload.is_active is not None:
+        alert.is_active = payload.is_active
+    if payload.notes is not None:
+        alert.notes = payload.notes
+
+    alert.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(alert)
+    return alert.to_dict()
+
+
+@app.delete("/api/organizations/{org_id}/alerts/{alert_id}")
+def delete_organization_alert(
+    alert_id: int,
+    org_id: int,
+    membership: Membership = Depends(require_role(MembershipRole.ANALYST)),
+    db: Session = Depends(get_db),
+):
+    """
+    Remove uma regra de alerta da organização.
+    """
+    alert = (
+        db.query(MarketAlert)
+        .filter(MarketAlert.id == alert_id, MarketAlert.organization_id == org_id)
+        .first()
+    )
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alerta de mercado não encontrado")
+
+    db.delete(alert)
+    db.commit()
+    return {"status": "deleted", "id": alert_id}
+
+
+@app.post("/api/organizations/{org_id}/alerts/{alert_id}/reset")
+def reset_organization_alert(
+    alert_id: int,
+    org_id: int,
+    membership: Membership = Depends(require_role(MembershipRole.ANALYST)),
+    db: Session = Depends(get_db),
+):
+    """
+    Reseta o status disparado (is_triggered) do alerta para permitir novo disparo.
+    """
+    alert = (
+        db.query(MarketAlert)
+        .filter(MarketAlert.id == alert_id, MarketAlert.organization_id == org_id)
+        .first()
+    )
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alerta de mercado não encontrado")
+
+    alert.is_triggered = False
+    alert.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(alert)
+    return alert.to_dict()
+
+
+@app.post("/api/organizations/{org_id}/alerts/evaluate")
+def evaluate_organization_alerts(
+    org_id: int,
+    payload: MarketAlertEvaluateInput,
+    membership: Membership = Depends(require_role(MembershipRole.READER)),
+    db: Session = Depends(get_db),
+):
+    """
+    Avalia em tempo real as metas e regras da watchlist contra parâmetros simulados ou cotações ativas.
+    Dispara os alertas cujas condições foram atingidas e atualiza o histórico de auditoria.
+    """
+    alerts = (
+        db.query(MarketAlert)
+        .filter(MarketAlert.organization_id == org_id, MarketAlert.is_active == True)
+        .all()
+    )
+
+    now = datetime.now(timezone.utc)
+    triggered_now = []
+
+    for alert in alerts:
+        # Verifica se o alerta é aplicável à commodity
+        if payload.commodity and alert.commodity and alert.commodity.upper() != payload.commodity.upper():
+            continue
+
+        # Verifica praça / destino se especificados no alerta
+        if alert.hub_id and payload.hub_id and alert.hub_id != payload.hub_id:
+            continue
+        if alert.port_id and payload.port_id and alert.port_id != payload.port_id:
+            continue
+
+        candidate_value: Optional[float] = None
+        should_trigger = False
+
+        if alert.alert_type == "PARITY_ABOVE":
+            if payload.parity_brl_bag is not None:
+                candidate_value = payload.parity_brl_bag
+                should_trigger = candidate_value >= alert.target_value
+        elif alert.alert_type == "PARITY_BELOW":
+            if payload.parity_brl_bag is not None:
+                candidate_value = payload.parity_brl_bag
+                should_trigger = candidate_value <= alert.target_value
+        elif alert.alert_type == "CBOT_ABOVE":
+            if payload.cbot_cents is not None:
+                candidate_value = payload.cbot_cents
+                should_trigger = candidate_value >= alert.target_value
+        elif alert.alert_type == "CBOT_BELOW":
+            if payload.cbot_cents is not None:
+                candidate_value = payload.cbot_cents
+                should_trigger = candidate_value <= alert.target_value
+        elif alert.alert_type in ("FX_CHANGE_PCT", "FX_ABOVE"):
+            if payload.fx_rate is not None:
+                candidate_value = payload.fx_rate
+                should_trigger = candidate_value >= alert.target_value
+        elif alert.alert_type == "FX_BELOW":
+            if payload.fx_rate is not None:
+                candidate_value = payload.fx_rate
+                should_trigger = candidate_value <= alert.target_value
+        elif alert.alert_type == "SPREAD_ABOVE":
+            if payload.spread_brl_bag is not None:
+                candidate_value = payload.spread_brl_bag
+                should_trigger = candidate_value >= alert.target_value
+
+        if candidate_value is not None:
+            alert.current_value = candidate_value
+
+        if should_trigger:
+            if not alert.is_triggered:
+                alert.is_triggered = True
+                alert.triggered_at = now
+                alert.trigger_count += 1
+                triggered_now.append(alert.to_dict())
+
+    db.commit()
+    all_active = [a.to_dict() for a in alerts]
+    total_triggered = sum(1 for a in alerts if a.is_triggered)
+
+    return {
+        "status": "evaluated",
+        "total_active_alerts": len(alerts),
+        "total_triggered": total_triggered,
+        "newly_triggered": triggered_now,
+        "alerts": all_active,
+    }
+
+
+# ==============================================================================
+# Onboarding Demo Seed (Atividade 3)
+# ==============================================================================
+
+@app.post("/api/organizations/{org_id}/seed-demo")
+def seed_organization_demo_endpoint(
+    org_id: int,
+    membership: Membership = Depends(require_role(MembershipRole.OWNER)),
+    db: Session = Depends(get_db),
+):
+    """
+    Popula sob demanda o portfólio completo de dados de demonstração (Trial 14 dias):
+    contratos de frete, cenários, boletas de compra e watchlist de alertas.
+    """
+    summary = seed_organization_demo_data(db=db, org_id=org_id, user_id=membership.user_id)
+    return {"status": "seeded", "summary": summary}
 
 
 # ==============================================================================

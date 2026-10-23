@@ -2129,6 +2129,9 @@ th[aria-sort="descending"] .ux-sort-button::after { content:'↓'; margin-left:5
 </button></div><div class="nav-group"><p class="nav-group-label">GESTÃO</p><button class="tab-btn" data-section="scheduler" id="tab-btn-scheduler" onclick="switchTab('scheduler')" type="button">
 <i class="nav-icon" data-lucide="clock"></i>
 <span class="nav-label">Agendamentos</span>
+</button><button class="tab-btn" data-section="alerts" id="tab-btn-alerts" onclick="openAlertsModal()" type="button">
+<i class="nav-icon" data-lucide="bell"></i>
+<span class="nav-label">Watchlist &amp; Alertas</span>
 </button><button class="tab-btn" data-section="company" id="tab-btn-company" onclick="switchTab('company')" type="button">
 <i class="nav-icon" data-lucide="building-2"></i>
 <span class="nav-label">Minha empresa</span>
@@ -2138,6 +2141,10 @@ th[aria-sort="descending"] .ux-sort-button::after { content:'↓'; margin-left:5
 </button></div></nav><footer class="sidebar-footer"><span class="context-pill">Mesa de operações</span><p>Da cotação à decisão.</p><div class="mt-2 pt-2 border-t border-slate-100 flex flex-col gap-1"><button type="button" onclick="openPrivacyModal()" class="text-left text-[11px] text-emerald-700 hover:text-emerald-800 font-semibold hover:underline inline-flex items-center gap-1.5"><i class="w-3.5 h-3.5" data-lucide="shield"></i><span>Termos &amp; Privacidade (LGPD)</span></button><span class="sidebar-version text-[10px] text-slate-400">AgriTrading · MVP 2026</span></div></footer></aside><button aria-label="Fechar navegação" class="sidebar-scrim" id="sidebar-scrim" tabindex="-1" type="button"></button>
 <!-- TOP HEADER -->
 <header class="app-header"><div class="app-header-inner"><div class="header-left"><button aria-controls="sidebar-navigation" aria-expanded="false" aria-label="Abrir navegação" class="mobile-nav-toggle" id="mobile-nav-toggle" type="button"><i data-lucide="menu"></i></button><div class="header-context"><span>Mesa de operações</span><span class="header-date">Análise de originação e exportação</span></div></div><div aria-label="Referências de mercado" class="market-strip"><div class="market-item"><span>USD / BRL</span><strong id="ticker-fx">—</strong></div><div class="market-item"><span>SOJA · CBOT</span><strong id="ticker-soja">—</strong></div><div class="market-item"><span>MILHO · CBOT</span><strong id="ticker-milho">—</strong></div><span class="data-origin" id="market-data-status">Verificando dados</span></div><div class="flex items-center space-x-2 pl-3 border-l border-slate-200" id="auth-header-container">
+<button aria-label="Watchlist e Alertas de Mercado" class="relative inline-flex items-center justify-center p-2 text-slate-600 hover:text-emerald-700 hover:bg-slate-100 rounded-lg transition" id="btn-header-alerts" onclick="openAlertsModal()" title="Watchlist da Mesa &amp; Metas de Preço" type="button">
+<i class="w-4 h-4" data-lucide="bell"></i>
+<span class="absolute -top-1 -right-1 bg-amber-500 text-white font-bold text-[10px] w-4 h-4 rounded-full flex items-center justify-center hidden" id="alert-badge">0</span>
+</button>
 <button aria-label="Entrar na conta" class="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-md shadow-sm transition" id="btn-login" onclick="startCognitoLogin()" type="button">
 <i class="w-3.5 h-3.5" data-lucide="log-in"></i>
 <span>Entrar</span>
@@ -2166,7 +2173,19 @@ th[aria-sort="descending"] .ux-sort-button::after { content:'↓'; margin-left:5
 <i class="w-5 h-5 text-green-600" data-lucide="sliders"></i>
 <span>Seu cenário</span>
 </h2><p class="input-help">Defina a operação e ajuste as referências de preço.</p>
-<p class="parameters-section">Operação</p><div>
+<p class="parameters-section">Operação</p>
+<div class="mb-3">
+<label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Destino Comercial</label>
+<div class="grid grid-cols-2 gap-2">
+<button type="button" id="dest-type-export" onclick="setDestinationType('EXPORT')" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-emerald-600 bg-emerald-50 text-emerald-800 transition">
+🚢 Exportação (Porto)
+</button>
+<button type="button" id="dest-type-domestic" onclick="setDestinationType('DOMESTIC_INDUSTRY')" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100 transition">
+🏭 Mercado Interno (Indústria)
+</button>
+</div>
+</div>
+<div>
 <label class="block text-xs font-semibold text-slate-600 uppercase mb-1" for="input-commodity">Grão</label>
 <select class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:outline-none" id="input-commodity" onchange="onHubOrCommodityChange()">
 <option selected="" value="SOJA">Soja em Grão (CBOT ZS)</option>
@@ -2174,7 +2193,7 @@ th[aria-sort="descending"] .ux-sort-button::after { content:'↓'; margin-left:5
 </select>
 </div>
 <div class="grid grid-cols-2 gap-3">
-<div>
+<div id="container-port">
 <label class="block text-xs font-semibold text-slate-600 uppercase mb-1" for="input-port">Porto</label>
 <select class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:outline-none" id="input-port" onchange="onPortChange()">
 <option selected="" value="STS">Santos (STS)</option>
@@ -2182,6 +2201,16 @@ th[aria-sort="descending"] .ux-sort-button::after { content:'↓'; margin-left:5
 <option value="RG">Rio Grande (RG)</option>
 <option value="BCR">Barcarena (BCR)</option>
 <option value="ITQ">Itaqui (ITQ)</option>
+</select>
+</div>
+<div id="container-industry" class="hidden">
+<label class="block text-xs font-semibold text-slate-600 uppercase mb-1" for="input-industry">Indústria Destino</label>
+<select class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:outline-none" id="input-industry" onchange="onIndustryChange()">
+<option value="IND_ROO_BUNGE" selected="">Complexo Esmagadora Bunge/ADM (Rondonópolis MT)</option>
+<option value="IND_LRV_FS">FS Bioenergia - Etanol (Lucas do Rio Verde MT)</option>
+<option value="IND_RV_COMIGO">Complexo Industrial COMIGO / BRF (Rio Verde GO)</option>
+<option value="IND_CHAP_BRF">Polo Agroindustrial BRF (Chapecó SC)</option>
+<option value="IND_CASCAVEL_LAR">Polo Cooperativo Lar / C.Vale (Cascavel PR)</option>
 </select>
 </div>
 <div>
@@ -2195,6 +2224,13 @@ th[aria-sort="descending"] .ux-sort-button::after { content:'↓'; margin-left:5
 <option value="lem_ba">Luís Eduardo Magalhães (BA)</option>
 </select>
 </div>
+</div>
+<div id="container-icms" class="hidden p-2.5 bg-amber-50/70 border border-amber-200 rounded-lg">
+<div class="flex items-center justify-between">
+<label class="block text-xs font-semibold text-slate-700 uppercase" for="input-icms-rate">Alíquota ICMS (%)</label>
+<span class="text-[10px] text-slate-500">0% interno (diferido) ou 12% interestadual</span>
+</div>
+<input type="number" step="0.5" id="input-icms-rate" value="0.0" onchange="calculateParity()" class="w-full mt-1 bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-800 focus:outline-none" />
 </div>
 <p class="parameters-section">Cotações de referência</p><div class="grid grid-cols-2 gap-3">
 <div>
@@ -3318,11 +3354,16 @@ th[aria-sort="descending"] .ux-sort-button::after { content:'↓'; margin-left:5
                 Espaço de trabalho da sua organização
               </p>
 </div>
-</div>
-<button class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold text-xs px-3.5 py-2 rounded-lg transition flex items-center space-x-1.5 self-start sm:self-center border border-indigo-200 shadow-sm" onclick="loadOrganizationData()" type="button">
+<div class="flex items-center gap-2 self-start sm:self-center">
+<button class="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 font-semibold text-xs px-3.5 py-2 rounded-lg transition flex items-center space-x-1.5 shadow-sm" onclick="triggerManualDemoSeed()" type="button" title="Carregar contratos de frete, cenários, boletas e alertas de exemplo">
+<i class="w-3.5 h-3.5" data-lucide="sparkles"></i>
+<span>🌱 Carregar Dados Demo</span>
+</button>
+<button class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold text-xs px-3.5 py-2 rounded-lg transition flex items-center space-x-1.5 border border-indigo-200 shadow-sm" onclick="loadOrganizationData()" type="button">
 <i class="w-3.5 h-3.5" data-lucide="refresh-cw"></i>
 <span>Atualizar Dados</span>
 </button>
+</div>
 </div>
 <!-- Equipe & Convites -->
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-2">
@@ -4439,6 +4480,7 @@ th[aria-sort="descending"] .ux-sort-button::after { content:'↓'; margin-left:5
 
           if (user.memberships && user.memberships.length > 0) {
             loadSavedScenariosCount();
+            if (window.loadMarketAlerts) loadMarketAlerts();
           } else {
             checkOnboarding(user);
           }
@@ -4652,8 +4694,52 @@ th[aria-sort="descending"] .ux-sort-button::after { content:'↓'; margin-left:5
       }
     }
 
-    // 1. CÁLCULO DE PARIDADE
+    let currentDestinationType = 'EXPORT';
+
+    function setDestinationType(type) {
+      currentDestinationType = type;
+      const btnExport = document.getElementById('dest-type-export');
+      const btnDom = document.getElementById('dest-type-domestic');
+      const portCont = document.getElementById('container-port');
+      const indCont = document.getElementById('container-industry');
+      const icmsCont = document.getElementById('container-icms');
+
+      if (type === 'DOMESTIC_INDUSTRY') {
+        if (btnExport) btnExport.className = 'px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100 transition';
+        if (btnDom) btnDom.className = 'px-3 py-1.5 text-xs font-semibold rounded-lg border border-emerald-600 bg-emerald-50 text-emerald-800 transition';
+        if (portCont) portCont.classList.add('hidden');
+        if (indCont) indCont.classList.remove('hidden');
+        if (icmsCont) icmsCont.classList.remove('hidden');
+        onIndustryChange();
+      } else {
+        if (btnExport) btnExport.className = 'px-3 py-1.5 text-xs font-semibold rounded-lg border border-emerald-600 bg-emerald-50 text-emerald-800 transition';
+        if (btnDom) btnDom.className = 'px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100 transition';
+        if (portCont) portCont.classList.remove('hidden');
+        if (indCont) indCont.classList.add('hidden');
+        if (icmsCont) icmsCont.classList.add('hidden');
+      }
+      calculateParity();
+    }
+
+    function onIndustryChange() {
+      const ind = document.getElementById('input-industry')?.value;
+      const hub = document.getElementById('input-hub')?.value;
+      const icmsInput = document.getElementById('input-icms-rate');
+      if (!icmsInput) return;
+
+      const isInternal = (
+        (ind === 'IND_LRV_FS' && (hub === 'sorriso_mt' || hub === 'rondonopolis_mt')) ||
+        (ind === 'IND_ROO_BUNGE' && (hub === 'sorriso_mt' || hub === 'rondonopolis_mt')) ||
+        (ind === 'IND_RV_COMIGO' && hub === 'rio_verde_go') ||
+        (ind === 'IND_CASCAVEL_LAR' && hub === 'cascavel_pr')
+      );
+      icmsInput.value = isInternal ? "0.0" : "12.0";
+      calculateParity();
+    }
+
+    // 1. CÁLCULO DE PARIDADE (EXPORTAÇÃO OU MERCADO INTERNO)
     async function calculateParity() {
+      const isDomestic = (currentDestinationType === 'DOMESTIC_INDUSTRY');
       const brokerPayer = document.getElementById('input-broker-payer') ? document.getElementById('input-broker-payer').value : 'NONE';
       const brokerFee = parseFloat(document.getElementById('input-broker-fee')?.value || 0.50);
       const elevationUsd = parseFloat(document.getElementById('input-elevation')?.value || 8.00);
@@ -4661,17 +4747,22 @@ th[aria-sort="descending"] .ux-sort-button::after { content:'↓'; margin-left:5
       const demurrageUsd = parseFloat(document.getElementById('input-demurrage')?.value || 0.0);
       const stateTaxInput = document.getElementById('input-state-tax');
       const stateTaxBag = stateTaxInput ? parseFloat(stateTaxInput.value) : null;
+      const icmsRate = isDomestic ? parseFloat(document.getElementById('input-icms-rate')?.value || 0.0) : 0.0;
+      const indId = isDomestic ? (document.getElementById('input-industry')?.value || 'IND_ROO_BUNGE') : null;
 
       const payload = {
         commodity: document.getElementById('input-commodity').value,
-        port_id: document.getElementById('input-port').value,
+        port_id: isDomestic ? 'STS' : document.getElementById('input-port').value,
+        destination_type: currentDestinationType,
+        industry_id: indId,
+        icms_rate_pct: icmsRate,
         hub_id: document.getElementById('input-hub').value,
         cbot_price_cents: parseFloat(document.getElementById('input-cbot').value),
         port_premium_cents: parseFloat(document.getElementById('input-premium').value),
         usd_brl_fx: parseFloat(document.getElementById('input-fx').value),
-        elevation_usd_ton: elevationUsd,
-        other_port_costs_brl_ton: otherPortBrl,
-        demurrage_usd_ton: demurrageUsd,
+        elevation_usd_ton: isDomestic ? 0.0 : elevationUsd,
+        other_port_costs_brl_ton: isDomestic ? 0.0 : otherPortBrl,
+        demurrage_usd_ton: isDomestic ? 0.0 : demurrageUsd,
         state_tax_fund_brl_bag: !isNaN(stateTaxBag) ? stateTaxBag : null,
         current_cash_price_brl_bag: parseFloat(document.getElementById('input-cash').value),
         brokerage_payer: brokerPayer,
@@ -4745,78 +4836,137 @@ th[aria-sort="descending"] .ux-sort-button::after { content:'↓'; margin-left:5
         const demurrageBag = data.cost_breakdown ? (data.cost_breakdown.demurrage_brl_bag || 0) : 0;
         const demurrageUsdTon = demurrageBag / (0.06 * payload.usd_brl_fx);
         const taxBag = data.cost_breakdown ? data.cost_breakdown.state_fund_brl_bag : 0;
+        const icmsBag = data.cost_breakdown ? (data.cost_breakdown.icms_brl_bag || 0) : 0;
+        const icmsUsdTon = icmsBag / (0.06 * payload.usd_brl_fx);
 
         const wBody = document.getElementById('waterfall-body');
-        wBody.innerHTML = `
-          <tr class="font-medium bg-slate-50">
-            <td class="px-4 py-2 font-bold text-slate-900">Preço FOB Exportação (Porto)</td>
-            <td class="px-4 py-2 text-right">$${fobUsd.toFixed(2)}</td>
-            <td class="px-4 py-2 text-right font-bold text-slate-900">R$ ${fobBrl.toFixed(2)}</td>
-            <td class="px-4 py-2 text-right">100.0%</td>
-          </tr>
-          <tr>
-            <td class="px-4 py-2 text-red-600">(-) Frete Rodoviário Origem-Porto</td>
-            <td class="px-4 py-2 text-right">-$${(freightTon / payload.usd_brl_fx).toFixed(2)}</td>
-            <td class="px-4 py-2 text-right text-red-600">-R$ ${freightBag.toFixed(2)}</td>
-            <td class="px-4 py-2 text-right">${fobBrl > 0 ? ((freightBag / fobBrl) * 100).toFixed(1) : 0}%</td>
-          </tr>
-          <tr>
-            <td class="px-4 py-2 text-red-600">(-) Elevação Portuária (Terminal Handling THC)</td>
-            <td class="px-4 py-2 text-right">-$${elevUsdTon.toFixed(2)}</td>
-            <td class="px-4 py-2 text-right text-red-600">-R$ ${elevBag.toFixed(2)}</td>
-            <td class="px-4 py-2 text-right">${fobBrl > 0 ? ((elevBag / fobBrl) * 100).toFixed(1) : 0}%</td>
-          </tr>
-          <tr>
-            <td class="px-4 py-2 text-red-600">(-) Despesas Acessórias (Classificação/Despacho)</td>
-            <td class="px-4 py-2 text-right">-$${otherPortUsdTon.toFixed(2)}</td>
-            <td class="px-4 py-2 text-right text-red-600">-R$ ${otherPortBag.toFixed(2)}</td>
-            <td class="px-4 py-2 text-right">${fobBrl > 0 ? ((otherPortBag / fobBrl) * 100).toFixed(1) : 0}%</td>
-          </tr>
-          ${demurrageBag > 0 ? `
-          <tr class="bg-amber-50/40">
-            <td class="px-4 py-2 text-amber-700">(-) Provisão de Demurrage / Fila Portuária</td>
-            <td class="px-4 py-2 text-right text-amber-700">-$${demurrageUsdTon.toFixed(2)}</td>
-            <td class="px-4 py-2 text-right text-amber-700 font-medium">-R$ ${demurrageBag.toFixed(2)}</td>
-            <td class="px-4 py-2 text-right text-amber-700">${fobBrl > 0 ? ((demurrageBag / fobBrl) * 100).toFixed(1) : 0}%</td>
-          </tr>
-          ` : ''}
-          ${brokerPayer === 'TRADING' ? `
-          <tr class="bg-amber-50/50">
-            <td class="px-4 py-2 text-amber-700 font-medium">(-) Corretagem de Originação (Pago pela Trading)</td>
-            <td class="px-4 py-2 text-right text-amber-700">-$${(brokerFee / (0.06 * payload.usd_brl_fx)).toFixed(2)}</td>
-            <td class="px-4 py-2 text-right text-amber-700 font-bold">-R$ ${brokerFee.toFixed(2)}</td>
-            <td class="px-4 py-2 text-right text-amber-700">${fobBrl > 0 ? ((brokerFee / fobBrl) * 100).toFixed(1) : 0}%</td>
-          </tr>
-          ` : (brokerPayer === 'SELLER' ? `
-          <tr class="bg-blue-50/50">
-            <td class="px-4 py-2 text-blue-700 font-medium">ℹ️ Corretagem Retida do Produtor (Fonte)</td>
-            <td class="px-4 py-2 text-right text-blue-600">-$${(brokerFee / (0.06 * payload.usd_brl_fx)).toFixed(2)}</td>
-            <td class="px-4 py-2 text-right text-blue-700 font-semibold">-R$ ${brokerFee.toFixed(2)}</td>
-            <td class="px-4 py-2 text-right text-slate-500 text-xs">Retenção</td>
-          </tr>
-          ` : '')}
-          ${taxBag > 0 ? `
-          <tr>
-            <td class="px-4 py-2 text-red-600">(-) Fundo Tributário Estadual (${(HUB_TAX_DEFAULTS[payload.hub_id] || {}).name || 'Fundo Estadual'})</td>
-            <td class="px-4 py-2 text-right">-$${(taxBag / (0.06 * payload.usd_brl_fx)).toFixed(2)}</td>
-            <td class="px-4 py-2 text-right text-red-600 font-medium">-R$ ${taxBag.toFixed(2)}</td>
-            <td class="px-4 py-2 text-right">${fobBrl > 0 ? ((taxBag / fobBrl) * 100).toFixed(1) : 0}%</td>
-          </tr>
-          ` : `
-          <tr class="bg-green-50/40">
-            <td class="px-4 py-2 text-green-700">✓ Fundo Tributário Estadual (${(HUB_TAX_DEFAULTS[payload.hub_id] || {}).name || 'Isento'})</td>
-            <td class="px-4 py-2 text-right text-green-700">$0.00</td>
-            <td class="px-4 py-2 text-right text-green-700 font-semibold">R$ 0,00</td>
-            <td class="px-4 py-2 text-right text-green-700">0.0%</td>
-          </tr>
-          `}
-          <tr class="bg-green-50 font-bold text-green-900 border-t border-green-200">
-            <td class="px-4 py-2">(=) Paridade Líquida FAS Interior</td>
-            <td class="px-4 py-2 text-right">$${fasUsd.toFixed(2)}</td>
-            <td class="px-4 py-2 text-right text-green-800 text-base">R$ ${fasBrl.toFixed(2)}</td>
-            <td class="px-4 py-2 text-right">${fobBrl > 0 ? ((fasBrl / fobBrl) * 100).toFixed(1) : 0}%</td>
-          </tr>
-        `;
+        if (isDomestic) {
+          wBody.innerHTML = `
+            <tr class="font-medium bg-emerald-50/50">
+              <td class="px-4 py-2 font-bold text-slate-900">Preço CIF Destino (${data.industry_name || 'Indústria Consumidora'})</td>
+              <td class="px-4 py-2 text-right">$${fobUsd.toFixed(2)}</td>
+              <td class="px-4 py-2 text-right font-bold text-slate-900">R$ ${fobBrl.toFixed(2)}</td>
+              <td class="px-4 py-2 text-right">100.0%</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-2 text-red-600">(-) Frete Rodoviário Origem-Indústria</td>
+              <td class="px-4 py-2 text-right">-$${(freightTon / payload.usd_brl_fx).toFixed(2)}</td>
+              <td class="px-4 py-2 text-right text-red-600 font-medium">-R$ ${freightBag.toFixed(2)}</td>
+              <td class="px-4 py-2 text-right">${fobBrl > 0 ? ((freightBag / fobBrl) * 100).toFixed(1) : 0}%</td>
+            </tr>
+            ${icmsBag > 0 ? `
+            <tr class="bg-amber-50/40">
+              <td class="px-4 py-2 text-amber-700">(-) ICMS Interestadual (${payload.icms_rate_pct}%)</td>
+              <td class="px-4 py-2 text-right text-amber-700">-$${icmsUsdTon.toFixed(2)}</td>
+              <td class="px-4 py-2 text-right text-amber-700 font-medium">-R$ ${icmsBag.toFixed(2)}</td>
+              <td class="px-4 py-2 text-right text-amber-700">${fobBrl > 0 ? ((icmsBag / fobBrl) * 100).toFixed(1) : 0}%</td>
+            </tr>
+            ` : `
+            <tr class="bg-green-50/40">
+              <td class="px-4 py-2 text-green-700">✓ ICMS Operação Interna (Diferido / 0%)</td>
+              <td class="px-4 py-2 text-right text-green-700">$0.00</td>
+              <td class="px-4 py-2 text-right text-green-700 font-semibold">R$ 0,00</td>
+              <td class="px-4 py-2 text-right text-green-700">0.0%</td>
+            </tr>
+            `}
+            <tr class="text-slate-400 text-xs">
+              <td class="px-4 py-1.5 italic">✓ Despesas Portuárias (Elevação/Demurrage)</td>
+              <td class="px-4 py-1.5 text-right">$0.00</td>
+              <td class="px-4 py-1.5 text-right font-medium">R$ 0,00</td>
+              <td class="px-4 py-1.5 text-right">Isento</td>
+            </tr>
+            ${taxBag > 0 ? `
+            <tr>
+              <td class="px-4 py-2 text-red-600">(-) Fundo Tributário Estadual (${(HUB_TAX_DEFAULTS[payload.hub_id] || {}).name || 'Fundo Estadual'})</td>
+              <td class="px-4 py-2 text-right">-$${(taxBag / (0.06 * payload.usd_brl_fx)).toFixed(2)}</td>
+              <td class="px-4 py-2 text-right text-red-600 font-medium">-R$ ${taxBag.toFixed(2)}</td>
+              <td class="px-4 py-2 text-right">${fobBrl > 0 ? ((taxBag / fobBrl) * 100).toFixed(1) : 0}%</td>
+            </tr>
+            ` : ''}
+            <tr class="bg-green-50 font-bold text-green-900 border-t border-green-200">
+              <td class="px-4 py-2">(=) Paridade Líquida Balcão Fazenda</td>
+              <td class="px-4 py-2 text-right">$${fasUsd.toFixed(2)}</td>
+              <td class="px-4 py-2 text-right text-green-800 text-base">R$ ${fasBrl.toFixed(2)}</td>
+              <td class="px-4 py-2 text-right">${fobBrl > 0 ? ((fasBrl / fobBrl) * 100).toFixed(1) : 0}%</td>
+            </tr>
+          `;
+        } else {
+          wBody.innerHTML = `
+            <tr class="font-medium bg-slate-50">
+              <td class="px-4 py-2 font-bold text-slate-900">Preço FOB Exportação (Porto)</td>
+              <td class="px-4 py-2 text-right">$${fobUsd.toFixed(2)}</td>
+              <td class="px-4 py-2 text-right font-bold text-slate-900">R$ ${fobBrl.toFixed(2)}</td>
+              <td class="px-4 py-2 text-right">100.0%</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-2 text-red-600">(-) Frete Rodoviário Origem-Porto</td>
+              <td class="px-4 py-2 text-right">-$${(freightTon / payload.usd_brl_fx).toFixed(2)}</td>
+              <td class="px-4 py-2 text-right text-red-600">-R$ ${freightBag.toFixed(2)}</td>
+              <td class="px-4 py-2 text-right">${fobBrl > 0 ? ((freightBag / fobBrl) * 100).toFixed(1) : 0}%</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-2 text-red-600">(-) Elevação Portuária (Terminal Handling THC)</td>
+              <td class="px-4 py-2 text-right">-$${elevUsdTon.toFixed(2)}</td>
+              <td class="px-4 py-2 text-right text-red-600">-R$ ${elevBag.toFixed(2)}</td>
+              <td class="px-4 py-2 text-right">${fobBrl > 0 ? ((elevBag / fobBrl) * 100).toFixed(1) : 0}%</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-2 text-red-600">(-) Despesas Acessórias (Classificação/Despacho)</td>
+              <td class="px-4 py-2 text-right">-$${otherPortUsdTon.toFixed(2)}</td>
+              <td class="px-4 py-2 text-right text-red-600">-R$ ${otherPortBag.toFixed(2)}</td>
+              <td class="px-4 py-2 text-right">${fobBrl > 0 ? ((otherPortBag / fobBrl) * 100).toFixed(1) : 0}%</td>
+            </tr>
+            ${demurrageBag > 0 ? `
+            <tr class="bg-amber-50/40">
+              <td class="px-4 py-2 text-amber-700">(-) Provisão de Demurrage / Fila Portuária</td>
+              <td class="px-4 py-2 text-right text-amber-700">-$${demurrageUsdTon.toFixed(2)}</td>
+              <td class="px-4 py-2 text-right text-amber-700 font-medium">-R$ ${demurrageBag.toFixed(2)}</td>
+              <td class="px-4 py-2 text-right text-amber-700">${fobBrl > 0 ? ((demurrageBag / fobBrl) * 100).toFixed(1) : 0}%</td>
+            </tr>
+            ` : ''}
+            ${brokerPayer === 'TRADING' ? `
+            <tr class="bg-amber-50/50">
+              <td class="px-4 py-2 text-amber-700 font-medium">(-) Corretagem de Originação (Pago pela Trading)</td>
+              <td class="px-4 py-2 text-right text-amber-700">-$${(brokerFee / (0.06 * payload.usd_brl_fx)).toFixed(2)}</td>
+              <td class="px-4 py-2 text-right text-amber-700 font-bold">-R$ ${brokerFee.toFixed(2)}</td>
+              <td class="px-4 py-2 text-right text-amber-700">${fobBrl > 0 ? ((brokerFee / fobBrl) * 100).toFixed(1) : 0}%</td>
+            </tr>
+            ` : (brokerPayer === 'SELLER' ? `
+            <tr class="bg-blue-50/50">
+              <td class="px-4 py-2 text-blue-700 font-medium">ℹ️ Corretagem Retida do Produtor (Fonte)</td>
+              <td class="px-4 py-2 text-right text-blue-600">-$${(brokerFee / (0.06 * payload.usd_brl_fx)).toFixed(2)}</td>
+              <td class="px-4 py-2 text-right text-blue-700 font-semibold">-R$ ${brokerFee.toFixed(2)}</td>
+              <td class="px-4 py-2 text-right text-slate-500 text-xs">Retenção</td>
+            </tr>
+            ` : '')}
+            ${taxBag > 0 ? `
+            <tr>
+              <td class="px-4 py-2 text-red-600">(-) Fundo Tributário Estadual (${(HUB_TAX_DEFAULTS[payload.hub_id] || {}).name || 'Fundo Estadual'})</td>
+              <td class="px-4 py-2 text-right">-$${(taxBag / (0.06 * payload.usd_brl_fx)).toFixed(2)}</td>
+              <td class="px-4 py-2 text-right text-red-600 font-medium">-R$ ${taxBag.toFixed(2)}</td>
+              <td class="px-4 py-2 text-right">${fobBrl > 0 ? ((taxBag / fobBrl) * 100).toFixed(1) : 0}%</td>
+            </tr>
+            ` : `
+            <tr class="bg-green-50/40">
+              <td class="px-4 py-2 text-green-700">✓ Fundo Tributário Estadual (${(HUB_TAX_DEFAULTS[payload.hub_id] || {}).name || 'Isento'})</td>
+              <td class="px-4 py-2 text-right text-green-700">$0.00</td>
+              <td class="px-4 py-2 text-right text-green-700 font-semibold">R$ 0,00</td>
+              <td class="px-4 py-2 text-right text-green-700">0.0%</td>
+            </tr>
+            `}
+            <tr class="bg-green-50 font-bold text-green-900 border-t border-green-200">
+              <td class="px-4 py-2">(=) Paridade Líquida FAS Interior</td>
+              <td class="px-4 py-2 text-right">$${fasUsd.toFixed(2)}</td>
+              <td class="px-4 py-2 text-right text-green-800 text-base">R$ ${fasBrl.toFixed(2)}</td>
+              <td class="px-4 py-2 text-right">${fobBrl > 0 ? ((fasBrl / fobBrl) * 100).toFixed(1) : 0}%</td>
+            </tr>
+          `;
+        }
+
+        // Avalia regras de alerta ativas da mesa
+        if (window.evaluateMarketAlerts) {
+          window.evaluateMarketAlerts(data, payload);
+        }
 
       } catch (err) {
         console.error('Erro ao calcular paridade:', err);
@@ -6222,6 +6372,251 @@ th[aria-sort="descending"] .ux-sort-button::after { content:'↓'; margin-left:5
     }
 
     // ==============================================================================
+    // WATCHLIST & ALERTAS DE MERCADO (ATIVIDADE 1)
+    // ==============================================================================
+    let currentMarketAlerts = [];
+
+    function openAlertsModal() {
+      const orgId = getActiveUserOrgId();
+      if (!orgId) {
+        alert('Faça login com sua conta para acessar a watchlist e alertas de mercado.');
+        startCognitoLogin();
+        return;
+      }
+      const modal = document.getElementById('alerts-modal');
+      if (modal) modal.classList.remove('hidden');
+      loadMarketAlerts();
+    }
+
+    function closeAlertsModal() {
+      const modal = document.getElementById('alerts-modal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    async function loadMarketAlerts() {
+      const orgId = getActiveUserOrgId();
+      if (!orgId) return;
+
+      try {
+        const res = await fetch(`${API_BASE}/organizations/${orgId}/alerts`, {
+          headers: getAuthHeaders()
+        });
+        if (!res.ok) return;
+        currentMarketAlerts = await res.json();
+        renderMarketAlertsTable(currentMarketAlerts);
+        updateAlertsBadge(currentMarketAlerts);
+      } catch (e) {
+        console.error('Erro ao carregar alertas da organização:', e);
+      }
+    }
+
+    function updateAlertsBadge(alerts) {
+      const badge = document.getElementById('alert-badge');
+      if (!badge) return;
+      const triggeredCount = alerts.filter(a => a.is_triggered && a.is_active).length;
+      if (triggeredCount > 0) {
+        badge.innerText = triggeredCount;
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
+      const countDisplay = document.getElementById('alerts-count-display');
+      if (countDisplay) countDisplay.innerText = alerts.length;
+    }
+
+    function renderMarketAlertsTable(alerts) {
+      const tbody = document.getElementById('alerts-tbody');
+      if (!tbody) return;
+
+      if (!alerts || alerts.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="px-4 py-8 text-center text-slate-500">Nenhum alerta cadastrado na mesa.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = alerts.map(a => {
+        const isTrig = a.is_triggered;
+        const statusBadge = isTrig
+          ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 animate-pulse">🔥 GATILHO ATINGIDO</span>`
+          : (a.is_active ? `<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-100 text-emerald-800">● ATIVO</span>` : `<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600">INATIVO</span>`);
+
+        const curValStr = (a.current_value !== null && a.current_value !== undefined)
+          ? `${a.current_value.toFixed(2)}`
+          : '—';
+
+        return `
+          <tr class="${isTrig ? 'bg-amber-50/50' : 'hover:bg-slate-50'}">
+            <td class="px-3 py-2.5">${statusBadge}</td>
+            <td class="px-3 py-2.5 font-semibold text-slate-900">
+              ${a.name}
+              ${a.commodity ? `<span class="ml-1 text-[10px] text-slate-500 font-normal">(${a.commodity})</span>` : ''}
+            </td>
+            <td class="px-3 py-2.5 text-slate-600 text-[11px] font-mono">${a.alert_type}</td>
+            <td class="px-3 py-2.5 text-right font-bold text-slate-900">${a.target_value.toFixed(2)}</td>
+            <td class="px-3 py-2.5 text-right font-bold ${isTrig ? 'text-amber-700' : 'text-slate-700'}">${curValStr}</td>
+            <td class="px-3 py-2.5 text-center text-slate-600 font-mono">${a.trigger_count || 0}</td>
+            <td class="px-3 py-2.5 text-center space-x-1 whitespace-nowrap">
+              ${isTrig ? `
+                <button type="button" onclick="resetMarketAlert(${a.id})" class="px-2 py-1 text-[10px] font-semibold text-amber-800 bg-amber-100 hover:bg-amber-200 rounded transition" title="Resetar gatilho">Reset</button>
+              ` : ''}
+              <button type="button" onclick="deleteMarketAlert(${a.id})" class="px-2 py-1 text-[10px] font-semibold text-red-700 hover:text-red-900 hover:bg-red-50 rounded transition" title="Remover regra">Excluir</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    async function submitCreateAlert() {
+      const orgId = getActiveUserOrgId();
+      if (!orgId) return;
+
+      const name = document.getElementById('alert-input-name')?.value.trim();
+      const alertType = document.getElementById('alert-input-type')?.value;
+      const targetVal = parseFloat(document.getElementById('alert-input-target')?.value);
+      const commodity = document.getElementById('alert-input-commodity')?.value;
+      const hubId = document.getElementById('alert-input-hub')?.value || null;
+
+      if (!name) {
+        alert('Informe o nome da meta ou alerta.');
+        return;
+      }
+      if (isNaN(targetVal)) {
+        alert('Informe o valor alvo para o gatilho.');
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/organizations/${orgId}/alerts`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({
+            name: name,
+            alert_type: alertType,
+            commodity: commodity,
+            hub_id: hubId,
+            target_value: targetVal,
+            notification_channel: 'IN_APP'
+          })
+        });
+
+        if (res.ok) {
+          document.getElementById('alert-input-name').value = '';
+          document.getElementById('alert-input-target').value = '';
+          await loadMarketAlerts();
+          alert('✓ Alerta cadastrado com sucesso!');
+        } else {
+          const err = await res.text();
+          alert('Erro ao cadastrar alerta: ' + err);
+        }
+      } catch (e) {
+        console.error('Erro ao cadastrar alerta:', e);
+      }
+    }
+
+    async function resetMarketAlert(alertId) {
+      const orgId = getActiveUserOrgId();
+      if (!orgId) return;
+
+      try {
+        const res = await fetch(`${API_BASE}/organizations/${orgId}/alerts/${alertId}/reset`, {
+          method: 'POST',
+          headers: getAuthHeaders()
+        });
+        if (res.ok) {
+          await loadMarketAlerts();
+        }
+      } catch (e) {
+        console.error('Erro ao resetar alerta:', e);
+      }
+    }
+
+    async function deleteMarketAlert(alertId) {
+      if (!confirm('Deseja realmente remover esta regra de alerta?')) return;
+      const orgId = getActiveUserOrgId();
+      if (!orgId) return;
+
+      try {
+        const res = await fetch(`${API_BASE}/organizations/${orgId}/alerts/${alertId}`, {
+          method: 'DELETE',
+          headers: getAuthHeaders()
+        });
+        if (res.ok) {
+          await loadMarketAlerts();
+        }
+      } catch (e) {
+        console.error('Erro ao excluir alerta:', e);
+      }
+    }
+
+    async function evaluateMarketAlerts(data, payload) {
+      const orgId = getActiveUserOrgId();
+      if (!orgId || !data) return;
+
+      try {
+        const evalPayload = {
+          commodity: payload.commodity,
+          hub_id: payload.hub_id,
+          port_id: payload.port_id,
+          parity_brl_bag: data.net_parity_price_brl_bag,
+          spread_brl_bag: data.originator_spread_brl_bag,
+          fx_rate: payload.usd_brl_fx,
+          cbot_cents: payload.cbot_price_cents
+        };
+
+        const res = await fetch(`${API_BASE}/organizations/${orgId}/alerts/evaluate`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(evalPayload)
+        });
+
+        if (res.ok) {
+          const evalData = await res.json();
+          if (evalData.alerts) {
+            currentMarketAlerts = evalData.alerts;
+            updateAlertsBadge(evalData.alerts);
+          }
+          if (evalData.newly_triggered && evalData.newly_triggered.length > 0) {
+            const first = evalData.newly_triggered[0];
+            const banner = document.getElementById('feedback-parity');
+            if (banner) {
+              banner.hidden = false;
+              banner.className = 'p-3 bg-amber-500 text-white rounded-lg shadow-md font-bold text-xs flex items-center justify-between mb-4';
+              banner.innerHTML = `<span>🚨 ALERTA ATINGIDO: ${first.name} (Atual: R$ ${first.current_value?.toFixed(2)} / Alvo: R$ ${first.target_value?.toFixed(2)})</span><button type="button" onclick="openAlertsModal()" class="underline ml-3">Ver Watchlist</button>`;
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Erro ao avaliar alertas:', e);
+      }
+    }
+
+    async function triggerManualDemoSeed() {
+      const orgId = getActiveUserOrgId();
+      if (!orgId) {
+        alert('Faça login primeiro para carregar dados demo.');
+        return;
+      }
+      if (!confirm('Deseja carregar o portfólio completo de demonstração (fretes, cenários, boletas e alertas)?')) return;
+
+      try {
+        const res = await fetch(`${API_BASE}/organizations/${orgId}/seed-demo`, {
+          method: 'POST',
+          headers: getAuthHeaders()
+        });
+        if (res.ok) {
+          alert('🌱 Portfólio de demonstração populado com sucesso!\n4 contratos de frete, 3 cenários, 2 boletas de compra e 4 alertas de mercado criados.');
+          await loadOrganizationData();
+          await loadSavedScenariosCount();
+          await loadMarketAlerts();
+        } else {
+          const err = await res.text();
+          alert('Erro ao carregar dados demo: ' + err);
+        }
+      } catch (e) {
+        console.error('Erro ao carregar demo seed:', e);
+      }
+    }
+
+    // ==============================================================================
     // TICKET U06: EXPORTAÇÃO EXECUTIVA PARA WHATSAPP
     // ==============================================================================
     function exportToWhatsApp() {
@@ -7514,6 +7909,7 @@ _Boleta registrada via AgriTrading Platform_`;
 
     async function submitOnboardingCreateOrg() {
       const name = document.getElementById('onboarding-company-name')?.value.trim();
+      const seedDemo = document.getElementById('onboarding-seed-demo')?.checked ?? true;
       if (!name) {
         alert('Por favor, informe o nome da sua empresa / trading.');
         return;
@@ -7523,13 +7919,20 @@ _Boleta registrada via AgriTrading Platform_`;
         const res = await fetch(`${API_BASE}/organizations`, {
           method: 'POST',
           headers: getAuthHeaders(),
-          body: JSON.stringify({ name: name })
+          body: JSON.stringify({ name: name, seed_demo_data: seedDemo })
         });
 
         if (res.ok) {
-          alert(`🎉 Workspace "${name}" criado com sucesso!`);
+          const resData = await res.json();
+          let msg = `🎉 Workspace "${name}" criado com sucesso!`;
+          if (resData.demo_seeded) {
+            msg += '\n🌱 Portfólio de demonstração (fretes, cenários, boletas e alertas) carregado para o seu Trial de 14 dias!';
+          }
+          alert(msg);
           document.getElementById('onboarding-modal').classList.add('hidden');
           await refreshUserProfile();
+          await loadSavedScenariosCount();
+          await loadMarketAlerts();
           switchTab('parity');
         } else {
           const err = await res.text();
@@ -7928,10 +8331,129 @@ _Boleta registrada via AgriTrading Platform_`;
 <button class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold rounded-lg transition" onclick="closeSavedScenariosModal()" type="button">Fechar</button>
 </div>
 </div>
-</div><div class="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 hidden flex items-center justify-center p-4" id="onboarding-modal">
+</div>
+
+<!-- ============================================================== -->
+<!-- MODAL: WATCHLIST & ALERTAS DE MERCADO (ATIVIDADE 1) -->
+<!-- ============================================================== -->
+<div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4" id="alerts-modal">
+  <div class="bg-white w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+    <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+      <div class="flex items-center space-x-2.5">
+        <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
+          <i class="w-4 h-4" data-lucide="bell"></i>
+        </div>
+        <div>
+          <h3 class="text-base font-bold text-slate-900">Watchlist &amp; Alertas de Mercado</h3>
+          <p class="text-xs text-slate-500">Metas de preço, gatilhos de paridade na fazenda, spread balcão, CBOT e taxa cambial.</p>
+        </div>
+      </div>
+      <button aria-label="Fechar janela" class="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-200 transition" onclick="closeAlertsModal()" type="button">
+        <i class="w-5 h-5" data-lucide="x"></i>
+      </button>
+    </div>
+    
+    <div class="p-6 overflow-y-auto space-y-6">
+      <!-- Formulário de Novo Alerta -->
+      <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+        <h4 class="text-xs font-bold text-slate-800 uppercase flex items-center gap-1.5">
+          <i class="w-4 h-4 text-emerald-600" data-lucide="plus-circle"></i>
+          <span>Nova Regra de Alerta / Meta de Preço</span>
+        </h4>
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+          <div class="md:col-span-2">
+            <label class="block text-[11px] font-semibold text-slate-600 mb-1" for="alert-input-name">Nome da Meta</label>
+            <input type="text" id="alert-input-name" placeholder="Ex: Meta Paridade Soja Sorriso > R$ 130" class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-600 mb-1" for="alert-input-type">Tipo de Gatilho</label>
+            <select id="alert-input-type" class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 focus:outline-none">
+              <option value="PARITY_ABOVE">Paridade Líquida &gt;= (R$/sc)</option>
+              <option value="PARITY_BELOW">Paridade Líquida &lt;= (R$/sc)</option>
+              <option value="SPREAD_ABOVE">Spread (Paridade - Balcão) &gt;= (R$/sc)</option>
+              <option value="CBOT_ABOVE">CBOT Acima de (¢/bu)</option>
+              <option value="CBOT_BELOW">CBOT Abaixo de (¢/bu)</option>
+              <option value="FX_CHANGE_PCT">Dólar PTAX Acima de (R$)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-600 mb-1" for="alert-input-target">Valor Alvo (Target)</label>
+            <input type="number" step="0.5" id="alert-input-target" placeholder="Ex: 130.00" class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 font-bold focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-600 mb-1" for="alert-input-commodity">Grão</label>
+            <select id="alert-input-commodity" class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 focus:outline-none">
+              <option value="SOJA">Soja em Grão</option>
+              <option value="MILHO">Milho em Grão</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-600 mb-1" for="alert-input-hub">Praça / Origem (Opcional)</label>
+            <select id="alert-input-hub" class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 focus:outline-none">
+              <option value="">Qualquer Praça</option>
+              <option value="sorriso_mt">Sorriso (MT)</option>
+              <option value="rondonopolis_mt">Rondonópolis (MT)</option>
+              <option value="rio_verde_go">Rio Verde (GO)</option>
+              <option value="cascavel_pr">Cascavel (PR)</option>
+              <option value="passo_fundo_rs">Passo Fundo (RS)</option>
+              <option value="lem_ba">LEM (BA)</option>
+            </select>
+          </div>
+          <div class="flex items-end">
+            <button type="button" onclick="submitCreateAlert()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs py-2 px-3 rounded-lg transition shadow-sm flex items-center justify-center gap-1.5">
+              <i class="w-3.5 h-3.5" data-lucide="check"></i>
+              <span>Cadastrar Alerta</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabela de Alertas Cadastrados -->
+      <div class="space-y-2">
+        <div class="flex items-center justify-between">
+          <h4 class="text-xs font-bold text-slate-700 uppercase flex items-center gap-1.5">
+            <i class="w-4 h-4 text-amber-600" data-lucide="list"></i>
+            <span>Regras Cadastradas na Watchlist (<span id="alerts-count-display">0</span>)</span>
+          </h4>
+          <button type="button" onclick="loadMarketAlerts()" class="text-xs text-emerald-700 hover:text-emerald-800 font-semibold inline-flex items-center gap-1">
+            <i class="w-3.5 h-3.5" data-lucide="refresh-cw"></i>
+            <span>Atualizar</span>
+          </button>
+        </div>
+        <div class="overflow-x-auto border border-slate-200 rounded-xl">
+          <table class="w-full text-xs text-left">
+            <thead class="bg-slate-50 uppercase text-slate-600 border-b border-slate-200">
+              <tr>
+                <th class="px-3 py-2.5">Status</th>
+                <th class="px-3 py-2.5">Alerta / Regra</th>
+                <th class="px-3 py-2.5">Tipo</th>
+                <th class="px-3 py-2.5 text-right">Alvo</th>
+                <th class="px-3 py-2.5 text-right">Valor Atual</th>
+                <th class="px-3 py-2.5 text-center">Disparos</th>
+                <th class="px-3 py-2.5 text-center">Ações</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100" id="alerts-tbody">
+              <tr><td colspan="7" class="px-4 py-8 text-center text-slate-500">Nenhum alerta cadastrado na mesa.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
+      <button class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold rounded-lg transition" onclick="closeAlertsModal()" type="button">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div class="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 hidden flex items-center justify-center p-4" id="onboarding-modal">
 <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col">
 <div class="p-6 text-center space-y-2 bg-gradient-to-b from-emerald-50 to-white border-b border-slate-100">
 <div class="w-14 h-14 rounded-2xl bg-emerald-600 text-white flex items-center justify-center text-3xl mx-auto shadow-md">
+🌱
 </div>
 <h3 class="text-lg font-bold text-slate-900">Bem-vindo ao AgriTrading!</h3>
 <p class="text-xs text-slate-500">Para liberar o salvamento de cenários, gestão de equipe e perfis privados de custos, crie o seu workspace corporativo:</p>
@@ -7940,6 +8462,15 @@ _Boleta registrada via AgriTrading Platform_`;
 <div>
 <label class="block text-xs font-bold text-slate-700 uppercase mb-1" for="onboarding-company-name">Nome da Empresa / Trading</label>
 <input class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none" id="onboarding-company-name" placeholder="Ex: AgroTrading Cerrado Ltda" type="text"/>
+</div>
+<div class="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+<label class="flex items-start space-x-2.5 cursor-pointer">
+<input type="checkbox" id="onboarding-seed-demo" checked="" class="mt-0.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"/>
+<div class="text-xs">
+<strong class="text-slate-800">🌱 Iniciar com dados de exemplo (Trial de 14 dias)</strong>
+<p class="text-slate-600 mt-0.5">Pré-carrega contratos privados de frete, cenários salvos, boletas de compra e watchlist de alertas para você testar imediatamente.</p>
+</div>
+</label>
 </div>
 <p class="text-[11px] text-slate-500 leading-relaxed">
           Você será configurado como <strong>OWNER</strong> com controle total sobre convites de traders e parâmetros de custos da organização.

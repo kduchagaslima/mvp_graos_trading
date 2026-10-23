@@ -6,7 +6,7 @@ Implementa as fórmulas e convenções oficiais do mercado físico e de trading 
 import uuid
 from typing import Optional, Dict, Any
 from src.domain.commodities import get_commodity_specs, CommodityType
-from src.domain.locations import ORIGINATION_HUBS, PORTS
+from src.domain.locations import ORIGINATION_HUBS, PORTS, DOMESTIC_INDUSTRIES
 from src.domain.models import (
     ParityCalculationInput,
     ParityCalculationResult,
@@ -68,61 +68,89 @@ class ExportParityEngine:
 
         specs = get_commodity_specs(inp.commodity)
         
-        # Validar ou carregar praça e porto
+        # Validar ou carregar praça
         hub = ORIGINATION_HUBS.get(inp.hub_id)
         if not hub:
             raise ValueError(f"Praça de originação '{inp.hub_id}' não encontrada.")
+
+        is_domestic = (inp.destination_type == "DOMESTIC_INDUSTRY")
+        industry = None
+        industry_name = None
+        port = None
+
+        if is_domestic:
+            industry_id = inp.industry_id or ("IND_LRV_FS" if inp.commodity == CommodityType.MILHO else "IND_ROO_BUNGE")
+            industry = DOMESTIC_INDUSTRIES.get(industry_id)
+            if not industry:
+                industry = next(iter(DOMESTIC_INDUSTRIES.values()))
+            industry_name = industry.name
+            port_id = industry.id
+            port_name = f"{industry.name} ({industry.city} - {industry.state})"
+
+            # Custos portuários zerados no mercado interno
+            elevation_usd_ton = 0.0
+            other_port_costs_ton = 0.0
+            demurrage_usd_ton = 0.0
+
+            # Frete rodoviário até a indústria consumidora
+            if inp.freight_brl_ton is not None:
+                freight_ton = inp.freight_brl_ton
+            elif hub.id in industry.typical_freight_from_hub:
+                freight_ton = industry.typical_freight_from_hub[hub.id]
+            else:
+                freight_ton = 75.00
+        else:
+            port = PORTS.get(inp.port_id)
+            if not port:
+                raise ValueError(f"Porto '{inp.port_id}' não encontrado.")
+            port_id = port.id
+            port_name = port.name
+
+            freight_ton = (
+                inp.freight_brl_ton
+                if inp.freight_brl_ton is not None
+                else hub.freight_to_port_brl_ton.get(inp.port_id, 300.0)
+            )
+            elevation_usd_ton = (
+                inp.elevation_usd_ton
+                if inp.elevation_usd_ton is not None
+                else port.elevation_cost_usd_ton
+            )
+            other_port_costs_ton = (
+                inp.other_port_costs_brl_ton
+                if inp.other_port_costs_brl_ton is not None
+                else port.other_port_costs_brl_ton
+            )
+            demurrage_usd_ton = round(inp.demurrage_usd_ton or 0.0, 2)
             
-        port = PORTS.get(inp.port_id)
-        if not port:
-            raise ValueError(f"Porto '{inp.port_id}' não encontrado.")
-            
-        # Obter custos logísticos (usar os fornecidos ou padrões da tabela de frete/porto)
-        freight_ton = (
-            inp.freight_brl_ton
-            if inp.freight_brl_ton is not None
-            else hub.freight_to_port_brl_ton.get(inp.port_id, 300.0)
-        )
-        
-        elevation_usd_ton = (
-            inp.elevation_usd_ton
-            if inp.elevation_usd_ton is not None
-            else port.elevation_cost_usd_ton
-        )
-        
-        other_port_costs_ton = (
-            inp.other_port_costs_brl_ton
-            if inp.other_port_costs_brl_ton is not None
-            else port.other_port_costs_brl_ton
-        )
-        
         state_tax_bag = (
             inp.state_tax_fund_brl_bag
             if inp.state_tax_fund_brl_bag is not None
             else hub.state_tax_fund_brl_bag.get(inp.commodity.value, 0.0)
         )
 
-        # 1. Preço FOB no Porto (USD/ton)
-        fob_cents_bu = inp.cbot_price_cents + inp.port_premium_cents
-        fob_usd_ton = fob_cents_bu * specs.cents_per_bu_to_usd_per_ton
-        
-        # 2. Conversão cambial para Real (R$/ton e R$/saca de 60kg)
-        # 2. Conversão cambial para Real (R$/ton e R$/saca de 60kg)
-        fob_brl_ton = round(fob_usd_ton * inp.usd_brl_fx, 2)
-        # 1 tonelada = 16.666667 sacas de 60kg (ou saca = ton * 0.06)
+        # 1. Preço de Referência no Destino (FOB no Porto ou CIF na Fábrica)
         ton_to_bag_factor = 0.06
-        fob_brl_bag = round(fob_brl_ton * ton_to_bag_factor, 2)
+        if is_domestic and inp.domestic_cif_price_brl_bag is not None and inp.domestic_cif_price_brl_bag > 0:
+            fob_brl_bag = round(inp.domestic_cif_price_brl_bag, 2)
+            fob_brl_ton = round(fob_brl_bag / ton_to_bag_factor, 2)
+            fob_usd_ton = round(fob_brl_ton / inp.usd_brl_fx, 2)
+            fob_cents_bu = round(fob_usd_ton / specs.cents_per_bu_to_usd_per_ton, 2)
+        else:
+            fob_cents_bu = inp.cbot_price_cents + inp.port_premium_cents
+            fob_usd_ton = fob_cents_bu * specs.cents_per_bu_to_usd_per_ton
+            fob_brl_ton = round(fob_usd_ton * inp.usd_brl_fx, 2)
+            fob_brl_bag = round(fob_brl_ton * ton_to_bag_factor, 2)
 
-        # 3. Deduções portuárias
+        # 3. Deduções portuárias (zero se destino for mercado interno)
         elevation_brl_bag = round((elevation_usd_ton * inp.usd_brl_fx) * ton_to_bag_factor, 2)
         other_port_costs_brl_bag = round(other_port_costs_ton * ton_to_bag_factor, 2)
-        demurrage_usd_ton = round(inp.demurrage_usd_ton or 0.0, 2)
         demurrage_brl_bag = round((demurrage_usd_ton * inp.usd_brl_fx) * ton_to_bag_factor, 2)
         
-        # Preço FAS (Free Alongside Ship) entregue no porto
+        # Preço FAS (Free Alongside Ship) entregue no porto ou CIF entregue na fábrica
         fas_brl_bag = round(fob_brl_bag - elevation_brl_bag - other_port_costs_brl_bag - demurrage_brl_bag, 2)
         
-        # 4. Frete Rodoviário interior-porto
+        # 4. Frete Rodoviário interior-destino
         freight_brl_bag = round(freight_ton * ton_to_bag_factor, 2)
         
         # 5. Margem da Trading (USD/ton convertida para R$/saca)
@@ -131,8 +159,12 @@ class ExportParityEngine:
         # 5.1 Comissão do Corretor de Grãos
         brokerage_fee_bag = round(inp.brokerage_fee_brl_bag if inp.brokerage_payer == "TRADING" else 0.0, 2)
 
+        # 5.2 ICMS Mercado Interno (0% se diferido interno ou alíquota interestadual se informada)
+        icms_rate = inp.icms_rate_pct if is_domestic else 0.0
+        icms_brl_bag = round(fas_brl_bag * (icms_rate / 100.0), 2) if icms_rate > 0 else 0.0
+
         # 6. Base preliminar antes de impostos sobre originação
-        price_before_taxes = round(fas_brl_bag - freight_brl_bag - trading_margin_brl_bag - brokerage_fee_bag, 2)
+        price_before_taxes = round(fas_brl_bag - freight_brl_bag - trading_margin_brl_bag - brokerage_fee_bag - icms_brl_bag, 2)
         
         # 7. Dedução de Fundo Estadual (FETHAB / FUNDEINFRA / etc)
         state_tax_bag = round(state_tax_bag, 2)
@@ -170,6 +202,9 @@ class ExportParityEngine:
             shrinkage_brl_bag=shrinkage_brl_bag,
             trading_margin_brl_bag=trading_margin_brl_bag,
             net_parity_brl_bag=net_parity_brl_bag,
+            destination_type=inp.destination_type,
+            industry_name=industry_name,
+            icms_brl_bag=icms_brl_bag,
         )
 
         parity_run_id = f"run_{uuid.uuid4().hex[:12]}"
@@ -202,8 +237,11 @@ class ExportParityEngine:
             commodity=inp.commodity,
             hub_id=inp.hub_id,
             hub_name=hub.name,
-            port_id=inp.port_id,
-            port_name=port.name,
+            port_id=port_id,
+            port_name=port_name,
+            destination_type=inp.destination_type,
+            industry_id=industry.id if industry else None,
+            industry_name=industry_name,
             cbot_price_cents=inp.cbot_price_cents,
             port_premium_cents=inp.port_premium_cents,
             fob_cents_bu=fob_cents_bu,

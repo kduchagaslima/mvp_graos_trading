@@ -27,6 +27,98 @@ class OriginationHub(BaseModel):
     typical_cash_basis_discount_brl_bag: float = 0.0  # Desconto histórico de balcão vs FOB líquido
 
 
+class DomesticIndustry(BaseModel):
+    id: str
+    name: str
+    state: str
+    city: str
+    industry_type: str  # "ESMAGADORA" (Soja farelo/óleo), "USINA_ETANOL" (Milho etanol/DDG), "RACAO_ANIMAL" (Aves/suínos)
+    typical_freight_from_hub: Dict[str, float]  # {hub_id: frete_brl_ton}
+    icms_internal_rate: float = 0.0  # ICMS interno diferido = 0%
+    icms_interstate_rate: float = 0.12  # ICMS interestadual padrão 12%
+    commodity_handled: str = "AMBOS"  # SOJA, MILHO, AMBOS
+
+
+DOMESTIC_INDUSTRIES: Dict[str, DomesticIndustry] = {
+    "IND_LRV_FS": DomesticIndustry(
+        id="IND_LRV_FS",
+        name="FS Bioenergia (Etanol & DDG)",
+        state="MT",
+        city="Lucas do Rio Verde",
+        industry_type="USINA_ETANOL",
+        typical_freight_from_hub={
+            "sorriso_mt": 65.00,
+            "rondonopolis_mt": 170.00,
+            "rio_verde_go": 340.00,
+        },
+        icms_internal_rate=0.0,
+        icms_interstate_rate=0.12,
+        commodity_handled="MILHO",
+    ),
+    "IND_ROO_BUNGE": DomesticIndustry(
+        id="IND_ROO_BUNGE",
+        name="Complexo Esmagadora Bunge/ADM",
+        state="MT",
+        city="Rondonópolis",
+        industry_type="ESMAGADORA",
+        typical_freight_from_hub={
+            "sorriso_mt": 185.00,
+            "rondonopolis_mt": 40.00,
+            "rio_verde_go": 190.00,
+        },
+        icms_internal_rate=0.0,
+        icms_interstate_rate=0.12,
+        commodity_handled="SOJA",
+    ),
+    "IND_RV_COMIGO": DomesticIndustry(
+        id="IND_RV_COMIGO",
+        name="Complexo Industrial COMIGO / BRF",
+        state="GO",
+        city="Rio Verde",
+        industry_type="ESMAGADORA",
+        typical_freight_from_hub={
+            "rio_verde_go": 35.00,
+            "rondonopolis_mt": 195.00,
+            "sorriso_mt": 320.00,
+        },
+        icms_internal_rate=0.0,
+        icms_interstate_rate=0.12,
+        commodity_handled="AMBOS",
+    ),
+    "IND_CHAP_BRF": DomesticIndustry(
+        id="IND_CHAP_BRF",
+        name="Polo Agroindustrial BRF / Aurora",
+        state="SC",
+        city="Chapecó",
+        industry_type="RACAO_ANIMAL",
+        typical_freight_from_hub={
+            "cascavel_pr": 115.00,
+            "passo_fundo_rs": 75.00,
+            "rio_verde_go": 330.00,
+        },
+        icms_internal_rate=0.0,
+        icms_interstate_rate=0.12,
+        commodity_handled="MILHO",
+    ),
+    "IND_CASCAVEL_LAR": DomesticIndustry(
+        id="IND_CASCAVEL_LAR",
+        name="Polo Cooperativas Lar / C.Vale",
+        state="PR",
+        city="Cascavel",
+        industry_type="RACAO_ANIMAL",
+        typical_freight_from_hub={
+            "cascavel_pr": 30.00,
+            "passo_fundo_rs": 140.00,
+            "sorriso_mt": 390.00,
+        },
+        icms_internal_rate=0.0,
+        icms_interstate_rate=0.12,
+        commodity_handled="AMBOS",
+    ),
+}
+
+
+
 PORTS: Dict[str, Port] = {
     "STS": Port(
         id="STS",

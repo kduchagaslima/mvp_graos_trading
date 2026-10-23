@@ -14,7 +14,11 @@ class ParityCalculationInput(BaseModel):
     port_premium_cents: float = Field(default=0.0, description="Prêmio F.O.B. no porto em cents de USD por bushel")
     usd_brl_fx: float = Field(..., gt=0, description="Taxa de câmbio USD/BRL")
     hub_id: str = Field(..., description="ID da praça de originação no interior")
-    port_id: str = Field(..., description="ID do porto de escoamento")
+    port_id: str = Field(default="STS", description="ID do porto de escoamento (quando exportação)")
+    destination_type: str = Field(default="EXPORT", description="Tipo de destino: 'EXPORT' (Porto) ou 'DOMESTIC_INDUSTRY' (Mercado Interno / Indústria)")
+    industry_id: Optional[str] = Field(default=None, description="ID da indústria doméstica consumidora (quando mercado interno)")
+    icms_rate_pct: float = Field(default=0.0, ge=0.0, le=25.0, description="Alíquota de ICMS na operação interna/interestadual (%)")
+    domestic_cif_price_brl_bag: Optional[float] = Field(default=None, description="Preço CIF de referência entregue na indústria (R$/sc)")
     
     # Parâmetros logísticos e custos (opcionais com preenchimento padrão do hub/porto)
     freight_brl_ton: Optional[float] = Field(default=None, description="Frete rodoviário interior-porto em R$/tonelada")
@@ -55,6 +59,9 @@ class CostBreakdownBag(BaseModel):
     shrinkage_brl_bag: float
     trading_margin_brl_bag: float
     net_parity_brl_bag: float
+    destination_type: str = "EXPORT"
+    industry_name: Optional[str] = None
+    icms_brl_bag: float = 0.0
 
 
 class ParityCalculationResult(BaseModel):
@@ -63,6 +70,9 @@ class ParityCalculationResult(BaseModel):
     hub_name: str
     port_id: str
     port_name: str
+    destination_type: str = "EXPORT"
+    industry_id: Optional[str] = None
+    industry_name: Optional[str] = None
     
     # Cotações de referência
     cbot_price_cents: float
@@ -70,7 +80,7 @@ class ParityCalculationResult(BaseModel):
     fob_cents_bu: float
     usd_brl_fx: float
     
-    # Preços no Porto (FOB)
+    # Preços no Porto (FOB) ou CIF Indústria
     fob_usd_ton: float
     fob_brl_ton: float
     fob_brl_bag: float
@@ -175,6 +185,7 @@ class InvitationCreateInput(BaseModel):
 class OrganizationCreateInput(BaseModel):
     name: str = Field(..., min_length=2, max_length=128, description="Nome da trading / empresa")
     slug: Optional[str] = Field(default=None, max_length=64, description="Identificador único da empresa")
+    seed_demo_data: bool = Field(default=False, description="Se deve carregar dados de demonstração realistas para trial")
 
 
 class SavedScenarioCreateInput(BaseModel):
@@ -252,5 +263,33 @@ class TradeTicketCreateInput(BaseModel):
     freight_reference: Optional[float] = Field(default=None, description="Frete de referência R$/ton")
     antt_compliant: bool = Field(default=True, description="Se cumpre o piso mínimo regulatório ANTT")
     notes: Optional[str] = Field(default=None, description="Observações comerciais adicionais")
+
+
+class MarketAlertCreateInput(BaseModel):
+    name: str = Field(..., min_length=2, max_length=128, description="Nome ou objetivo da regra/meta de alerta")
+    alert_type: str = Field(..., description="Tipo de alerta: PARITY_ABOVE, PARITY_BELOW, SPREAD_ABOVE, FX_CHANGE_PCT, CBOT_ABOVE, CBOT_BELOW")
+    commodity: str = Field(default="SOJA", description="Commodity monitorada (SOJA ou MILHO)")
+    hub_id: Optional[str] = Field(default=None, description="Praça física monitorada (ex: sorriso_mt)")
+    port_id: Optional[str] = Field(default=None, description="Porto de destino (ex: STS, BCR)")
+    target_value: float = Field(..., description="Valor alvo a ser monitorado (R$/sc, %, etc.)")
+    notification_channel: str = Field(default="IN_APP", description="Canal de notificação: IN_APP, EMAIL, WEBHOOK")
+    notes: Optional[str] = Field(default=None, description="Observações ou lembrete para a mesa")
+
+
+class MarketAlertUpdateInput(BaseModel):
+    name: Optional[str] = Field(default=None)
+    target_value: Optional[float] = Field(default=None)
+    is_active: Optional[bool] = Field(default=None)
+    notes: Optional[str] = Field(default=None)
+
+
+class MarketAlertEvaluateInput(BaseModel):
+    parity_brl_bag: Optional[float] = None
+    spread_brl_bag: Optional[float] = None
+    fx_rate: Optional[float] = None
+    cbot_cents: Optional[float] = None
+    commodity: Optional[str] = "SOJA"
+    hub_id: Optional[str] = None
+    port_id: Optional[str] = None
 
 

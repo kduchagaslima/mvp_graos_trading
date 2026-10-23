@@ -258,6 +258,7 @@ class Organization(Base):
     cost_profiles = relationship("CostProfile", back_populates="organization", cascade="all, delete-orphan")
     freight_contracts = relationship("CompanyFreightContract", back_populates="organization", cascade="all, delete-orphan")
     trade_tickets = relationship("TradeTicket", back_populates="organization", cascade="all, delete-orphan")
+    market_alerts = relationship("MarketAlert", back_populates="organization", cascade="all, delete-orphan")
 
     def to_dict(self):
         return {
@@ -598,4 +599,64 @@ class TradeTicket(Base):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
+
+
+class MarketAlert(Base):
+    """
+    Alertas de Mercado e Metas de Preço (Watchlist da Mesa de Operações).
+    Permite cadastrar regras e gatilhos de preço (Paridade, Spread, PTAX, CBOT).
+    """
+    __tablename__ = "market_alerts"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    organization_id = Column(Integer, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    name = Column(String(128), nullable=False)
+    alert_type = Column(String(32), nullable=False)  # PARITY_ABOVE, PARITY_BELOW, SPREAD_ABOVE, FX_CHANGE_PCT, CBOT_ABOVE, CBOT_BELOW
+    commodity = Column(String(16), nullable=False, default="SOJA")
+    hub_id = Column(String(32), nullable=True)
+    port_id = Column(String(16), nullable=True)
+    target_value = Column(Float, nullable=False)
+    current_value = Column(Float, nullable=True)
+    is_triggered = Column(Boolean, nullable=False, default=False)
+    triggered_at = Column(UTCDateTime, nullable=True)
+    trigger_count = Column(Integer, nullable=False, default=0)
+    is_active = Column(Boolean, nullable=False, default=True)
+    notification_channel = Column(String(32), nullable=False, default="IN_APP")
+    notes = Column(Text, nullable=True)
+    created_at = Column(UTCDateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(UTCDateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+
+    organization = relationship("Organization", back_populates="market_alerts")
+    user = relationship("User")
+
+    __table_args__ = (
+        Index("idx_market_alerts_org", "organization_id"),
+        Index("idx_market_alerts_active", "organization_id", "is_active"),
+        Index("idx_market_alerts_triggered", "organization_id", "is_triggered"),
+    )
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "organization_id": self.organization_id,
+            "user_id": self.user_id,
+            "user_name": self.user.name if self.user else None,
+            "name": self.name,
+            "alert_type": self.alert_type,
+            "commodity": self.commodity,
+            "hub_id": self.hub_id,
+            "port_id": self.port_id,
+            "target_value": self.target_value,
+            "current_value": self.current_value,
+            "is_triggered": self.is_triggered,
+            "triggered_at": self.triggered_at.isoformat() if self.triggered_at else None,
+            "trigger_count": self.trigger_count,
+            "is_active": self.is_active,
+            "notification_channel": self.notification_channel,
+            "notes": self.notes,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
 

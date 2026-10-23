@@ -37,6 +37,7 @@ EXPECTED_ACCESS_TIERS = {
         ("GET", "/api/freight/history"),
         ("GET", "/api/freight/arbitrage"),
         ("GET", "/api/freight/antt-floor"),
+        ("GET", "/api/industries/summary"),
     ],
     # 3. MOTORES DE CÁLCULO (Cálculos de negócio com parâmetros do usuário)
     "CLIENT_ENGINES": [
@@ -57,7 +58,7 @@ EXPECTED_ACCESS_TIERS = {
         ("GET", "/api/scheduler/status"),
         ("GET", "/api/admin/sources/health"),
     ],
-    # 5. CLIENTE PRIVADO / TENANT (Identidade, organizações, convites, membros e perfis privados - F09, F10, F11)
+    # 5. CLIENTE PRIVADO / TENANT (Identidade, organizações, convites, membros e perfis privados - F09, F10, F11, Backlog)
     "CLIENT_PRIVATE": [
         ("GET", "/api/me"),
         ("POST", "/api/organizations"),
@@ -81,6 +82,13 @@ EXPECTED_ACCESS_TIERS = {
         ("POST", "/api/organizations/{org_id}/invitations"),
         ("GET", "/api/organizations/{org_id}/invitations"),
         ("POST", "/api/invitations/{token}/accept"),
+        ("GET", "/api/organizations/{org_id}/alerts"),
+        ("POST", "/api/organizations/{org_id}/alerts"),
+        ("PUT", "/api/organizations/{org_id}/alerts/{alert_id}"),
+        ("DELETE", "/api/organizations/{org_id}/alerts/{alert_id}"),
+        ("POST", "/api/organizations/{org_id}/alerts/{alert_id}/reset"),
+        ("POST", "/api/organizations/{org_id}/alerts/evaluate"),
+        ("POST", "/api/organizations/{org_id}/seed-demo"),
     ],
 }
 
