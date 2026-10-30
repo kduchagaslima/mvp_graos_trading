@@ -4486,6 +4486,13 @@ th[aria-sort="descending"] .ux-sort-button::after { content:'↓'; margin-left:5
           }
           checkPendingInviteToken();
 
+          // Sincronizar dados da empresa se a aba estiver ativa ou se a URL for #company
+          const activeHash = (window.location.hash || '').replace('#', '');
+          const isCompanyActive = activeHash === 'company' || (!document.getElementById('tab-company')?.classList.contains('hidden'));
+          if (isCompanyActive && typeof loadOrganizationData === 'function') {
+            loadOrganizationData();
+          }
+
           if (window.lucide) lucide.createIcons();
           return user;
         } else if (res.status === 401) {
@@ -5780,6 +5787,10 @@ th[aria-sort="descending"] .ux-sort-button::after { content:'↓'; margin-left:5
       'BCR': 'Barcarena (BCR)',
       'ITQ': 'Itaqui (ITQ)',
       'RG': 'Rio Grande (RG)',
+      'IND_LRV_FS': 'FS Bioenergia (Lucas do Rio Verde MT)',
+      'IND_ROO_BUNGE': 'Bunge Esmagamento (Rondonópolis MT)',
+      'IND_RVD_COMIGO': 'COMIGO Indústria (Rio Verde GO)',
+      'IND_CAS_CVALE': 'C.Vale Ração/Óleo (Palotina/Cascavel PR)'
     };
 
     const HUB_NAMES = {
@@ -6609,7 +6620,15 @@ th[aria-sort="descending"] .ux-sort-button::after { content:'↓'; margin-left:5
     async function triggerManualDemoSeed() {
       const orgId = getActiveUserOrgId();
       if (!orgId) {
-        alert('Faça login primeiro para carregar dados demo.');
+        const token = sessionStorage.getItem('agri_access_token');
+        if (token) {
+          alert('Sua conta ainda não possui uma organização vinculada. Informe o nome da sua empresa para criar o workspace com o portfólio completo de demonstração.');
+          const modal = document.getElementById('onboarding-modal');
+          if (modal) modal.classList.remove('hidden');
+        } else {
+          alert('Faça login primeiro para carregar dados demo.');
+          if (typeof window.startCognitoLogin === 'function') window.startCognitoLogin();
+        }
         return;
       }
       if (!confirm('Deseja carregar o portfólio completo de demonstração (fretes, cenários, boletas e alertas)?')) return;
@@ -6848,9 +6867,17 @@ _Gerado via AgriTrading Intelligence Platform_`;
     // TICKETS F10 & F11: GESTÃO DA EMPRESA, EQUIPE & PARÂMETROS
     // ==============================================================================
     async function loadOrganizationData() {
-      const userStr = sessionStorage.getItem('agri_user_profile');
+      let userStr = sessionStorage.getItem('agri_user_profile');
+      if (!userStr && sessionStorage.getItem('agri_access_token')) {
+        await refreshUserProfile();
+        userStr = sessionStorage.getItem('agri_user_profile');
+      }
+
+      if (typeof window.companyLoggedOutState === 'function') {
+        window.companyLoggedOutState();
+      }
+
       if (!userStr) {
-        if (typeof companyLoggedOutState === 'function') companyLoggedOutState();
         return;
       }
       let user;
@@ -6858,7 +6885,7 @@ _Gerado via AgriTrading Intelligence Platform_`;
         user = JSON.parse(userStr);
       } catch (e) {
         console.error('Perfil de usuário corrompido:', e);
-        if (typeof companyLoggedOutState === 'function') companyLoggedOutState();
+        if (typeof window.companyLoggedOutState === 'function') window.companyLoggedOutState();
         return;
       }
       const membership = user && user.memberships && user.memberships[0];
@@ -6871,6 +6898,25 @@ _Gerado via AgriTrading Intelligence Platform_`;
         if (titleEl) titleEl.innerText = 'Organização não cadastrada';
         if (badgeEl) badgeEl.innerText = 'NOVO';
         if (subEl) subEl.innerText = 'Crie sua organização para gerenciar equipe, contratos e boletas.';
+        
+        const countEl = document.getElementById('company-members-count');
+        if (countEl) countEl.innerText = '0';
+        const tbodyMembers = document.getElementById('company-members-tbody');
+        if (tbodyMembers) {
+          tbodyMembers.innerHTML = `
+            <tr>
+              <td colspan="4" class="px-4 py-8 text-center text-slate-500">
+                <div class="max-w-sm mx-auto space-y-2">
+                  <p class="font-semibold text-slate-700">Nenhuma empresa associada ao seu usuário.</p>
+                  <p class="text-xs text-slate-500">Crie seu workspace corporativo para convidar equipe, definir custos e gerenciar contratos.</p>
+                  <button type="button" onclick="checkOnboarding(JSON.parse(sessionStorage.getItem('agri_user_profile') || '{}'))" class="mt-2 inline-flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg text-xs shadow-sm transition">
+                    <span>🌱 Criar Workspace Corporativo</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `;
+        }
         return;
       }
 
@@ -6886,7 +6932,7 @@ _Gerado via AgriTrading Intelligence Platform_`;
       if (badgeEl) badgeEl.innerText = role;
       if (subEl) subEl.innerText = `ID da Organização: #${orgId} • Papel: ${role}`;
 
-      if (typeof companyLoggedOutState === 'function') companyLoggedOutState();
+      if (typeof window.companyLoggedOutState === 'function') window.companyLoggedOutState();
 
       // Carregar Membros
       try {
@@ -6984,7 +7030,12 @@ _Gerado via AgriTrading Intelligence Platform_`;
 
     async function createCompanyInvitation() {
       const orgId = getActiveUserOrgId();
-      if (!orgId) return;
+      if (!orgId) {
+        alert('É necessário ter uma organização ativa para convidar membros. Crie sua empresa para continuar.');
+        const modal = document.getElementById('onboarding-modal');
+        if (modal) modal.classList.remove('hidden');
+        return;
+      }
 
       const email = document.getElementById('invite-input-email')?.value.trim();
       const role = document.getElementById('invite-input-role')?.value;
@@ -7054,8 +7105,15 @@ _Gerado via AgriTrading Intelligence Platform_`;
 
     async function saveCompanyCostProfile() {
       const orgId = getActiveUserOrgId();
-      if (!orgId || !activeCostProfileId) {
-        alert('Perfil de custo não identificado.');
+      if (!orgId) {
+        alert('Cadastre sua organização antes de salvar parâmetros de custos da mesa.');
+        const modal = document.getElementById('onboarding-modal');
+        if (modal) modal.classList.remove('hidden');
+        return;
+      }
+      if (!activeCostProfileId) {
+        alert('Carregando perfil de custos da organização... Tente novamente em instantes.');
+        await loadOrganizationData();
         return;
       }
 
@@ -7170,6 +7228,13 @@ _Gerado via AgriTrading Intelligence Platform_`;
     }
 
     function openFreightContractModal() {
+      const orgId = getActiveUserOrgId();
+      if (!orgId) {
+        alert('Cadastre sua organização antes de cadastrar contratos de frete.');
+        const modal = document.getElementById('onboarding-modal');
+        if (modal) modal.classList.remove('hidden');
+        return;
+      }
       const modal = document.getElementById('freight-contract-modal');
       if (modal) modal.classList.remove('hidden');
       if (window.lucide) lucide.createIcons();
@@ -7183,7 +7248,9 @@ _Gerado via AgriTrading Intelligence Platform_`;
     async function saveCompanyFreightContract() {
       const orgId = getActiveUserOrgId();
       if (!orgId) {
-        alert('Organização não identificada. Efetue login novamente.');
+        alert('Organização não identificada. Crie sua empresa antes de cadastrar contratos.');
+        const modal = document.getElementById('onboarding-modal');
+        if (modal) modal.classList.remove('hidden');
         return;
       }
 
@@ -7264,6 +7331,13 @@ _Gerado via AgriTrading Intelligence Platform_`;
     }
 
     function openFreightBatchModal() {
+      const orgId = getActiveUserOrgId();
+      if (!orgId) {
+        alert('Cadastre sua organização antes de importar contratos de frete em lote.');
+        const modal = document.getElementById('onboarding-modal');
+        if (modal) modal.classList.remove('hidden');
+        return;
+      }
       const modal = document.getElementById('freight-batch-modal');
       if (modal) modal.classList.remove('hidden');
       if (window.lucide) lucide.createIcons();
@@ -8025,7 +8099,7 @@ _Boleta registrada via AgriTrading Platform_`;
           await refreshUserProfile();
           await loadSavedScenariosCount();
           await loadMarketAlerts();
-          switchTab('parity');
+          switchTab('company');
         } else {
           const err = await res.text();
           alert('Erro ao criar organização: ' + err);
@@ -10078,7 +10152,7 @@ _Boleta registrada via AgriTrading Platform_`;
     if (original.loadOrganizationData && !window.loadOrganizationData.__uxRuntime) {
       window.loadOrganizationData = function () {
         companyLoggedOutState();
-        if (!sessionStorage.getItem('agri_user_profile')) {
+        if (!sessionStorage.getItem('agri_user_profile') && !sessionStorage.getItem('agri_access_token')) {
           return Promise.resolve(null);
         }
         return original.loadOrganizationData.apply(this, arguments);
@@ -10385,16 +10459,30 @@ _Boleta registrada via AgriTrading Platform_`;
     protectedChildren(root).forEach(function (panel) {
       panel.classList.toggle('ux-auth-hidden', !logged);
       panel.classList.toggle('hidden', !logged);
+      if (!logged) {
+        panel.style.display = 'none';
+      } else {
+        panel.style.display = '';
+      }
     });
     var empty = root.querySelector('.login-empty-state');
-    if (!logged) ensureLoginEmpty(root, titleText, descriptionText);
-    else if (empty) empty.classList.add('hidden');
+    if (!logged) {
+      empty = ensureLoginEmpty(root, titleText, descriptionText);
+      if (empty) {
+        empty.classList.remove('hidden');
+        empty.style.display = '';
+      }
+    } else if (empty) {
+      empty.classList.add('hidden');
+      empty.style.display = 'none';
+      empty.remove();
+    }
   }
 
   function companyLoggedOutState() {
     var root = byId('tab-company');
     if (!root) return;
-    var logged = !!sessionStorage.getItem('agri_access_token') && !!sessionStorage.getItem('agri_user_profile');
+    var logged = !!sessionStorage.getItem('agri_access_token');
     setProtectedState(root, logged, 'Entre para acessar Minha empresa', 'A gestão de equipe, cenários e perfis de custo é exclusiva da sua organização.');
   }
 
@@ -10406,6 +10494,9 @@ _Boleta registrada via AgriTrading Platform_`;
     setProtectedState(root, logged, 'Acesso de operador', 'Agendamentos e logs de auditoria são exclusivos dos operadores da plataforma. Entre com uma conta autorizada.');
     if (!logged && sectionState.scheduler.active === 0) setFeedback('scheduler', 'error', 'Entre na sua conta para acessar os agendamentos.');
   }
+
+  window.companyLoggedOutState = companyLoggedOutState;
+  window.schedulerLoggedOutState = schedulerLoggedOutState;
 
   async function requestSnapshot() {
     if (snapshotState.requested) return;
