@@ -5782,6 +5782,23 @@ th[aria-sort="descending"] .ux-sort-button::after { content:'↓'; margin-left:5
       'RG': 'Rio Grande (RG)',
     };
 
+    const HUB_NAMES = {
+      'sorriso_mt': 'Sorriso (MT)',
+      'rondonopolis_mt': 'Rondonópolis (MT)',
+      'rio_verde_go': 'Rio Verde (GO)',
+      'cascavel_pr': 'Cascavel (PR)',
+      'passo_fundo_rs': 'Passo Fundo (RS)',
+      'lem_ba': 'Luís Eduardo Magalhães (BA)',
+      'primavera_leste_mt': 'Primavera do Leste (MT)',
+      'canarana_mt': 'Canarana (MT)',
+      'maracaju_ms': 'Maracaju (MS)',
+      'dourados_ms': 'Dourados (MS)',
+      'uberaba_mg': 'Uberaba (MG)',
+      'chapadao_ceu_go': 'Chapadão do Céu (GO)'
+    };
+    window.PORT_NAMES = PORT_NAMES;
+    window.HUB_NAMES = HUB_NAMES;
+
     async function loadFreightRoutes() {
       try {
         const res = await fetch(`${API_BASE}/freight/routes`);
@@ -6833,20 +6850,33 @@ _Gerado via AgriTrading Intelligence Platform_`;
     async function loadOrganizationData() {
       const userStr = sessionStorage.getItem('agri_user_profile');
       if (!userStr) {
-        startCognitoLogin();
+        if (typeof companyLoggedOutState === 'function') companyLoggedOutState();
         return;
       }
-      const user = JSON.parse(userStr);
-      const membership = user.memberships && user.memberships[0];
+      let user;
+      try {
+        user = JSON.parse(userStr);
+      } catch (e) {
+        console.error('Perfil de usuário corrompido:', e);
+        if (typeof companyLoggedOutState === 'function') companyLoggedOutState();
+        return;
+      }
+      const membership = user && user.memberships && user.memberships[0];
 
       if (!membership) {
         checkOnboarding(user);
+        const titleEl = document.getElementById('company-name-title');
+        const badgeEl = document.getElementById('company-role-badge');
+        const subEl = document.getElementById('company-slug-subtitle');
+        if (titleEl) titleEl.innerText = 'Organização não cadastrada';
+        if (badgeEl) badgeEl.innerText = 'NOVO';
+        if (subEl) subEl.innerText = 'Crie sua organização para gerenciar equipe, contratos e boletas.';
         return;
       }
 
       const orgId = membership.organization_id;
-      const orgName = membership.organization_name;
-      const role = membership.role;
+      const orgName = membership.organization_name || 'Minha Organização';
+      const role = membership.role || 'OWNER';
 
       const titleEl = document.getElementById('company-name-title');
       const badgeEl = document.getElementById('company-role-badge');
@@ -6856,6 +6886,8 @@ _Gerado via AgriTrading Intelligence Platform_`;
       if (badgeEl) badgeEl.innerText = role;
       if (subEl) subEl.innerText = `ID da Organização: #${orgId} • Papel: ${role}`;
 
+      if (typeof companyLoggedOutState === 'function') companyLoggedOutState();
+
       // Carregar Membros
       try {
         const resMem = await fetch(`${API_BASE}/organizations/${orgId}/members`, {
@@ -6863,34 +6895,55 @@ _Gerado via AgriTrading Intelligence Platform_`;
         });
         if (resMem.ok) {
           const members = await resMem.json();
-          document.getElementById('company-members-count').innerText = members.length;
+          const countEl = document.getElementById('company-members-count');
+          if (countEl) countEl.innerText = Array.isArray(members) ? members.length : 0;
           const tbody = document.getElementById('company-members-tbody');
-          tbody.innerHTML = members.map(m => {
-            const joined = m.joined_at ? new Date(m.joined_at).toLocaleDateString('pt-BR') : '-';
-            const isMe = m.user_id === user.id;
-            const canRemove = role === 'OWNER' && !isMe;
-            return `
-              <tr class="hover:bg-slate-50">
-                <td class="px-4 py-2.5 font-bold text-slate-900">
-                  ${m.name || m.email}
-                  <span class="block text-[10px] text-slate-500 font-normal">${m.email} ${isMe ? '(Você)' : ''}</span>
-                </td>
-                <td class="px-4 py-2.5">
-                  <span class="px-2 py-0.5 rounded text-[10px] font-bold ${m.role === 'OWNER' ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'}">
-                    ${m.role}
-                  </span>
-                </td>
-                <td class="px-4 py-2.5 text-slate-500">${joined}</td>
-                <td class="px-4 py-2.5 text-center">
-                  ${canRemove ? `
-                    <button onclick="removeCompanyMember(${m.user_id})" class="text-xs text-red-600 hover:text-red-800 font-semibold p-1">
-                      Remover
-                    </button>
-                  ` : '<span class="text-slate-300">-</span>'}
-                </td>
-              </tr>
-            `;
-          }).join('');
+          if (tbody) {
+            if (!Array.isArray(members) || members.length === 0) {
+              tbody.innerHTML = `
+                <tr>
+                  <td colspan="4" class="px-4 py-6 text-center text-slate-400">
+                    Nenhum membro listado além de você.
+                  </td>
+                </tr>
+              `;
+            } else {
+              tbody.innerHTML = members.map(m => {
+                let joined = '-';
+                if (m.joined_at) {
+                  try {
+                    const d = new Date(m.joined_at);
+                    joined = isNaN(d.getTime()) ? String(m.joined_at) : d.toLocaleDateString('pt-BR');
+                  } catch (e) { joined = String(m.joined_at); }
+                }
+                const isMe = m.user_id === user.id;
+                const canRemove = role === 'OWNER' && !isMe;
+                const displayName = m.name || m.email || 'Usuário';
+                const displayEmail = m.email || '';
+                return `
+                  <tr class="hover:bg-slate-50">
+                    <td class="px-4 py-2.5 font-bold text-slate-900">
+                      ${displayName}
+                      <span class="block text-[10px] text-slate-500 font-normal">${displayEmail} ${isMe ? '(Você)' : ''}</span>
+                    </td>
+                    <td class="px-4 py-2.5">
+                      <span class="px-2 py-0.5 rounded text-[10px] font-bold ${m.role === 'OWNER' ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'}">
+                        ${m.role}
+                      </span>
+                    </td>
+                    <td class="px-4 py-2.5 text-slate-500">${joined}</td>
+                    <td class="px-4 py-2.5 text-center">
+                      ${canRemove ? `
+                        <button onclick="removeCompanyMember(${m.user_id})" class="text-xs text-red-600 hover:text-red-800 font-semibold p-1 hover:bg-red-50 rounded transition">
+                          Remover
+                        </button>
+                      ` : '<span class="text-slate-300">-</span>'}
+                    </td>
+                  </tr>
+                `;
+              }).join('');
+            }
+          }
         }
       } catch (e) {
         console.error('Erro ao listar membros:', e);
@@ -6903,14 +6956,20 @@ _Gerado via AgriTrading Intelligence Platform_`;
         });
         if (resCp.ok) {
           const profiles = await resCp.json();
-          if (profiles.length > 0) {
+          if (Array.isArray(profiles) && profiles.length > 0) {
             const cp = profiles[0];
             activeCostProfileId = cp.id;
-            if (document.getElementById('cp-margin-usd')) document.getElementById('cp-margin-usd').value = cp.brokerage_margin_usd_ton.toFixed(2);
-            if (document.getElementById('cp-broker-fee')) document.getElementById('cp-broker-fee').value = cp.brokerage_fee_brl_bag.toFixed(2);
-            if (document.getElementById('cp-broker-payer')) document.getElementById('cp-broker-payer').value = cp.brokerage_payer;
-            if (document.getElementById('cp-funrural')) document.getElementById('cp-funrural').value = cp.default_funrural_pct.toFixed(2);
-            if (document.getElementById('cp-shrinkage')) document.getElementById('cp-shrinkage').value = cp.default_shrinkage_loss_pct.toFixed(2);
+            const elMargin = document.getElementById('cp-margin-usd');
+            const elFee = document.getElementById('cp-broker-fee');
+            const elPayer = document.getElementById('cp-broker-payer');
+            const elFunrural = document.getElementById('cp-funrural');
+            const elShrinkage = document.getElementById('cp-shrinkage');
+
+            if (elMargin && cp.brokerage_margin_usd_ton != null) elMargin.value = Number(cp.brokerage_margin_usd_ton).toFixed(2);
+            if (elFee && cp.brokerage_fee_brl_bag != null) elFee.value = Number(cp.brokerage_fee_brl_bag).toFixed(2);
+            if (elPayer && cp.brokerage_payer) elPayer.value = cp.brokerage_payer;
+            if (elFunrural && cp.default_funrural_pct != null) elFunrural.value = Number(cp.default_funrural_pct).toFixed(2);
+            if (elShrinkage && cp.default_shrinkage_loss_pct != null) elShrinkage.value = Number(cp.default_shrinkage_loss_pct).toFixed(2);
           }
         }
       } catch (e) {
@@ -7045,7 +7104,7 @@ _Gerado via AgriTrading Intelligence Platform_`;
         if (!res.ok) return;
 
         const data = await res.json();
-        companyFreightContractsCache = data;
+        companyFreightContractsCache = Array.isArray(data) ? data : [];
 
         if (!data || data.length === 0) {
           tbody.innerHTML = `
@@ -7059,12 +7118,26 @@ _Gerado via AgriTrading Intelligence Platform_`;
         }
 
         tbody.innerHTML = data.map(c => {
-          const originName = HUB_NAMES[c.origin_id] || c.origin_id;
-          const destName = PORT_NAMES[c.destination_id] || c.destination_id;
-          const equivBag = (c.freight_brl_ton * 0.06).toFixed(2);
-          const volStr = c.volume_contracted_tons ? c.volume_contracted_tons.toLocaleString('pt-BR') : '—';
-          const validFrom = c.valid_from ? new Date(c.valid_from + 'T00:00:00').toLocaleDateString('pt-BR') : '—';
-          const validUntil = c.valid_until ? new Date(c.valid_until + 'T00:00:00').toLocaleDateString('pt-BR') : '—';
+          const originName = (typeof HUB_NAMES !== 'undefined' && HUB_NAMES[c.origin_id]) || c.origin_id || 'Origem';
+          const destName = (typeof PORT_NAMES !== 'undefined' && PORT_NAMES[c.destination_id]) || c.destination_id || 'Porto';
+          const equivBag = (Number(c.freight_brl_ton || 0) * 0.06).toFixed(2);
+          const volStr = c.volume_contracted_tons != null ? Number(c.volume_contracted_tons).toLocaleString('pt-BR') : '—';
+          
+          let validFrom = '—';
+          if (c.valid_from) {
+            try {
+              const d = new Date(String(c.valid_from).includes('T') ? c.valid_from : (c.valid_from + 'T00:00:00'));
+              validFrom = isNaN(d.getTime()) ? String(c.valid_from) : d.toLocaleDateString('pt-BR');
+            } catch (e) { validFrom = String(c.valid_from); }
+          }
+          let validUntil = '—';
+          if (c.valid_until) {
+            try {
+              const d = new Date(String(c.valid_until).includes('T') ? c.valid_until : (c.valid_until + 'T00:00:00'));
+              validUntil = isNaN(d.getTime()) ? String(c.valid_until) : d.toLocaleDateString('pt-BR');
+            } catch (e) { validUntil = String(c.valid_until); }
+          }
+
           const statusBadge = c.is_active
             ? '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">Ativo</span>'
             : '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-200 text-slate-700">Inativo</span>';
@@ -7074,9 +7147,9 @@ _Gerado via AgriTrading Intelligence Platform_`;
               <td class="px-4 py-2.5 font-bold text-slate-900">
                 ${originName} ➔ ${destName}
               </td>
-              <td class="px-4 py-2.5 text-slate-700">${c.carrier_name}</td>
-              <td class="px-4 py-2.5 font-mono text-slate-600 text-[11px]">${c.contract_code}</td>
-              <td class="px-4 py-2.5 text-right font-bold text-emerald-700">R$ ${c.freight_brl_ton.toFixed(2)}</td>
+              <td class="px-4 py-2.5 text-slate-700">${c.carrier_name || '—'}</td>
+              <td class="px-4 py-2.5 font-mono text-slate-600 text-[11px]">${c.contract_code || '—'}</td>
+              <td class="px-4 py-2.5 text-right font-bold text-emerald-700">R$ ${Number(c.freight_brl_ton || 0).toFixed(2)}</td>
               <td class="px-4 py-2.5 text-right text-slate-600">R$ ${equivBag}</td>
               <td class="px-4 py-2.5 text-right text-slate-600">${volStr}</td>
               <td class="px-4 py-2.5 text-center text-slate-500">${validFrom} a ${validUntil}</td>
@@ -7504,18 +7577,18 @@ _Gerado via AgriTrading Intelligence Platform_`;
     }
 
     function updateTradeTicketPreview() {
-      const seller = document.getElementById('tt-input-seller-name')?.value.trim() || 'Produtor Rural';
-      const doc = document.getElementById('tt-input-seller-doc')?.value.trim() || '—';
-      const farm = document.getElementById('tt-input-seller-farm')?.value.trim() || 'Fazenda / Silo';
+      const seller = (document.getElementById('tt-input-seller-name')?.value || '').trim() || 'Produtor Rural';
+      const doc = (document.getElementById('tt-input-seller-doc')?.value || '').trim() || '—';
+      const farm = (document.getElementById('tt-input-seller-farm')?.value || '').trim() || 'Fazenda / Silo';
       const comm = document.getElementById('tt-input-commodity')?.value || 'SOJA';
-      const crop = document.getElementById('tt-input-crop-year')?.value.trim() || '2025/2026';
+      const crop = (document.getElementById('tt-input-crop-year')?.value || '').trim() || '2025/2026';
       const hub = document.getElementById('tt-input-hub')?.value || 'Interior';
       const port = document.getElementById('tt-input-port')?.value || 'Porto';
-      const qtyBags = parseFloat(document.getElementById('tt-input-quantity-bags')?.value || 5000);
-      const priceBag = parseFloat(document.getElementById('tt-input-price-bag')?.value || 132.50);
-      const payment = document.getElementById('tt-input-payment-terms')?.value.trim() || 'À vista contra entrega';
-      const delivery = document.getElementById('tt-input-delivery-period')?.value.trim() || 'Imediato';
-      const quality = document.getElementById('tt-input-quality')?.value.trim() || 'Padrão ANEC';
+      const qtyBags = parseFloat(document.getElementById('tt-input-quantity-bags')?.value || 5000) || 5000;
+      const priceBag = parseFloat(document.getElementById('tt-input-price-bag')?.value || 132.50) || 132.50;
+      const payment = (document.getElementById('tt-input-payment-terms')?.value || '').trim() || 'À vista contra entrega';
+      const delivery = (document.getElementById('tt-input-delivery-period')?.value || '').trim() || 'Imediato';
+      const quality = (document.getElementById('tt-input-quality')?.value || '').trim() || 'Padrão ANEC';
 
       const qtyTons = (qtyBags * 0.06);
       const totalBrl = (qtyBags * priceBag);
@@ -7538,9 +7611,9 @@ _Gerado via AgriTrading Intelligence Platform_`;
       if (document.getElementById('tt-view-seller-sig-name')) document.getElementById('tt-view-seller-sig-name').innerText = seller;
 
       if (currentTradeTicketContext) {
-        if (document.getElementById('tt-view-cbot')) document.getElementById('tt-view-cbot').innerText = `${currentTradeTicketContext.cbot.toFixed(2)} ¢/bu`;
-        if (document.getElementById('tt-view-fx')) document.getElementById('tt-view-fx').innerText = `${currentTradeTicketContext.fx.toFixed(4)} R$`;
-        if (document.getElementById('tt-view-freight')) document.getElementById('tt-view-freight').innerText = `R$ ${currentTradeTicketContext.freight.toFixed(2)}/t`;
+        if (document.getElementById('tt-view-cbot')) document.getElementById('tt-view-cbot').innerText = `${Number(currentTradeTicketContext.cbot || 0).toFixed(2)} ¢/bu`;
+        if (document.getElementById('tt-view-fx')) document.getElementById('tt-view-fx').innerText = `${Number(currentTradeTicketContext.fx || 0).toFixed(4)} R$`;
+        if (document.getElementById('tt-view-freight')) document.getElementById('tt-view-freight').innerText = `R$ ${Number(currentTradeTicketContext.freight || 0).toFixed(2)}/t`;
         if (document.getElementById('tt-view-run-id')) document.getElementById('tt-view-run-id').innerText = currentTradeTicketContext.parity_run_id || 'DECISION_READY';
       }
 
@@ -7566,20 +7639,20 @@ _Gerado via AgriTrading Intelligence Platform_`;
     function exportTradeTicketToWhatsApp() {
       const num = document.getElementById('tt-view-number')?.innerText || 'BOL-20261015-PROV';
       const company = document.getElementById('tt-view-company-name')?.innerText || 'AgriTrading Desk';
-      const seller = document.getElementById('tt-input-seller-name')?.value.trim() || 'Produtor Rural';
-      const doc = document.getElementById('tt-input-seller-doc')?.value.trim() || '';
-      const farm = document.getElementById('tt-input-seller-farm')?.value.trim() || '';
+      const seller = (document.getElementById('tt-input-seller-name')?.value || '').trim() || 'Produtor Rural';
+      const doc = (document.getElementById('tt-input-seller-doc')?.value || '').trim() || '';
+      const farm = (document.getElementById('tt-input-seller-farm')?.value || '').trim() || '';
       const comm = document.getElementById('tt-input-commodity')?.value === 'SOJA' ? 'Soja em Grão' : 'Milho em Grão';
-      const crop = document.getElementById('tt-input-crop-year')?.value.trim() || '2025/2026';
+      const crop = (document.getElementById('tt-input-crop-year')?.value || '').trim() || '2025/2026';
       const hub = document.getElementById('tt-input-hub')?.value || 'Interior';
       const port = document.getElementById('tt-input-port')?.value || 'Porto';
-      const qtyBags = parseFloat(document.getElementById('tt-input-quantity-bags')?.value || 5000);
+      const qtyBags = parseFloat(document.getElementById('tt-input-quantity-bags')?.value || 5000) || 5000;
       const qtyTons = (qtyBags * 0.06).toLocaleString('pt-BR', {minimumFractionDigits: 2});
-      const priceBag = parseFloat(document.getElementById('tt-input-price-bag')?.value || 132.50).toFixed(2);
-      const totalBrl = (qtyBags * parseFloat(priceBag)).toLocaleString('pt-BR', {minimumFractionDigits: 2});
-      const payment = document.getElementById('tt-input-payment-terms')?.value.trim() || 'À vista contra entrega';
-      const delivery = document.getElementById('tt-input-delivery-period')?.value.trim() || 'Safra Corrente';
-      const quality = document.getElementById('tt-input-quality')?.value.trim() || 'Padrão ANEC';
+      const priceBag = parseFloat(document.getElementById('tt-input-price-bag')?.value || 132.50) || 132.50;
+      const totalBrl = (qtyBags * priceBag).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+      const payment = (document.getElementById('tt-input-payment-terms')?.value || '').trim() || 'À vista contra entrega';
+      const delivery = (document.getElementById('tt-input-delivery-period')?.value || '').trim() || 'Safra Corrente';
+      const quality = (document.getElementById('tt-input-quality')?.value || '').trim() || 'Padrão ANEC';
       const runId = document.getElementById('tt-view-run-id')?.innerText || 'LOCAL';
 
       const text = `📋 *AGRITRADING — CONFIRMAÇÃO DE NEGOCIAÇÃO*
@@ -7591,7 +7664,7 @@ _Gerado via AgriTrading Intelligence Platform_`;
 🚢 *Destino:* ${port}
 🌱 *Commodity:* ${comm} | *Safra:* ${crop}
 📦 *Volume:* ${qtyBags.toLocaleString('pt-BR')} sacas (${qtyTons} ton)
-💰 *Preço Fechado:* R$ ${priceBag}/saca (60kg)
+💰 *Preço Fechado:* R$ ${priceBag.toFixed(2)}/saca (60kg)
 💵 *Valor Total:* R$ ${totalBrl}
 🚚 *Entrega:* ${delivery}
 💳 *Condição:* ${payment}
@@ -7621,19 +7694,19 @@ _Boleta registrada via AgriTrading Platform_`;
         return;
       }
 
-      const seller = document.getElementById('tt-input-seller-name')?.value.trim();
-      const doc = document.getElementById('tt-input-seller-doc')?.value.trim() || null;
-      const farm = document.getElementById('tt-input-seller-farm')?.value.trim() || null;
+      const seller = (document.getElementById('tt-input-seller-name')?.value || '').trim();
+      const doc = (document.getElementById('tt-input-seller-doc')?.value || '').trim() || null;
+      const farm = (document.getElementById('tt-input-seller-farm')?.value || '').trim() || null;
       const comm = document.getElementById('tt-input-commodity')?.value || 'SOJA';
-      const crop = document.getElementById('tt-input-crop-year')?.value.trim() || '2025/2026';
+      const crop = (document.getElementById('tt-input-crop-year')?.value || '').trim() || '2025/2026';
       const hub = currentTradeTicketContext?.hub_id || 'sorriso_mt';
       const port = currentTradeTicketContext?.port_id || 'STS';
-      const qtyBags = parseFloat(document.getElementById('tt-input-quantity-bags')?.value || 0);
-      const priceBag = parseFloat(document.getElementById('tt-input-price-bag')?.value || 0);
-      const payment = document.getElementById('tt-input-payment-terms')?.value.trim() || null;
-      const delivery = document.getElementById('tt-input-delivery-period')?.value.trim() || null;
-      const quality = document.getElementById('tt-input-quality')?.value.trim() || null;
-      const notes = document.getElementById('tt-input-notes')?.value.trim() || null;
+      const qtyBags = parseFloat(document.getElementById('tt-input-quantity-bags')?.value || 0) || 0;
+      const priceBag = parseFloat(document.getElementById('tt-input-price-bag')?.value || 0) || 0;
+      const payment = (document.getElementById('tt-input-payment-terms')?.value || '').trim() || null;
+      const delivery = (document.getElementById('tt-input-delivery-period')?.value || '').trim() || null;
+      const quality = (document.getElementById('tt-input-quality')?.value || '').trim() || null;
+      const notes = (document.getElementById('tt-input-notes')?.value || '').trim() || null;
 
       if (!seller || qtyBags <= 0 || priceBag <= 0) {
         alert('Por favor, preencha o nome do produtor/vendedor, quantidade de sacas e preço por saca válidos.');
@@ -7687,6 +7760,9 @@ _Boleta registrada via AgriTrading Platform_`;
       const orgId = getActiveUserOrgId();
       if (!orgId) return;
 
+      const tbody = document.getElementById('company-trade-tickets-tbody');
+      if (!tbody) return;
+
       try {
         const res = await fetch(`${API_BASE}/organizations/${orgId}/trade-tickets`, {
           headers: getAuthHeaders()
@@ -7694,10 +7770,8 @@ _Boleta registrada via AgriTrading Platform_`;
 
         if (!res.ok) return;
         const tickets = await res.json();
-        const tbody = document.getElementById('company-trade-tickets-tbody');
-        if (!tbody) return;
 
-        if (tickets.length === 0) {
+        if (!tickets || tickets.length === 0) {
           tbody.innerHTML = `
             <tr>
               <td colspan="10" class="px-4 py-6 text-center text-slate-400">
@@ -7709,27 +7783,40 @@ _Boleta registrada via AgriTrading Platform_`;
         }
 
         tbody.innerHTML = tickets.map(t => {
-          const dateStr = t.created_at ? new Date(t.created_at).toLocaleString('pt-BR') : '—';
+          let dateStr = '—';
+          if (t.created_at) {
+            try {
+              const d = new Date(t.created_at);
+              dateStr = isNaN(d.getTime()) ? String(t.created_at) : d.toLocaleString('pt-BR');
+            } catch (e) { dateStr = String(t.created_at); }
+          }
           const commLabel = t.commodity === 'SOJA' ? 'Soja' : 'Milho';
+          const originName = (typeof HUB_NAMES !== 'undefined' && HUB_NAMES[t.location_hub_id]) || t.location_hub_id || 'Origem';
+          const destName = (typeof PORT_NAMES !== 'undefined' && PORT_NAMES[t.destination_port_id]) || t.destination_port_id || 'Porto';
+          const qtyBags = Number(t.quantity_bags || 0);
+          const qtyTons = Number(t.quantity_tons != null ? t.quantity_tons : (qtyBags * 0.06));
+          const priceBag = Number(t.price_per_bag_brl || 0);
+          const totalBrl = Number(t.total_amount_brl != null ? t.total_amount_brl : (qtyBags * priceBag));
+
           return `
             <tr class="hover:bg-slate-50">
-              <td class="px-4 py-2.5 font-mono font-bold text-emerald-800">${t.ticket_number}</td>
+              <td class="px-4 py-2.5 font-mono font-bold text-emerald-800">${t.ticket_number || 'BOL-—'}</td>
               <td class="px-4 py-2.5 text-slate-500">${dateStr}</td>
               <td class="px-4 py-2.5 font-semibold text-slate-900">
-                ${t.seller_name}
+                ${t.seller_name || '—'}
                 ${t.seller_farm ? `<span class="block text-[10px] text-slate-400">${t.seller_farm}</span>` : ''}
               </td>
-              <td class="px-4 py-2.5 text-slate-700 font-medium">${commLabel} (${t.crop_year})</td>
-              <td class="px-4 py-2.5 text-slate-600">${t.location_hub_id} ➔ ${t.destination_port_id}</td>
+              <td class="px-4 py-2.5 text-slate-700 font-medium">${commLabel} (${t.crop_year || '—'})</td>
+              <td class="px-4 py-2.5 text-slate-600">${originName} ➔ ${destName}</td>
               <td class="px-4 py-2.5 text-right font-medium text-slate-700">
-                ${t.quantity_bags.toLocaleString('pt-BR')} sc
-                <span class="block text-[10px] text-slate-400">${t.quantity_tons.toFixed(1)} t</span>
+                ${qtyBags.toLocaleString('pt-BR')} sc
+                <span class="block text-[10px] text-slate-400">${qtyTons.toFixed(1)} t</span>
               </td>
-              <td class="px-4 py-2.5 text-right font-bold text-emerald-800">R$ ${t.price_per_bag_brl.toFixed(2)}</td>
-              <td class="px-4 py-2.5 text-right font-black text-slate-900">R$ ${t.total_amount_brl.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+              <td class="px-4 py-2.5 text-right font-bold text-emerald-800">R$ ${priceBag.toFixed(2)}</td>
+              <td class="px-4 py-2.5 text-right font-black text-slate-900">R$ ${totalBrl.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
               <td class="px-4 py-2.5 text-center">
                 <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                  ${t.status}
+                  ${t.status || 'REGISTRADA'}
                 </span>
               </td>
               <td class="px-4 py-2.5 text-center">
@@ -7765,36 +7852,41 @@ _Boleta registrada via AgriTrading Platform_`;
           return;
         }
         const t = await res.json();
+        const hubName = (typeof HUB_NAMES !== 'undefined' && HUB_NAMES[t.location_hub_id]) || t.location_hub_id || 'Origem';
+        const portName = (typeof PORT_NAMES !== 'undefined' && PORT_NAMES[t.destination_port_id]) || t.destination_port_id || 'Porto';
+        const priceBag = Number(t.price_per_bag_brl || 0);
+
         currentTradeTicketContext = {
-          commodity: t.commodity,
+          commodity: t.commodity || 'SOJA',
           hub_id: t.location_hub_id,
-          hub_name: t.location_hub_id,
+          hub_name: hubName,
           port_id: t.destination_port_id,
-          port_name: t.destination_port_id,
-          cbot: t.cbot_reference || 1185.25,
-          fx: t.fx_reference || 5.485,
-          freight: t.freight_reference || 420.0,
-          price_bag: t.price_per_bag_brl,
+          port_name: portName,
+          cbot: Number(t.cbot_reference || 1185.25),
+          fx: Number(t.fx_reference || 5.485),
+          freight: Number(t.freight_reference || 420.0),
+          price_bag: priceBag,
           parity_run_id: t.parity_run_id || 'RECORDED',
-          antt_compliant: t.antt_compliant
+          antt_compliant: t.antt_compliant ?? true
         };
 
-        document.getElementById('tt-input-seller-name').value = t.seller_name;
-        document.getElementById('tt-input-seller-doc').value = t.seller_document || '';
-        document.getElementById('tt-input-seller-farm').value = t.seller_farm || '';
-        document.getElementById('tt-input-commodity').value = t.commodity;
-        document.getElementById('tt-input-crop-year').value = t.crop_year;
-        document.getElementById('tt-input-hub').value = t.location_hub_id;
-        document.getElementById('tt-input-port').value = t.destination_port_id;
-        document.getElementById('tt-input-quantity-bags').value = t.quantity_bags;
-        document.getElementById('tt-input-price-bag').value = t.price_per_bag_brl.toFixed(2);
-        document.getElementById('tt-input-payment-terms').value = t.payment_terms || '';
-        document.getElementById('tt-input-delivery-period').value = t.delivery_period || '';
-        document.getElementById('tt-input-quality').value = t.quality_specs || '';
-        document.getElementById('tt-input-notes').value = t.notes || '';
+        if (document.getElementById('tt-input-seller-name')) document.getElementById('tt-input-seller-name').value = t.seller_name || '';
+        if (document.getElementById('tt-input-seller-doc')) document.getElementById('tt-input-seller-doc').value = t.seller_document || '';
+        if (document.getElementById('tt-input-seller-farm')) document.getElementById('tt-input-seller-farm').value = t.seller_farm || '';
+        if (document.getElementById('tt-input-commodity')) document.getElementById('tt-input-commodity').value = t.commodity || 'SOJA';
+        if (document.getElementById('tt-input-crop-year')) document.getElementById('tt-input-crop-year').value = t.crop_year || '2025/2026';
+        if (document.getElementById('tt-input-hub')) document.getElementById('tt-input-hub').value = hubName;
+        if (document.getElementById('tt-input-port')) document.getElementById('tt-input-port').value = portName;
+        if (document.getElementById('tt-input-quantity-bags')) document.getElementById('tt-input-quantity-bags').value = t.quantity_bags || 5000;
+        if (document.getElementById('tt-input-price-bag')) document.getElementById('tt-input-price-bag').value = priceBag.toFixed(2);
+        if (document.getElementById('tt-input-payment-terms')) document.getElementById('tt-input-payment-terms').value = t.payment_terms || '';
+        if (document.getElementById('tt-input-delivery-period')) document.getElementById('tt-input-delivery-period').value = t.delivery_period || '';
+        if (document.getElementById('tt-input-quality')) document.getElementById('tt-input-quality').value = t.quality_specs || '';
+        if (document.getElementById('tt-input-notes')) document.getElementById('tt-input-notes').value = t.notes || '';
 
         updateTradeTicketPreview();
-        document.getElementById('tt-view-number').innerText = t.ticket_number;
+        const numEl = document.getElementById('tt-view-number');
+        if (numEl) numEl.innerText = t.ticket_number || 'BOL-—';
 
         const modal = document.getElementById('trade-ticket-modal');
         if (modal) modal.classList.remove('hidden');
@@ -9985,8 +10077,8 @@ _Boleta registrada via AgriTrading Platform_`;
     }
     if (original.loadOrganizationData && !window.loadOrganizationData.__uxRuntime) {
       window.loadOrganizationData = function () {
+        companyLoggedOutState();
         if (!sessionStorage.getItem('agri_user_profile')) {
-          companyLoggedOutState();
           return Promise.resolve(null);
         }
         return original.loadOrganizationData.apply(this, arguments);
